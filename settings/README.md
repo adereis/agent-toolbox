@@ -4,12 +4,12 @@ Claude Code settings configurations. Add these snippets to your `~/.claude/setti
 
 ## statusline.sh
 
-A two-row columnar statusline with dim headers and colored values. Adapts to your setup — vim mode only appears if enabled, quota shows the 5-hour rate-limit percentage (subscription only), cost shows the estimated session cost, and memory detection works on both Linux and macOS.
+A two-row columnar statusline with dim headers and colored values. Adapts to your setup — vim mode only appears if enabled, the quota columns only on a subscription, and memory detection works on both Linux and macOS. It mirrors the three windows `/usage` shows: the 5-hour session limit, the weekly all-models limit, and any per-model weekly limit.
 
 **Example output** (with vim mode enabled):
 ```
-mode   workspace               branch   profile   model        context    quota      cost      memory
-[NOR]  ~/projects/my-app       main*+%  pro       Opus 4.6     23% used   42% used   $1.2345   312.5 MB
+mode   workspace            branch   profile   model      context    quota      cost      week       fable      memory
+[NOR]  ~/projects/my-app    main*+%  pro       Opus 5     23% used   42% used   $1.2345   40% used   17% used   312.5 MB
 ```
 
 **Columns:**
@@ -24,9 +24,11 @@ mode   workspace               branch   profile   model        context    quota 
 | context | Green→Yellow→Red | Context window usage, color-coded by tier |
 | quota | Green→Yellow→Red | 5-hour rate limit usage (subscription only — absent on API/Vertex) |
 | cost | Cyan | Estimated session cost in USD, computed client-side (all backends) |
+| week | Green→Yellow→Red | 7-day all-models rate limit usage (subscription only) |
+| *model name* | Green→Yellow→Red | 7-day per-model limit, one column per bucket the API reports (e.g. `fable`). Requires `statusline-usage.sh` — see below |
 | memory | Cyan | Claude Code process RSS memory |
 
-**Color thresholds** (context and quota):
+**Color thresholds** (context, quota, week, per-model):
 - **Green**: < 50% used
 - **Yellow**: 50–79% used
 - **Red**: ≥ 80% used
@@ -47,11 +49,62 @@ mode   workspace               branch   profile   model        context    quota 
 }
 ```
 
+4. For the per-model weekly columns, also install `statusline-usage.sh` (below)
+
 **Platform notes:**
 
 - **Linux**: Memory detection reads `/proc/<pid>/status` (VmRSS)
 - **macOS**: Memory detection uses `ps -o rss=`
-- Requires `jq` and `git` in `$PATH`
+- Requires `jq` and `git` in `$PATH` (plus `curl` for the per-model columns)
+
+## statusline-usage.sh
+
+Keeps the per-model weekly quota columns fed. Install it next to `statusline.sh` — the status line looks for it as a sibling and does nothing if it is absent.
+
+**Why it is needed:** the JSON Claude Code pipes to a status line carries only two windows, `five_hour` and `seven_day`. Per-model weekly buckets are not in it. `/usage` gets those from `GET /api/oauth/usage`, and Claude Code persists that response to `~/.claude.json` (`cachedUsageUtilization`) **only when you open the `/usage` dialog** — no timer, no startup prefetch. Between visits that copy just sits there, so reading it alone would show a number that is usually hours old.
+
+So this script fetches the same endpoint on a timer. The status line spawns it detached and never waits on the network itself.
+
+```
+Claude Code ──stdin──► statusline.sh ──► quota, week           (live, from response headers)
+                            │
+                            ├─ reads ──► ~/.claude/statusline-usage.json   (this script, refreshed on a timer)
+                            │            ~/.claude.json                    (Claude Code's copy, whichever is newer)
+                            └─ spawns ─► statusline-usage.sh ──► GET /api/oauth/usage
+```
+
+**Behavior worth knowing:**
+
+- Safe to call on every tick. It self-gates on a TTL and exits in ~10ms when a refresh is not due.
+- The TTL gate keys on *attempt*, not success, so a bad token cannot cause one request per tick. Concurrent sessions collapse into a single request via an `mkdir` mutex, re-checked after acquiring it.
+- A failed refresh never overwrites the last good snapshot.
+- The bearer token is passed to `curl` via `--config` on stdin, never on the command line where `ps` would expose it.
+- When the snapshot ages past 15 minutes the status line dims the value and appends its age (`17% used ·2h`) instead of presenting stale data as current.
+
+**Commands:**
+
+```
+statusline-usage.sh            # refresh if older than the TTL (what the status line calls)
+statusline-usage.sh --force    # refresh now
+statusline-usage.sh --status   # snapshot age, current buckets, last error
+statusline-usage.sh --path     # print the snapshot path
+```
+
+**Environment:**
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `CLAUDE_USAGE_CACHE` | `~/.claude/statusline-usage.json` | Snapshot path |
+| `CLAUDE_USAGE_TTL` | `300` | Seconds between refreshes (matches Claude Code's own throttle on this endpoint) |
+| `CLAUDE_USAGE_STALE_AFTER` | `900` | Seconds before the status line marks a value stale |
+| `CLAUDE_USAGE_CREDS` | `~/.claude/.credentials.json` | OAuth credentials |
+| `CLAUDE_USAGE_API` | `https://api.anthropic.com` | API base |
+| `CLAUDE_USAGE_FALLBACK` | `~/.claude.json` | Claude Code's own usage cache |
+| `CLAUDE_USAGE_REFRESH` | sibling `statusline-usage.sh` | Refresher the status line spawns |
+
+**Caveat:** `/api/oauth/usage` is an internal endpoint, not a documented API. It is the same call `/usage` makes, but its response shape can change between Claude Code releases. If a per-model column disappears, run `statusline-usage.sh --status` to see what the endpoint is actually returning.
+
+If there are no OAuth credentials (API key, Bedrock, Vertex) the script exits silently and the per-model columns simply do not appear.
 
 **Customization:**
 

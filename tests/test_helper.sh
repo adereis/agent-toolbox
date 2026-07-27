@@ -22,6 +22,18 @@ assert_output_contains() {
     fi
 }
 
+assert_output_lacks() {
+    local unexpected="$1"
+    if echo "$_stdout" | grep -q "$unexpected"; then
+        (( _fail++ ))
+        echo "  FAIL: $_test_name"
+        echo "    expected output NOT to contain: $unexpected"
+        echo "    got: $_stdout"
+    else
+        (( _pass++ ))
+    fi
+}
+
 assert_output_empty() {
     if [ -z "$_stdout" ]; then
         (( _pass++ ))
