@@ -33,5 +33,8 @@ execute them (e.g., "run the interactive tests" or "test the push hook live").
 ## IT-05: statusline displays correctly
 
 **Action:** Observe the Claude Code status bar during normal operation.
-**Expected:** Shows user@host:cwd, git branch with indicators, context %, and
-session cost.
+**Expected:** Shows user@host:cwd, git branch with indicators, a `session` %
+for context fill, and session cost. On a subscription the quota column is
+headed `↻HH:MM` — the local time the 5-hour window resets. Cross-check that
+time against `/usage`, and check that the two rows stay column-aligned (the
+`↻` is the only multi-byte glyph in a header).

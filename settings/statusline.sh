@@ -3,8 +3,14 @@
 # Row 1: dim column headers  |  Row 2: colored values
 #
 # Fields (when available):
-#   vim mode | workspace | branch | profile | model | context | quota | cost |
+#   vim mode | workspace | branch | profile | model | session | cost | ↻HH:MM |
 #   week | <per-model weekly buckets> | memory
+#
+# Order groups by what a column is about: the conversation (session, cost),
+# then the plan windows that outlive it (↻HH:MM, week, per-model).
+#
+# The 5-hour quota column has no word for a header: it wears the wall-clock time
+# it resets at (↻14:30), so the deadline is visible without spending a column.
 #
 # Usage columns change color by tier:
 #   green (<50%) → yellow (50-79%) → red (≥80%)
@@ -26,10 +32,28 @@ input=$(cat)
 # ── Platform detection (once) ───────────────────────────────────────
 _PLATFORM=$(uname -s)
 
+# Bash's ${#s} counts characters under a UTF-8 LC_CTYPE but *bytes* under C or
+# POSIX. We emit two non-ASCII glyphs (↻ in the quota header, · in the stale
+# marker), so column widths would come out 2 too wide for a status line launched
+# with a stripped locale. Probe once instead of assuming the caller's.
+_MB=0
+_probe='·'; [ "${#_probe}" -eq 1 ] || _MB=1
+
 # ── Helpers ──────────────────────────────────────────────────────────
 
+# Display width of $1, into $_w. In a byte-counting locale the UTF-8
+# continuation bytes (0x80–0xBF) are exactly the bytes that do not begin a
+# character, so dropping them leaves the character count.
+_w=0
+_width() {
+  local s=$1
+  [ "$_MB" -eq 1 ] && s=${s//[$'\200'-$'\277']/}
+  _w=${#s}
+}
+
 pad() {
-  local gap=$(( $2 - ${#1} ))
+  _width "$1"
+  local gap=$(( $2 - _w ))
   (( gap < 0 )) && gap=0
   printf '%s%*s' "$1" "$gap" ''
 }
@@ -58,6 +82,17 @@ _proc_ppid() {
   esac
 }
 
+# Epoch seconds → local HH:MM. Claude Code rounds the
+# anthropic-ratelimit-unified-5h-reset header to whole seconds before putting it
+# in the payload, so this is a plain integer, not the ISO string the
+# /api/oauth/usage endpoint returns for the same field.
+_fmt_clock() {
+  case "$_PLATFORM" in
+    Darwin) date -r "$1" +%H:%M 2>/dev/null ;;
+    *)      date -d "@$1" +%H:%M 2>/dev/null ;;
+  esac
+}
+
 _proc_rss_kb() {
   case "$_PLATFORM" in
     Linux)  awk '/^VmRSS:/ {print $2}' "/proc/$1/status" 2>/dev/null ;;
@@ -75,6 +110,7 @@ _proc_rss_kb() {
   read -r model_val
   read -r ctx_pct
   read -r q
+  read -r q_reset
   read -r wk
   read -r cost_val
 } < <(printf '%s' "$input" | jq -r '
@@ -86,10 +122,18 @@ _proc_rss_kb() {
       else .model end) | val),
     (.context_window.used_percentage | val),
     (.rate_limits.five_hour.used_percentage | val),
+    (.rate_limits.five_hour.resets_at | val),
     (.rate_limits.seven_day.used_percentage | val),
     (.cost.total_cost_usd | val)')
 
 short_cwd="${cwd/#$HOME/\~}"
+
+# Claude Code builds this name as display_name + " (1M context)" whenever the
+# model id ends in [1m] — the registry's display_name is always the short form.
+# A million tokens is the ordinary case now, so drop the qualifier and keep the
+# column narrow. Matching the literal suffix, not any trailing parenthetical, so
+# a future qualifier that does carry information still shows up.
+model_val="${model_val% (1M context)}"
 
 # ── Git branch + dirty state ────────────────────────────────────────
 
@@ -113,29 +157,41 @@ else
   profile_val="pro"     profile_clr="\033[36m"
 fi
 
-# ── Context — color by usage tier ────────────────────────────────────
+# ── Session — context window fill, colored by usage tier ─────────────
+#
+# Headed "session" rather than "context": it answers "how full is this
+# conversation", which is the question you actually ask it. Note that the API
+# uses "session" for the 5-hour limit (kind:"session") — different thing.
 
 ctx_val="" ctx_clr=""
 if [ -n "$ctx_pct" ]; then
   ctx_clr=$(tier_color "$ctx_pct")
-  ctx_val=$(printf '%.0f%% used' "$ctx_pct")
+  ctx_val=$(printf '%.0f%%' "$ctx_pct")
 fi
 
 # ── Quota — 5-hour and 7-day rate limits (subscription only) ─────────
 #
 # Both ride on the anthropic-ratelimit-unified-* response headers, so Claude
 # Code refreshes them on every API call: these are live to within one tick.
+#
+# The 5-hour header doubles as its own reset clock. resets_at comes from the
+# same headers, so it costs nothing extra; when it is missing (older payload,
+# no rate limit info yet) the column falls back to the plain word.
 
-quota_val="" quota_clr=""
+quota_val="" quota_clr="" quota_hdr="quota"
 if [ -n "$q" ]; then
   quota_clr=$(tier_color "$q")
-  quota_val=$(printf '%.0f%% used' "$q")
+  quota_val=$(printf '%.0f%%' "$q")
+  if [ -n "$q_reset" ]; then
+    clock=$(_fmt_clock "${q_reset%%.*}")
+    [ -n "$clock" ] && quota_hdr="↻$clock"
+  fi
 fi
 
 week_val="" week_clr=""
 if [ -n "$wk" ]; then
   week_clr=$(tier_color "$wk")
-  week_val=$(printf '%.0f%% used' "$wk")
+  week_val=$(printf '%.0f%%' "$wk")
 fi
 
 # ── Weekly per-model quotas (e.g. Fable) ─────────────────────────────
@@ -149,8 +205,8 @@ fi
 # touches the network, so it cannot stall on a slow request.
 #
 # When a refresh is failing (expired token, offline, rate limited) the value
-# goes dim and picks up an age suffix rather than quietly presenting old data as
-# current.
+# goes dim and picks up an age suffix (17% ·2h) rather than quietly presenting
+# old data as current.
 
 USAGE_CACHE="${CLAUDE_USAGE_CACHE:-$HOME/.claude/statusline-usage.json}"
 USAGE_FALLBACK="${CLAUDE_USAGE_FALLBACK:-$HOME/.claude.json}"
@@ -203,15 +259,19 @@ if [ -n "$scoped_pairs" ]; then
     name=${pair%%=*} pct=${pair##*=}
     if [ -n "$age_sfx" ]; then clr="\033[2m"; else clr=$(tier_color "$pct"); fi
     scoped_hdrs+=("$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')")
-    scoped_vals+=("$(printf '%.0f%% used%s' "$pct" "$age_sfx")")
+    scoped_vals+=("$(printf '%.0f%%%s' "$pct" "$age_sfx")")
     scoped_clrs+=("$clr")
   done
 fi
 
 # ── Cost — estimated session cost (all backends) ─────────────────────
+#
+# Cents are the useful resolution here; the extra two digits only ever changed
+# how wide the column was. Sub-cent sessions therefore read $0.00 until they
+# cross a cent.
 
 cost_disp=""
-[ -n "$cost_val" ] && cost_disp=$(printf '$%.4f' "$cost_val")
+[ -n "$cost_val" ] && cost_disp=$(printf '$%.2f' "$cost_val")
 
 # ── Process memory (walk up to find Claude Code's node process) ──────
 
@@ -237,7 +297,8 @@ hdr="" val=""
 
 col() {
   local h="$1" v="$2" c="$3"
-  local w=${#v}; (( ${#h} > w )) && w=${#h}
+  _width "$v"; local w=$_w
+  _width "$h"; (( _w > w )) && w=$_w
   hdr+="${DIM}$(pad "$h" "$w")${RST}${SEP}"
   val+="${c}$(pad "$v" "$w")${RST}${SEP}"
 }
@@ -247,9 +308,9 @@ col "workspace" "$short_cwd" "${BOLD}\033[34m"
 [ -n "$git_val" ]   && col "branch"     "$git_val"     "\033[33m"
                        col "profile"    "$profile_val" "$profile_clr"
 [ -n "$model_val" ] && col "model"      "$model_val"   "\033[32m"
-[ -n "$ctx_val" ]   && col "context"    "$ctx_val"     "$ctx_clr"
-[ -n "$quota_val" ] && col "quota"      "$quota_val"   "$quota_clr"
+[ -n "$ctx_val" ]   && col "session"    "$ctx_val"     "$ctx_clr"
 [ -n "$cost_disp" ] && col "cost"       "$cost_disp"   "\033[36m"
+[ -n "$quota_val" ] && col "$quota_hdr" "$quota_val"   "$quota_clr"
 [ -n "$week_val" ]  && col "week"       "$week_val"    "$week_clr"
 for i in "${!scoped_vals[@]}"; do
                        col "${scoped_hdrs[$i]}" "${scoped_vals[$i]}" "${scoped_clrs[$i]}"

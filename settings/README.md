@@ -8,9 +8,15 @@ A two-row columnar statusline with dim headers and colored values. Adapts to you
 
 **Example output** (with vim mode enabled):
 ```
-mode   workspace            branch   profile   model      context    quota      cost      week       fable      memory
-[NOR]  ~/projects/my-app    main*+%  pro       Opus 5     23% used   42% used   $1.2345   40% used   17% used   312.5 MB
+mode   workspace            branch   profile   model    session   cost    ↻14:30   week   fable   memory
+[NOR]  ~/projects/my-app    main*+%  pro       Opus 5   23%       $1.23   42%      40%    17%     312.5 MB
 ```
+
+Columns are grouped by what they describe: the conversation (`session`, `cost`),
+then the plan windows that outlive it (`↻14:30`, `week`, per-model).
+
+The 5-hour quota column has no fixed header — it wears the wall-clock time it
+resets at (`↻14:30`), so the deadline costs no extra width.
 
 **Columns:**
 
@@ -20,15 +26,15 @@ mode   workspace            branch   profile   model      context    quota      
 | workspace | Bold blue | Working directory (`~` shorthand for `$HOME`) |
 | branch | Yellow | Git branch + status indicators (`*` dirty, `+` staged, `%` untracked) |
 | profile | Cyan/Yellow | `pro` (subscription) or `vertex` (Vertex AI) |
-| model | Green | Active model display name |
-| context | Green→Yellow→Red | Context window usage, color-coded by tier |
-| quota | Green→Yellow→Red | 5-hour rate limit usage (subscription only — absent on API/Vertex) |
-| cost | Cyan | Estimated session cost in USD, computed client-side (all backends) |
+| model | Green | Active model display name. The ` (1M context)` qualifier Claude Code appends for `[1m]` model ids is stripped — it is the ordinary case now and only widened the column |
+| session | Green→Yellow→Red | Context window fill for this conversation, color-coded by tier |
+| cost | Cyan | Estimated session cost in USD to the cent, computed client-side (all backends). Reads `$0.00` until the session crosses a cent |
+| ↻*HH:MM* | Green→Yellow→Red | 5-hour rate limit usage (subscription only — absent on API/Vertex). The header is the local time the window resets, read from `resets_at` in the same payload; it falls back to `quota` when that field is absent |
 | week | Green→Yellow→Red | 7-day all-models rate limit usage (subscription only) |
 | *model name* | Green→Yellow→Red | 7-day per-model limit, one column per bucket the API reports (e.g. `fable`). Requires `statusline-usage.sh` — see below |
 | memory | Cyan | Claude Code process RSS memory |
 
-**Color thresholds** (context, quota, week, per-model):
+**Color thresholds** (session, quota, week, per-model):
 - **Green**: < 50% used
 - **Yellow**: 50–79% used
 - **Red**: ≥ 80% used
@@ -79,7 +85,7 @@ Claude Code ──stdin──► statusline.sh ──► quota, week           (
 - The TTL gate keys on *attempt*, not success, so a bad token cannot cause one request per tick. Concurrent sessions collapse into a single request via an `mkdir` mutex, re-checked after acquiring it.
 - A failed refresh never overwrites the last good snapshot.
 - The bearer token is passed to `curl` via `--config` on stdin, never on the command line where `ps` would expose it.
-- When the snapshot ages past 15 minutes the status line dims the value and appends its age (`17% used ·2h`) instead of presenting stale data as current.
+- When the snapshot ages past 15 minutes the status line dims the value and appends its age (`17% ·2h`) instead of presenting stale data as current.
 
 **Commands:**
 
