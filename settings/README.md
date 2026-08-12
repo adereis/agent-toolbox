@@ -26,7 +26,7 @@ resets at (`↻14:30`), so the deadline costs no extra width.
 | workspace | Bold blue | Working directory (`~` shorthand for `$HOME`) |
 | branch | Yellow | Git branch + status indicators (`*` dirty, `+` staged, `%` untracked) |
 | profile | Cyan/Yellow | `pro` (subscription) or `vertex` (Vertex AI) |
-| model | Green | Active model display name. The ` (1M context)` qualifier Claude Code appends for `[1m]` model ids is stripped — it is the ordinary case now and only widened the column |
+| model | Green | Active model display name. On a 1M-context session the ` (1M context)` qualifier Claude Code appends for `[1m]` model ids is stripped — it is the ordinary case now and only widened the column. When the enforced window is smaller, the name wears its size instead (e.g. `Opus 4.8 [200k]`), read from `context_window_size` — this covers both the plain 200k model variant and a `[1m]` model whose 1M credits are spent |
 | session | Green→Yellow→Red | Context window fill for this conversation, color-coded by tier |
 | cost | Cyan | Estimated session cost in USD to the cent, computed client-side (all backends). Reads `$0.00` until the session crosses a cent |
 | ↻*HH:MM* | Green→Yellow→Red | 5-hour rate limit usage (subscription only — absent on API/Vertex). The header is the local time the window resets, read from `resets_at` in the same payload; it falls back to `quota` when that field is absent |

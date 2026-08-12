@@ -66,6 +66,26 @@ test_begin "leaves a model name without the qualifier alone"
 run_hook "$SCRIPT" '{"workspace":{"current_dir":"'"$PWD"'"},"model":{"display_name":"Haiku 4.5"},"context_window":{},"cost":{}}'
 assert_output_contains "Haiku 4.5"
 
+# context_window_size is the window Claude Code is actually enforcing. 1M is the
+# ordinary case and stays bare; anything smaller wears its size, so a 200k session
+# is visible at a glance.
+test_begin "flags a sub-1M window with its size"
+run_hook "$SCRIPT" '{"workspace":{"current_dir":"'"$PWD"'"},"model":{"display_name":"Opus 4.8"},"context_window":{"context_window_size":200000},"cost":{}}'
+assert_output_contains "Opus 4.8 \[200k\]"
+
+test_begin "leaves a 1M window unmarked"
+run_hook "$SCRIPT" '{"workspace":{"current_dir":"'"$PWD"'"},"model":{"display_name":"Opus 4.8 (1M context)"},"context_window":{"context_window_size":1000000},"cost":{}}'
+assert_output_contains "Opus 4.8"
+assert_output_lacks "200k"
+assert_output_lacks "1M context"
+
+# A [1m] model capped to 200k once its 1M credits are spent: the name loses its
+# "(1M context)" suffix and still gains [200k], so the demotion reads as what it is.
+test_begin "flags a credit-capped 1M model as 200k"
+run_hook "$SCRIPT" '{"workspace":{"current_dir":"'"$PWD"'"},"model":{"display_name":"Opus 4.8 (1M context)"},"context_window":{"context_window_size":200000},"cost":{}}'
+assert_output_contains "Opus 4.8 \[200k\]"
+assert_output_lacks "1M context"
+
 test_begin "shows cost alongside quota on subscription"
 run_hook "$SCRIPT" '{"workspace":{"current_dir":"'"$PWD"'"},"context_window":{},"rate_limits":{"five_hour":{"used_percentage":73}},"cost":{"total_cost_usd":1.2345}}'
 assert_output_contains '$1.23'

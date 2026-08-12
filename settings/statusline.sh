@@ -109,6 +109,7 @@ _proc_rss_kb() {
   read -r cwd
   read -r model_val
   read -r ctx_pct
+  read -r ctx_size
   read -r q
   read -r q_reset
   read -r wk
@@ -121,6 +122,7 @@ _proc_rss_kb() {
       elif .model | type == "object" then .model.display_name
       else .model end) | val),
     (.context_window.used_percentage | val),
+    (.context_window.context_window_size | val),
     (.rate_limits.five_hour.used_percentage | val),
     (.rate_limits.five_hour.resets_at | val),
     (.rate_limits.seven_day.used_percentage | val),
@@ -134,6 +136,18 @@ short_cwd="${cwd/#$HOME/\~}"
 # column narrow. Matching the literal suffix, not any trailing parenthetical, so
 # a future qualifier that does carry information still shows up.
 model_val="${model_val% (1M context)}"
+
+# The inverse is worth surfacing. context_window_size is the window Claude Code is
+# actually enforcing this session: 1e6 on a 1M model, 200000 otherwise — and also
+# 200000 for a [1m] model once its 1M credits are spent. So a size below a million
+# means "not on 1M", whatever the reason, and the field says so. 1M stays bare as
+# the ordinary case; a smaller window wears its size, e.g. Opus 4.8 [200k]. The
+# suffix strip above and this flag cooperate: a credit-capped [1m] model loses its
+# "(1M context)" name yet still gains [200k], reading as the demotion it is.
+ctx_size="${ctx_size%%.*}"
+if [ -n "$model_val" ] && [ -n "$ctx_size" ] && [ "$ctx_size" -lt 1000000 ] 2>/dev/null; then
+  model_val="$model_val [$(( ctx_size / 1000 ))k]"
+fi
 
 # ── Git branch + dirty state ────────────────────────────────────────
 
