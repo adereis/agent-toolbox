@@ -186,4 +186,18 @@ CLAUDE_USAGE_CACHE="$FIXTURES/old.json"       # ours is 2h old, Claude Code's is
 run_hook "$SCRIPT" "$WEEK_IN"
 assert_output_lacks '·2h'
 
+# ── Effort (reasoning) level ─────────────────────────────────────────
+# .effort.level rides in the status line payload on models that expose an
+# effort parameter; it is absent (not null) otherwise, so the column vanishes
+# rather than showing a placeholder.
+
+test_begin "shows the effort level in its own column"
+run_hook "$SCRIPT" '{"workspace":{"current_dir":"'"$PWD"'"},"context_window":{},"cost":{},"effort":{"level":"max"}}'
+assert_output_contains "effort"
+assert_output_contains "max"
+
+test_begin "omits the effort column when the model exposes no effort parameter"
+run_hook "$SCRIPT" '{"workspace":{"current_dir":"'"$PWD"'"},"context_window":{},"cost":{}}'
+assert_output_lacks "effort"
+
 test_summary "statusline"

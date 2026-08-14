@@ -8,8 +8,8 @@ A two-row columnar statusline with dim headers and colored values. Adapts to you
 
 **Example output** (with vim mode enabled):
 ```
-mode   workspace            branch   profile   model    session   cost    ↻14:30   week   fable   memory
-[NOR]  ~/projects/my-app    main*+%  pro       Opus 5   23%       $1.23   42%      40%    17%     312.5 MB
+mode   workspace            branch   model    effort   session   cost    ↻14:30   week   fable   profile   memory
+[NOR]  ~/projects/my-app    main*+%  Opus 5   max      23%       $1.23   42%      40%    17%     pro       312.5 MB
 ```
 
 Columns are grouped by what they describe: the conversation (`session`, `cost`),
@@ -25,13 +25,14 @@ resets at (`↻14:30`), so the deadline costs no extra width.
 | mode | Bold magenta | Vim mode indicator, abbreviated to 3 letters (`[NOR]`/`[INS]`), only when vim mode is on |
 | workspace | Bold blue | Working directory (`~` shorthand for `$HOME`) |
 | branch | Yellow | Git branch + status indicators (`*` dirty, `+` staged, `%` untracked) |
-| profile | Cyan/Yellow | `pro` (subscription) or `vertex` (Vertex AI) |
 | model | Green | Active model display name. On a 1M-context session the ` (1M context)` qualifier Claude Code appends for `[1m]` model ids is stripped — it is the ordinary case now and only widened the column. When the enforced window is smaller, the name wears its size instead (e.g. `Opus 4.8 [200k]`), read from `context_window_size` — this covers both the plain 200k model variant and a `[1m]` model whose 1M credits are spent |
+| effort | Magenta (dim→bold) | Reasoning effort level (`low`/`medium`/`high`/`xhigh`/`max`), read from `.effort.level`. Brightness ramps with intensity — dim at `low`, bold at `max` — deliberately off the green→red tier scale, which is reserved for "distance to a limit". Hidden on models with no effort parameter |
 | session | Green→Yellow→Red | Context window fill for this conversation, color-coded by tier |
 | cost | Cyan | Estimated session cost in USD to the cent, computed client-side (all backends). Reads `$0.00` until the session crosses a cent |
 | ↻*HH:MM* | Green→Yellow→Red | 5-hour rate limit usage (subscription only — absent on API/Vertex). The header is the local time the window resets, read from `resets_at` in the same payload; it falls back to `quota` when that field is absent |
 | week | Green→Yellow→Red | 7-day all-models rate limit usage (subscription only) |
 | *model name* | Green→Yellow→Red | 7-day per-model limit, one column per bucket the API reports (e.g. `fable`). Requires `statusline-usage.sh` — see below |
+| profile | Cyan/Yellow | `pro` (subscription) or `vertex` (Vertex AI) |
 | memory | Cyan | Claude Code process RSS memory |
 
 **Color thresholds** (session, quota, week, per-model):

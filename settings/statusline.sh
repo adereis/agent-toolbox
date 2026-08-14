@@ -3,8 +3,8 @@
 # Row 1: dim column headers  |  Row 2: colored values
 #
 # Fields (when available):
-#   vim mode | workspace | branch | profile | model | session | cost | ↻HH:MM |
-#   week | <per-model weekly buckets> | memory
+#   vim mode | workspace | branch | model | effort | session | cost | ↻HH:MM |
+#   week | <per-model weekly buckets> | profile | memory
 #
 # Order groups by what a column is about: the conversation (session, cost),
 # then the plan windows that outlive it (↻HH:MM, week, per-model).
@@ -68,6 +68,18 @@ tier_color() {
   fi
 }
 
+# Effort (reasoning) intensity as brightness on a single hue: dim when barely
+# thinking, bold when flat out. Deliberately NOT the green→red tier ramp — that
+# vocabulary means "distance to a limit", and effort is intensity, not a limit.
+# medium/high/xhigh share the middle rung; only the extremes carry a marker.
+effort_color() {
+  case "$1" in
+    low) printf '\033[2;35m' ;;   # dim magenta
+    max) printf '\033[1;35m' ;;   # bold magenta
+    *)   printf '\033[35m'   ;;   # medium / high / xhigh
+  esac
+}
+
 _proc_comm() {
   case "$_PLATFORM" in
     Linux)  cat "/proc/$1/comm" 2>/dev/null ;;
@@ -114,6 +126,7 @@ _proc_rss_kb() {
   read -r q_reset
   read -r wk
   read -r cost_val
+  read -r effort_lvl
 } < <(printf '%s' "$input" | jq -r '
     def val: if . == null then "" else tostring end;
     (.vim.mode | val),
@@ -126,7 +139,8 @@ _proc_rss_kb() {
     (.rate_limits.five_hour.used_percentage | val),
     (.rate_limits.five_hour.resets_at | val),
     (.rate_limits.seven_day.used_percentage | val),
-    (.cost.total_cost_usd | val)')
+    (.cost.total_cost_usd | val),
+    (.effort.level | val)')
 
 short_cwd="${cwd/#$HOME/\~}"
 
@@ -181,6 +195,18 @@ ctx_val="" ctx_clr=""
 if [ -n "$ctx_pct" ]; then
   ctx_clr=$(tier_color "$ctx_pct")
   ctx_val=$(printf '%.0f%%' "$ctx_pct")
+fi
+
+# ── Effort — reasoning effort level, when the model exposes one ───────
+#
+# .effort.level is absent (not null) on models without an effort parameter, so
+# `val` yields "" and the column drops out on its own — the same idiom the vim
+# and git columns use. Brightness ramp, not the tier ramp — see effort_color.
+
+effort_val="" effort_clr=""
+if [ -n "$effort_lvl" ]; then
+  effort_val="$effort_lvl"
+  effort_clr=$(effort_color "$effort_lvl")
 fi
 
 # ── Quota — 5-hour and 7-day rate limits (subscription only) ─────────
@@ -320,8 +346,8 @@ col() {
 [ -n "$vim_mode" ] && col "mode" "[${vim_mode:0:3}]" "\033[1;35m"
 col "workspace" "$short_cwd" "${BOLD}\033[34m"
 [ -n "$git_val" ]   && col "branch"     "$git_val"     "\033[33m"
-                       col "profile"    "$profile_val" "$profile_clr"
 [ -n "$model_val" ] && col "model"      "$model_val"   "\033[32m"
+[ -n "$effort_val" ] && col "effort"    "$effort_val"  "$effort_clr"
 [ -n "$ctx_val" ]   && col "session"    "$ctx_val"     "$ctx_clr"
 [ -n "$cost_disp" ] && col "cost"       "$cost_disp"   "\033[36m"
 [ -n "$quota_val" ] && col "$quota_hdr" "$quota_val"   "$quota_clr"
@@ -329,6 +355,9 @@ col "workspace" "$short_cwd" "${BOLD}\033[34m"
 for i in "${!scoped_vals[@]}"; do
                        col "${scoped_hdrs[$i]}" "${scoped_vals[$i]}" "${scoped_clrs[$i]}"
 done
+# profile last — a fixed pro/vertex marker earns less width than the live
+# columns, so it sits out of the way beside memory rather than up front.
+                       col "profile"    "$profile_val" "$profile_clr"
 [ -n "$mem_val" ]   && col "memory"     "$mem_val"     "\033[36m"
 
 printf '%b\n%b' "$hdr" "$val"
