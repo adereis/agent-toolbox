@@ -2,6 +2,14 @@
 
 A collection of reusable extensions for Claude Code: agents, skills, hooks, and scripts.
 
+## Statusline
+
+The most-used piece here. Two rows — dim headers over colored values — putting context fill, session cost, and every rate-limit window `/usage` tracks in front of you without opening `/usage`.
+
+![Claude Code statusline showing branch, model, effort, session, cost, and quota columns](settings/statusline.png)
+
+Columns adapt to the setup: vim mode only when it is on, quota columns only on a subscription, one column per per-model weekly bucket the API reports. See [settings/README.md](settings/README.md) for the full column reference and installation.
+
 ## Related
 
 - [claude-sandbox](https://github.com/adereis/claude-sandbox) - Containerized environment for running Claude Code in autonomous mode
