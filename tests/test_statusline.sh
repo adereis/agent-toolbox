@@ -11,6 +11,21 @@ export CLAUDE_USAGE_CACHE="$FIXTURES/absent.json"
 export CLAUDE_USAGE_FALLBACK="$FIXTURES/absent.json"
 export CLAUDE_USAGE_REFRESH="$FIXTURES/no-such-refresher"
 
+# Same reason, for the profile column: it reads the real OAuth credentials to
+# name the plan, so point it at a fixture and clear the two variables that
+# would otherwise let the developer's own backend decide the answer.
+export CLAUDE_USAGE_CREDS="$FIXTURES/absent-creds.json"
+unset CLAUDE_CODE_USE_VERTEX ANTHROPIC_API_KEY
+
+# OAuth credentials in the shape Claude Code writes them. The token is here
+# because the real file has one and the column must ignore it, not because
+# anything reads it.
+creds() {
+    printf '{"claudeAiOauth":{"accessToken":"sk-ant-oat-EXAMPLE-NOT-A-REAL-TOKEN","subscriptionType":%s,"rateLimitTier":%s}}' \
+        "$1" "$2" > "$FIXTURES/creds.json"
+    export CLAUDE_USAGE_CREDS="$FIXTURES/creds.json"
+}
+
 # Write a usage snapshot aged $1 seconds, in the shape statusline-usage.sh
 # produces. $3 wraps it as Claude Code's ~/.claude.json when set.
 snapshot() {
@@ -199,5 +214,59 @@ assert_output_contains "max"
 test_begin "omits the effort column when the model exposes no effort parameter"
 run_hook "$SCRIPT" '{"workspace":{"current_dir":"'"$PWD"'"},"context_window":{},"cost":{}}'
 assert_output_lacks "effort"
+
+# ── Profile (plan / backend) ─────────────────────────────────────────
+# subscriptionType names the family and rateLimitTier the Max multiplier; the
+# column is the two read together, because neither alone identifies the plan.
+
+PROFILE_IN='{"workspace":{"current_dir":"'"$PWD"'"},"context_window":{},"cost":{}}'
+
+test_begin "names the Max multiplier, not just the plan family"
+creds '"max"' '"default_claude_max_5x"'
+run_hook "$SCRIPT" "$PROFILE_IN"
+assert_output_contains "max 5x"
+
+test_begin "distinguishes Max 20x from Max 5x"
+creds '"max"' '"default_claude_max_20x"'
+run_hook "$SCRIPT" "$PROFILE_IN"
+assert_output_contains "max 20x"
+
+test_begin "falls back to the bare family when the tier is missing"
+creds '"max"' 'null'
+run_hook "$SCRIPT" "$PROFILE_IN"
+assert_output_contains "max"
+assert_output_lacks "5x"
+
+test_begin "shows pro without a multiplier"
+creds '"pro"' '"default_claude_zero"'
+run_hook "$SCRIPT" "$PROFILE_IN"
+assert_output_contains "pro"
+assert_output_lacks "zero"
+
+test_begin "passes an unrecognised plan family through unchanged"
+creds '"team"' 'null'
+run_hook "$SCRIPT" "$PROFILE_IN"
+assert_output_contains "team"
+
+test_begin "never leaks the access token sitting beside the plan fields"
+creds '"max"' '"default_claude_max_5x"'
+run_hook "$SCRIPT" "$PROFILE_IN"
+assert_output_lacks "sk-ant-oat"
+
+test_begin "Vertex overrides the plan even with credentials present"
+creds '"max"' '"default_claude_max_5x"'
+CLAUDE_CODE_USE_VERTEX=1 run_hook "$SCRIPT" "$PROFILE_IN"
+assert_output_contains "vertex"
+assert_output_lacks "max 5x"
+unset CLAUDE_CODE_USE_VERTEX
+
+test_begin "reports a key-based backend as api when there are no credentials"
+export CLAUDE_USAGE_CREDS="$FIXTURES/absent-creds.json"
+ANTHROPIC_API_KEY=sk-ant-example run_hook "$SCRIPT" "$PROFILE_IN"
+assert_output_contains "api"
+
+test_begin "drops the profile column when nothing identifies the backend"
+run_hook "$SCRIPT" "$PROFILE_IN"
+assert_output_lacks "profile"
 
 test_summary "statusline"

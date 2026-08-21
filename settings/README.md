@@ -13,7 +13,7 @@ A two-row columnar statusline with dim headers and colored values. Adapts to you
 **Example output** (with vim mode enabled):
 ```
 mode   workspace            branch   model    effort   session   cost    ↻14:30   week   fable   profile   memory
-[NOR]  ~/projects/my-app    main*+%  Opus 5   max      23%       $1.23   42%      40%    17%     pro       312.5 MB
+[NOR]  ~/projects/my-app    main*+%  Opus 5   max      23%       $1.23   42%      40%    17%     max 5x    312.5 MB
 ```
 
 Columns are grouped by what they describe: the conversation (`session`, `cost`),
@@ -36,7 +36,7 @@ resets at (`↻14:30`), so the deadline costs no extra width.
 | ↻*HH:MM* | Green→Yellow→Red | 5-hour rate limit usage (subscription only — absent on API/Vertex). The header is the local time the window resets, read from `resets_at` in the same payload; it falls back to `quota` when that field is absent |
 | week | Green→Yellow→Red | 7-day all-models rate limit usage (subscription only) |
 | *model name* | Green→Yellow→Red | 7-day per-model limit, one column per bucket the API reports (e.g. `fable`). Requires `statusline-usage.sh` — see below |
-| profile | Cyan/Yellow | `pro` (subscription) or `vertex` (Vertex AI) |
+| profile | Cyan/Yellow/Dim | Which account this session bills to: the exact plan on a subscription (`pro`, `max 5x`, `max 20x`, `team`, …), `vertex` on Vertex AI, or a dim `api` for a key-based backend. The plan is not in the status line payload — it is read from `subscriptionType` + `rateLimitTier` in `~/.claude/.credentials.json`, the same pair Claude Code uses to tell Max 20x from Max 5x. Only those two fields are read; the access token beside them is never touched. The column disappears when nothing identifies the backend |
 | memory | Cyan | Claude Code process RSS memory |
 
 **Color thresholds** (session, quota, week, per-model):

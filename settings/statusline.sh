@@ -177,12 +177,57 @@ if [ -n "$cwd" ] && git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1; then
   git_val="${branch}${d}${s}${u}"
 fi
 
-# ── Profile (vertex / subscription) ─────────────────────────────────
+# ── Profile — backend, or the exact subscription plan ────────────────
+#
+# The status line payload carries no account information: it stops at model,
+# context, cost, effort and rate limits. The plan lives in the OAuth credentials
+# Claude Code writes, split across two fields — subscriptionType is the family
+# (pro / max / team / enterprise) and rateLimitTier carries the Max multiplier.
+# Claude Code decides "is this Max 20x" from exactly that pair, so we read the
+# same two, and only those two: the access token sits beside them in the file
+# and never enters a variable, a command line, or the output.
+#
+# Its own jq call rather than a field on one of the calls above — sharing an
+# invocation would mean feeding the credentials file to a filter that also
+# handles data we print, for no saved work.
+#
+# ~/.claude.json's oauthAccount.organizationType looks like it would answer this
+# in one field, but it reads "claude_pro" on a Max account: it names the org's
+# product, not the seat's plan.
 
+CREDS_FILE="${CLAUDE_USAGE_CREDS:-$HOME/.claude/.credentials.json}"
+
+profile_val="" profile_clr="\033[36m" sub_type="" rl_tier=""
 if [ -n "${CLAUDE_CODE_USE_VERTEX:-}" ] && [ "${CLAUDE_CODE_USE_VERTEX}" != '0' ]; then
   profile_val="vertex"  profile_clr="\033[33m"
 else
-  profile_val="pro"     profile_clr="\033[36m"
+  if [ -r "$CREDS_FILE" ]; then
+    { read -r sub_type; read -r rl_tier; } < <(jq -r '
+        def val: if . == null then "" else tostring end;
+        (.claudeAiOauth.subscriptionType | val),
+        (.claudeAiOauth.rateLimitTier | val)' "$CREDS_FILE" 2>/dev/null)
+  fi
+  case "$sub_type" in
+    # Match the multiplier by suffix, not the whole tier string: the prefix is
+    # Anthropic's internal plan id (default_claude_max_20x today) and only the
+    # ×N part is what the column is reporting.
+    max) case "$rl_tier" in
+           *_20x) profile_val="max 20x" ;;
+           *_5x)  profile_val="max 5x"  ;;
+           *)     profile_val="max"     ;;
+         esac ;;
+    # pro / team / enterprise need no decoding — the API's own word is the name
+    # a user would use for the plan. An unrecognised future value passes through
+    # intact rather than being flattened into a wrong guess.
+    "") ;;
+    *)  profile_val="$sub_type" ;;
+  esac
+  # No OAuth credentials at all means a key-based backend rather than a plan.
+  # Naming it keeps the column's promise — "which account is this session on" —
+  # instead of leaving a gap that reads like a bug.
+  if [ -z "$profile_val" ] && [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+    profile_val="api"  profile_clr="\033[2m"
+  fi
 fi
 
 # ── Session — context window fill, colored by usage tier ─────────────
@@ -355,9 +400,10 @@ col "workspace" "$short_cwd" "${BOLD}\033[34m"
 for i in "${!scoped_vals[@]}"; do
                        col "${scoped_hdrs[$i]}" "${scoped_vals[$i]}" "${scoped_clrs[$i]}"
 done
-# profile last — a fixed pro/vertex marker earns less width than the live
-# columns, so it sits out of the way beside memory rather than up front.
-                       col "profile"    "$profile_val" "$profile_clr"
+# profile last — a near-fixed plan marker earns less width than the live
+# columns, so it sits out of the way beside memory rather than up front. It
+# drops out when nothing identifies the backend, like every other column.
+[ -n "$profile_val" ] && col "profile" "$profile_val" "$profile_clr"
 [ -n "$mem_val" ]   && col "memory"     "$mem_val"     "\033[36m"
 
 printf '%b\n%b' "$hdr" "$val"
