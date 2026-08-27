@@ -41,6 +41,8 @@ For each extension type:
 - This command (`sync.md`) lives only in `.claude/commands/` - do NOT sync it
 - Only sync from project root directories (`commands/`, `agents/`, `skills/`, `hooks/`, `settings/`), not `.claude/commands/`
 - Skills are directories - compare all files within each skill
+- Agents: sync only agent `.md` files, not `README.md`
+- Agents: `jira.md` is environment-specific (its `mcpServers` command is a machine-local path) and lives only in `~/.claude/agents/` — do not copy it into the repo or overwrite the local copy
 - Hooks: only sync executable scripts (e.g., `.sh`), not README.md
 - Settings: only sync executable scripts (e.g., `.sh`), not README.md. Target is the `~/.claude/` root directly (flat), not a `~/.claude/settings/` subdirectory
 - After syncing, remind user to commit changes in git

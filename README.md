@@ -48,7 +48,7 @@ claude-code-extensions/
 
 - **Hooks**: Copy scripts to `~/.claude/hooks/` and add configuration to `~/.claude/settings.json` (see `hooks/README.md` for each hook's config)
 - **Skills**: Copy skill directories to `~/.claude/skills/`
-- **Agents**: Copy agent files to `~/.claude/agents/`
+- **Agents**: Copy agent files to `~/.claude/agents/` (see `agents/README.md`)
 - **Settings**: Copy scripts to `~/.claude/` and add configuration to `~/.claude/settings.json` (see `settings/README.md`)
 - **Scripts**: Run directly or copy to a directory in your `$PATH` (see `scripts/README.md`)
 
