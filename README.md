@@ -9,6 +9,7 @@ harnesses; each component documents where it works.
 | Component | Harness | Documentation |
 |-----------|---------|---------------|
 | Session history and resume | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md) |
+| Session history and resume | Codex | [Codex integration](harnesses/codex/README.md) |
 | Memory export, import, and status | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-memory--memory-portability) |
 | Statusline and quota display | Claude Code | [Settings](harnesses/claude-code/settings/README.md) |
 | Hooks | Claude Code | [Hooks](harnesses/claude-code/hooks/README.md) |
