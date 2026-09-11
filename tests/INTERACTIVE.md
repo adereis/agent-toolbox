@@ -41,7 +41,7 @@ time against `/usage`, and check that the two rows stay column-aligned (the
 
 ## IT-06: Jira MCP is scoped to the `jira` agent (Sonnet only)
 
-Verifies the "model-scoped MCP agent" pattern (see `agents/README.md`).
+Verifies the "model-scoped MCP agent" pattern (see `harnesses/claude-code/agents/README.md`).
 
 **Prereq:** `~/.claude/agents/jira.md` exists with `model: sonnet` and an
 `atlassian` server under `mcpServers`, and `atlassian` is removed from global

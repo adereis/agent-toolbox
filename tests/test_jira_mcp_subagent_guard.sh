@@ -1,7 +1,7 @@
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
-HOOK="$SCRIPT_DIR/../hooks/jira-mcp-subagent-guard.sh"
+HOOK="$SCRIPT_DIR/../harnesses/claude-code/hooks/jira-mcp-subagent-guard.sh"
 
 test_begin "Main agent (no agent_id) is blocked"
 run_hook "$HOOK" '{"tool_name":"mcp__atlassian__jira_search","tool_input":{"jql":"project = TEST"}}'

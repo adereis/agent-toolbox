@@ -1,7 +1,7 @@
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
-HOOK="$SCRIPT_DIR/../hooks/continue-plan.sh"
+HOOK="$SCRIPT_DIR/../harnesses/claude-code/hooks/continue-plan.sh"
 
 # Use isolated state dir to avoid interfering with real state
 export XDG_STATE_HOME=$(mktemp -d)

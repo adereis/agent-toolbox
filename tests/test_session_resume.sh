@@ -12,7 +12,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
-SCRIPT="$SCRIPT_DIR/../scripts/claude-code-session-resume.py"
+SCRIPT="$SCRIPT_DIR/../harnesses/claude-code/scripts/claude-code-session-resume.py"
 
 test_begin "session-resume parsing"
 

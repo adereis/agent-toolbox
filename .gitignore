@@ -1,5 +1,7 @@
 # Local settings
 .claude/settings.local.json
+.envrc
+.venv/
 
 # Temporary files
 *.tmp

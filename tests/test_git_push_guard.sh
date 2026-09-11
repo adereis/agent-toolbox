@@ -1,7 +1,7 @@
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
-HOOK="$SCRIPT_DIR/../hooks/git-push-guard.sh"
+HOOK="$SCRIPT_DIR/../harnesses/claude-code/hooks/git-push-guard.sh"
 
 test_begin "git push triggers ask"
 run_hook "$HOOK" '{"tool_name":"Bash","tool_input":{"command":"git push origin main"}}'

@@ -13,7 +13,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
-SCRIPT="$SCRIPT_DIR/../settings/statusline-usage.sh"
+SCRIPT="$SCRIPT_DIR/../harnesses/claude-code/settings/statusline-usage.sh"
 
 WORK=$(mktemp -d)
 FAKE_PID=""

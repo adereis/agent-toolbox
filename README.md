@@ -1,56 +1,52 @@
-# Claude Code Extensions
+# Agent Toolbox
 
-A collection of reusable extensions for Claude Code: agents, skills, hooks, and scripts.
+Reusable tools, prompts, instructions, skills, and hooks for coding agents.
+Shared components live alongside explicit integrations for individual
+harnesses; each component documents where it works.
 
-## Statusline
+## Available components
 
-The most-used piece here. Two rows — dim headers over colored values — putting context fill, session cost, and every rate-limit window `/usage` tracks in front of you without opening `/usage`.
+| Component | Harness | Documentation |
+|-----------|---------|---------------|
+| Session history and resume | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md) |
+| Memory export, import, and status | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-memory--memory-portability) |
+| Statusline and quota display | Claude Code | [Settings](harnesses/claude-code/settings/README.md) |
+| Hooks | Claude Code | [Hooks](harnesses/claude-code/hooks/README.md) |
+| Agents and skills | Claude Code | [Agents](harnesses/claude-code/agents/README.md) |
 
-![Claude Code statusline showing branch, model, effort, session, cost, and quota columns](settings/statusline.png)
+## Installation
 
-Columns adapt to the setup: vim mode only when it is on, quota columns only on a subscription, one column per per-model weekly bucket the API reports. See [settings/README.md](settings/README.md) for the full column reference and installation.
+Claude Code components are under `harnesses/claude-code/`. From this checkout,
+run `/sync` in Claude Code to compare the collection with your user
+configuration. Individual component READMEs describe manual installation.
+Session utilities run from a terminal; use `--list` to inspect history without
+launching an interactive agent.
+
+## Repository layout
+
+```text
+agent-toolbox/
+├── harnesses/
+│   └── claude-code/       # Claude hooks, skills, agents, settings, utilities
+├── tests/                # Automated and live integration checks
+├── AGENTS.md             # Repository development conventions
+├── CLAUDE.md             # Claude entry point to those conventions
+└── README.md             # Catalog and installation
+```
+
+## Migration from Claude Code Extensions
+
+The existing Git history is retained. The `claude-code-baseline` tag marks
+the collection before this migration. Source directories formerly at the
+repository root now live under `harnesses/claude-code/`; update any links or
+scripts that refer to checkout paths. Installed `~/.claude/` paths are
+unchanged by this source reorganization.
 
 ## Related
 
-- [claude-sandbox](https://github.com/adereis/claude-sandbox) - Containerized environment for running Claude Code in autonomous mode
-- [mcp-servers](https://github.com/adereis/mcp-servers) - MCP servers (protocol layer, portable across clients)
-
-## Extension Types
-
-This repo covers Claude Code's extension points:
-
-| Type | Description |
-|------|-------------|
-| Hooks | Event handlers that modify Claude's behavior |
-| Skills | Reusable capabilities invoked via `/skill-name` (includes custom slash commands) |
-| Agents | Specialized AI for specific tasks |
-| Settings | Useful settings.json configurations (statusline, etc.) |
-| Scripts | Standalone tools that complement Claude Code |
-
-## Structure
-
-```
-claude-code-extensions/
-├── hooks/            # Event handlers
-├── skills/           # Slash commands and auto-invoked capabilities
-├── agents/           # Specialized AI for specific tasks
-├── settings/         # Settings.json configurations
-├── scripts/          # Standalone tools (memory sync, session-resume, etc.)
-├── README.md         # This file
-└── CLAUDE.md         # Workflow and conventions
-```
-
-## Installing
-
-**Using `/sync`** (recommended): From this project directory, run `/sync` inside Claude Code. It syncs all extension types (commands, agents, skills, hooks, settings) to `~/.claude/`, detects conflicts, and verifies hook enablement in `settings.json`.
-
-**Manual installation:**
-
-- **Hooks**: Copy scripts to `~/.claude/hooks/` and add configuration to `~/.claude/settings.json` (see `hooks/README.md` for each hook's config)
-- **Skills**: Copy skill directories to `~/.claude/skills/`
-- **Agents**: Copy agent files to `~/.claude/agents/` (see `agents/README.md`)
-- **Settings**: Copy scripts to `~/.claude/` and add configuration to `~/.claude/settings.json` (see `settings/README.md`)
-- **Scripts**: Run directly or copy to a directory in your `$PATH` (see `scripts/README.md`)
+- [mcp-servers](https://github.com/adereis/mcp-servers): reusable MCP servers.
+- [claude-sandbox](https://github.com/adereis/claude-sandbox): a containerized
+  Claude Code environment.
 
 ## License
 

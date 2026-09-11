@@ -10,11 +10,11 @@ Sync extensions between this project and the global ~/.claude/ directory.
 
 | Type | Project | Global |
 |------|---------|--------|
-| Commands | `commands/` | `~/.claude/commands/` |
-| Agents | `agents/` | `~/.claude/agents/` |
-| Skills | `skills/` | `~/.claude/skills/` |
-| Hooks | `hooks/` | `~/.claude/hooks/` |
-| Settings | `settings/*.sh` | `~/.claude/` (flat, e.g. `statusline.sh`) |
+| Commands | `harnesses/claude-code/commands/` | `~/.claude/commands/` |
+| Agents | `harnesses/claude-code/agents/` | `~/.claude/agents/` |
+| Skills | `harnesses/claude-code/skills/` | `~/.claude/skills/` |
+| Hooks | `harnesses/claude-code/hooks/` | `~/.claude/hooks/` |
+| Settings | `harnesses/claude-code/settings/*.sh` | `~/.claude/` (flat, e.g. `statusline.sh`) |
 
 ## Task
 
@@ -39,7 +39,7 @@ For each extension type:
 ## Important
 
 - This command (`sync.md`) lives only in `.claude/commands/` - do NOT sync it
-- Only sync from project root directories (`commands/`, `agents/`, `skills/`, `hooks/`, `settings/`), not `.claude/commands/`
+- Only sync from harnesses/claude-code directories (`harnesses/claude-code/commands/`, `harnesses/claude-code/agents/`, `harnesses/claude-code/skills/`, `harnesses/claude-code/hooks/`, `harnesses/claude-code/settings/`), not `.claude/commands/`
 - Skills are directories - compare all files within each skill
 - Agents: sync only agent `.md` files, not `README.md`
 - Agents: `jira.md` is environment-specific (its `mcpServers` command is a machine-local path) and lives only in `~/.claude/agents/` — do not copy it into the repo or overwrite the local copy
@@ -56,7 +56,7 @@ After syncing hooks, verify they're enabled in `~/.claude/settings.json`:
 3. Report status:
    - ✓ Enabled (appears in settings.json)
    - ⚠ Not enabled (file exists but not configured)
-4. For hooks not enabled: ask user if they want you to add the configuration to settings.json (use `hooks/README.md` as reference for the correct snippet)
+4. For hooks not enabled: ask user if they want you to add the configuration to settings.json (use `harnesses/claude-code/hooks/README.md` as reference for the correct snippet)
 
 ## Settings Enablement Check
 
@@ -67,4 +67,4 @@ After syncing settings, verify they're configured in `~/.claude/settings.json`:
 3. Report status:
    - ✓ Configured (referenced in settings.json)
    - ⚠ Not configured (file exists but not wired up)
-4. For settings not configured: ask user if they want you to add the configuration (use `settings/README.md` as reference for the correct snippet)
+4. For settings not configured: ask user if they want you to add the configuration (use `harnesses/claude-code/settings/README.md` as reference for the correct snippet)

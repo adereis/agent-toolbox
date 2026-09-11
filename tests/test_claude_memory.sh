@@ -7,9 +7,9 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
 
-EXPORT="$SCRIPT_DIR/../scripts/claude-memory-export.sh"
-IMPORT="$SCRIPT_DIR/../scripts/claude-memory-import.sh"
-STATUS="$SCRIPT_DIR/../scripts/claude-memory-status.sh"
+EXPORT="$SCRIPT_DIR/../harnesses/claude-code/scripts/claude-memory-export.sh"
+IMPORT="$SCRIPT_DIR/../harnesses/claude-code/scripts/claude-memory-import.sh"
+STATUS="$SCRIPT_DIR/../harnesses/claude-code/scripts/claude-memory-status.sh"
 
 # --- Test environment setup ---
 

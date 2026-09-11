@@ -1,7 +1,7 @@
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
-HOOK="$SCRIPT_DIR/../hooks/test-edit-guard.sh"
+HOOK="$SCRIPT_DIR/../harnesses/claude-code/hooks/test-edit-guard.sh"
 
 # Ensure debug log dir exists
 mkdir -p ~/tmp

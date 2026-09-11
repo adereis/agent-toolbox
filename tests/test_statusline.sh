@@ -1,7 +1,7 @@
 #!/bin/bash
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
-SCRIPT="$SCRIPT_DIR/../settings/statusline.sh"
+SCRIPT="$SCRIPT_DIR/../harnesses/claude-code/settings/statusline.sh"
 
 # Keep the suite hermetic. Without these the status line would read the real
 # usage snapshot and spawn the real refresher, i.e. hit the network from a test.

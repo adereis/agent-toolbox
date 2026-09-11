@@ -20,19 +20,19 @@ to print the history and exit without the interactive resume prompt.
 
 ```bash
 # Sessions for the current project, newest last (interactive)
-python3 scripts/claude-code-session-resume.py
+python3 harnesses/claude-code/scripts/claude-code-session-resume.py
 
 # All projects, more entries, with edited files
-python3 scripts/claude-code-session-resume.py --all -n 20 -v
+python3 harnesses/claude-code/scripts/claude-code-session-resume.py --all -n 20 -v
 
 # Just view, no prompt (pipe-friendly)
-python3 scripts/claude-code-session-resume.py --list --all | less
+python3 harnesses/claude-code/scripts/claude-code-session-resume.py --list --all | less
 ```
 
 To run it from anywhere, symlink it onto your `PATH`:
 
 ```bash
-ln -s "$PWD/scripts/claude-code-session-resume.py" ~/bin/
+ln -s "$PWD/harnesses/claude-code/scripts/claude-code-session-resume.py" ~/bin/
 ```
 
 ## claude-memory — Memory Portability
@@ -80,13 +80,13 @@ Exports memories from your local Claude Code data to the portable directory. Sca
 
 ```bash
 # Export all project memories
-./scripts/claude-memory-export.sh
+./harnesses/claude-code/scripts/claude-memory-export.sh
 
 # Export with custom paths
-./scripts/claude-memory-export.sh --dir ~/sync/claude-memories --projects-dir ~/code
+./harnesses/claude-code/scripts/claude-memory-export.sh --dir ~/sync/claude-memories --projects-dir ~/code
 
 # Skip work-specific projects
-./scripts/claude-memory-export.sh --skip work/ --skip scratch/
+./harnesses/claude-code/scripts/claude-memory-export.sh --skip work/ --skip scratch/
 ```
 
 **Output** (tab-separated):
@@ -103,13 +103,13 @@ Imports memories from the portable directory to your local Claude Code data. Com
 
 ```bash
 # Import all memories
-./scripts/claude-memory-import.sh
+./harnesses/claude-code/scripts/claude-memory-import.sh
 
 # Import from custom portable directory
-./scripts/claude-memory-import.sh --dir ~/sync/claude-memories
+./harnesses/claude-code/scripts/claude-memory-import.sh --dir ~/sync/claude-memories
 
 # Skip projects you don't have locally
-./scripts/claude-memory-import.sh --skip proprietary-work/
+./harnesses/claude-code/scripts/claude-memory-import.sh --skip proprietary-work/
 ```
 
 **Output** (tab-separated):
@@ -126,10 +126,10 @@ Shows sync status between your local memories and the portable directory. Two-wa
 
 ```bash
 # Show what's different
-./scripts/claude-memory-status.sh
+./harnesses/claude-code/scripts/claude-memory-status.sh
 
 # Filter output to only differences
-./scripts/claude-memory-status.sh | grep -v '^OK'
+./harnesses/claude-code/scripts/claude-memory-status.sh | grep -v '^OK'
 ```
 
 **Output** (tab-separated):

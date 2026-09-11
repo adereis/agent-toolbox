@@ -1,11 +1,11 @@
 #!/bin/bash
-# Tests for the BASE detection logic used in agents/commit-reviewer.md
+# Tests for the BASE detection logic used in harnesses/claude-code/agents/commit-reviewer.md
 # Creates temporary git repos to verify correct base branch detection.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
 
-# The BASE detection command from agents/commit-reviewer.md
+# The BASE detection command from harnesses/claude-code/agents/commit-reviewer.md
 detect_base() {
     BASE=$(git rev-parse --abbrev-ref @{upstream} 2>/dev/null || { git rev-parse --verify main >/dev/null 2>&1 && echo main; } || echo master)
     echo "$BASE"
