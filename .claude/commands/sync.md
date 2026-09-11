@@ -68,3 +68,7 @@ After syncing settings, verify they're configured in `~/.claude/settings.json`:
    - ✓ Configured (referenced in settings.json)
    - ⚠ Not configured (file exists but not wired up)
 4. For settings not configured: ask user if they want you to add the configuration (use `harnesses/claude-code/settings/README.md` as reference for the correct snippet)
+
+Never re-import retired components from user configuration: tmp-write-guard,
+tmp-home-allow, test-edit-guard, continue-plan, commit-reviewer, web-ui-verifier,
+commit-review, or web-ui-verify. See docs/migration.md for retirement guidance.

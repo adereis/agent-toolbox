@@ -1,17 +1,12 @@
-# Agents
+# Claude Code agent configuration examples
 
-Specialized subagents Claude Code can delegate to. Copy an agent file to
-`~/.claude/agents/` (or use `/sync`) to make it available. Each agent is a
-Markdown file with YAML frontmatter (`name`, `description`, `tools`, `model`,
-optional `mcpServers`) followed by the agent's system prompt.
+Agent Toolbox no longer ships the commit-reviewer or web-ui-verifier agents
+or their delegation skills. Use the optional [review prompts](../../../prompts/README.md)
+with the tools and review facilities available in your harness.
 
-| Agent | Purpose |
-|-------|---------|
-| `commit-reviewer.md` | Post-commit code review (hygiene, security, perf, docs, tests). Runs on Sonnet. |
-| `web-ui-verifier.md` | Verifies web UI changes in a live browser. |
-| `jira` (template below) | All Jira/Atlassian work, hard-scoped to this agent and pinned to Sonnet. Environment-specific — not shipped as a file. |
-
----
+The machine-specific Jira agent remains local configuration. The example
+below documents that Claude-specific integration; it is not an installed
+agent or a portable permission policy.
 
 ## Pattern: model-scoped MCP agent ("Layer 0")
 

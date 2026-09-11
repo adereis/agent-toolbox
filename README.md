@@ -12,7 +12,8 @@ harnesses; each component documents where it works.
 | Memory export, import, and status | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-memory--memory-portability) |
 | Statusline and quota display | Claude Code | [Settings](harnesses/claude-code/settings/README.md) |
 | Hooks | Claude Code | [Hooks](harnesses/claude-code/hooks/README.md) |
-| Agents and skills | Claude Code | [Agents](harnesses/claude-code/agents/README.md) |
+| Review and browser verification prompts | Any harness accepting text prompts | [Prompts](prompts/README.md) |
+| Agent configuration examples | Claude Code | [Agents](harnesses/claude-code/agents/README.md) |
 
 ## Installation
 
