@@ -1,18 +1,21 @@
 # Scripts
 
-Standalone tools that extend Claude Code. Copy individual scripts to `~/.claude/scripts/` or run them directly from this directory.
+Utilities for Claude Code. Run them from this checkout or use symlinks.
+Keep the checkout intact: session recovery imports the shared
+`tools/_session_resume.py` module, and the memory scripts need their sibling
+`claude-memory-lib.sh`. Copying just an entry point is insufficient.
 
 ## claude-code-session-resume.py
 
 Smart session resume with enriched history. For each recent session it shows the
 session title (the AI-generated or renamed name from `/resume`), an arc of
-prompts, and every git commit made during the session; `-v` adds edited files.
+prompts, and recognized git commit results from the session; `-v` adds edited files.
 
 **Run it from a shell, not from inside Claude Code.** When you pick a session it
 `exec`s `claude --resume <id>` in place, so it must be your terminal's foreground
 process — that can't work as a slash command from within a running session
 (and Claude Code's built-in `/resume` already covers the in-session case). A
-shell alias is the natural home, e.g. `alias ccr='python3 ~/.claude/scripts/claude-code-session-resume.py'`.
+shell alias is the natural home, e.g. an alias to this checkout's script or an installed symlink.
 
 Colors are emitted only on a terminal, so `| less` and file redirects stay
 clean (override with `--color always|never`, or honor `NO_COLOR`). Use `--list`
@@ -28,6 +31,25 @@ python3 harnesses/claude-code/scripts/claude-code-session-resume.py --all -n 20 
 # Just view, no prompt (pipe-friendly)
 python3 harnesses/claude-code/scripts/claude-code-session-resume.py --list --all | less
 ```
+
+
+`--claude-dir PATH` selects a separate Claude configuration directory;
+otherwise the utility honors `CLAUDE_CONFIG_DIR` and then `~/.claude`. The
+selected store is passed to the resumed child process. Cached index paths
+never redirect reads into another profile. Sessions are ordered by transcript
+file modification time, with the newest displayed last.
+
+`--json` emits a machine-readable listing. Piped output never starts an
+interactive session, even without `--list`. Counts must be positive. If the
+recorded project directory is gone, use `--resume-cwd PATH` to choose its
+replacement explicitly; the utility does not silently switch projects.
+
+Malformed or incomplete JSONL records produce warnings while other records
+remain usable. Custom titles and all text blocks in a user prompt are shown;
+injected metadata is omitted. Edited files require a successful tool result.
+Commit extraction is best effort for recognized shell calls; quiet commits
+may have only a summary. Distinct observed SHAs remain visible even when
+subjects match, including commits later replaced by an amend or reset.
 
 To run it from anywhere, symlink it onto your `PATH`:
 

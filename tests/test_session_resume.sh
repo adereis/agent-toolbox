@@ -125,7 +125,7 @@ qrecs += qc("Q1",
     "done: aaaaaaa\naaaaaaa feat: alpha")
 # Quiet commit via -m, success, NO echoed SHA -> summary shown without a SHA.
 qrecs += qc("Q2", 'git commit -q -m "feat: beta"', "")
-# Soft-reset then redo the same summary, new SHA -> dedup keeps the final SHA.
+# Soft-reset then redo the same summary: retain both observed commit SHAs.
 qrecs += qc("Q3",
     "git reset --soft HEAD~1\ngit commit -q -F - <<'EOF'\nfeat: alpha\nEOF\n"
     'echo "redo: $(git log -1 --format=%h)"',
@@ -142,7 +142,7 @@ qp = m.parse_session_jsonl(fp)
 os.unlink(fp)
 qcommits = qp["git_commits"]
 print("q_ncommits=" + str(len(qcommits)))
-print("q_alpha_sha=" + next((sha for sha, s in qcommits if s == "feat: alpha"), "NONE"))
+print("q_alpha_shas=" + ",".join(sha for sha, s in qcommits if s == "feat: alpha"))
 print("q_beta=" + next((f"{sha or 'NOSHA'}:{s}" for sha, s in qcommits if s == "feat: beta"), "NONE"))
 print("q_failed_dropped=" + b(not any(s == "feat: never happened" for _, s in qcommits)))
 print("q_body_not_summary=" + b(not any(s == "body" for _, s in qcommits)))
@@ -186,10 +186,10 @@ assert_output_contains "sha_anchored=9abcdef"
 assert_output_contains "sha_wrongsummary=1111111"
 assert_output_contains "sha_missing=EMPTY"
 
-# Quiet commits end-to-end: alpha (soft-reset redo wins final SHA), beta has no
+# Quiet commits end-to-end: retain both observed alpha SHAs; beta has no
 # echoed SHA, failed commit dropped, heredoc body never mistaken for a summary.
-assert_output_contains "q_ncommits=2"
-assert_output_contains "q_alpha_sha=ccccccc"
+assert_output_contains "q_ncommits=3"
+assert_output_contains "q_alpha_shas=aaaaaaa,ccccccc"
 assert_output_contains "q_beta=NOSHA:feat: beta"
 assert_output_contains "q_failed_dropped=True"
 assert_output_contains "q_body_not_summary=True"
