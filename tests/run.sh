@@ -1,34 +1,37 @@
 #!/bin/bash
-# Test runner: executes all automated test_*.sh files
-# Usage: ./tests/run.sh [test_name]  — run all, or a specific test file
-
+# Run the shell and Python suites with private temporary files under ~/tmp.
+set -u
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-overall_fail=0
+mkdir -p "$HOME/tmp" || exit 1
+TMPDIR=$(mktemp -d "$HOME/tmp/agent-toolbox-tests.XXXXXXXX") || exit 1
+export TMPDIR
+trap 'rm -rf -- "$TMPDIR"' EXIT
 
-if [ -n "$1" ]; then
-    # Run specific test
-    test_file="$SCRIPT_DIR/test_${1}.sh"
-    if [ ! -f "$test_file" ]; then
-        test_file="$SCRIPT_DIR/$1"
+overall_fail=0
+if [ -n "${1:-}" ]; then
+    name="${1#test_}"
+    name="${name%.sh}"
+    name="${name%.py}"
+    if [ -f "$SCRIPT_DIR/test_${name}.sh" ]; then
+        bash "$SCRIPT_DIR/test_${name}.sh"
+        exit $?
+    elif [ -f "$SCRIPT_DIR/test_${name}.py" ]; then
+        python3 -m unittest discover -s "$SCRIPT_DIR" -p "test_${name}.py"
+        exit $?
     fi
-    if [ ! -f "$test_file" ]; then
-        echo "Test not found: $1"
-        exit 1
-    fi
-    bash "$test_file"
-    exit $?
+    echo "Test not found: $1" >&2
+    exit 1
 fi
 
-# Run all test files
 for test_file in "$SCRIPT_DIR"/test_*.sh; do
-    bash "$test_file"
-    [ $? -ne 0 ] && overall_fail=1
+    [ "$test_file" = "$SCRIPT_DIR/test_helper.sh" ] && continue
+    bash "$test_file" || overall_fail=1
 done
+python3 -m unittest discover -s "$SCRIPT_DIR" -p 'test_*.py' || overall_fail=1
 
-echo ""
 if [ "$overall_fail" -eq 0 ]; then
     echo "All test suites passed."
 else
-    echo "Some tests failed."
+    echo "Some tests failed." >&2
 fi
-exit $overall_fail
+exit "$overall_fail"
