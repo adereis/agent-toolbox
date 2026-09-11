@@ -24,6 +24,8 @@ harnesses; each component documents where it works.
 Choose a harness and scope, then preview the selected components:
 
 ```bash
+git clone https://github.com/adereis/agent-toolbox.git
+cd agent-toolbox
 python3 tools/install.py --harness codex --scope user \
   --component skills --component scripts
 ```
@@ -54,7 +56,9 @@ agent-toolbox/
 
 ## Migration from Claude Code Extensions
 
-The existing Git history is retained. The `claude-code-baseline` tag marks
+The GitHub repository was renamed from `claude-code-extensions` to
+[`agent-toolbox`](https://github.com/adereis/agent-toolbox), retaining its
+history. The `claude-code-baseline` tag marks
 the collection before this migration. Source directories formerly at the
 repository root now live under `harnesses/claude-code/`; update any links or
 scripts that refer to checkout paths. Installed `~/.claude/` paths are

@@ -1,5 +1,16 @@
 # Migration to Agent Toolbox
 
+The repository is now [adereis/agent-toolbox](https://github.com/adereis/agent-toolbox).
+Existing clones can update their remote without changing checkout paths:
+
+```bash
+git remote set-url origin git@github.com:adereis/agent-toolbox.git
+```
+
+Renaming the local checkout directory is optional. If you move it, update
+installed symlinks and aliases to the new location. GitHub redirects the old
+repository URL; keep the old repository name unused to retain that redirect.
+
 The `claude-code-baseline` tag preserves the previous collection. Harness
 components moved from the root into `harnesses/claude-code/`; update any
 checkout-relative paths, aliases, or symlinks you maintain.
@@ -17,6 +28,9 @@ removing the corresponding installed files:
 Check both user and project scopes, including `settings.local.json`. Preserve
 other commands in shared matcher groups. Back up settings and installed
 files before editing; start a fresh Claude session after changing hooks.
+Remove the same obsolete files and registrations from any provisioning or
+dotfile source so a future setup run cannot restore them. Update deployed-file
+tracking records when your provisioning system maintains them.
 
 Directory denial and edit-context examples now live under
 [`examples/claude-code/hooks/`](../examples/claude-code/hooks/README.md). They
