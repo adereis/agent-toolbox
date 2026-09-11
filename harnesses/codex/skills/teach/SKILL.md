@@ -1,0 +1,1 @@
+../../../../skills/teach/SKILL.md

@@ -1,5 +1,10 @@
 # Shared tooling
 
+`install.py` previews and applies scoped symlink installations. See
+[installation](../docs/installation.md) for the command interface and
+supported components. It never deploys reference examples or rewrites
+native configuration files.
+
 `_session_resume.py` provides the common presentation and interactive
 selection used by the harness session utilities. Launch the entry point
 documented under `harnesses/`; this module is not itself a

@@ -1,5 +1,9 @@
 # Codex integration
 
+Use the [scoped installer](../../docs/installation.md) for utilities and the
+shared `teach` skill. The Codex skill adapter preserves explicit invocation
+through `agents/openai.yaml`; it does not change other skill policies.
+
 ## codex-code-session-resume.py
 
 Browse recent local Codex sessions with their titles, a prompt arc, recognized

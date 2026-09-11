@@ -13,23 +13,39 @@ harnesses; each component documents where it works.
 | Memory export, import, and status | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-memory--memory-portability) |
 | Statusline and quota display | Claude Code | [Settings](harnesses/claude-code/settings/README.md) |
 | Hooks | Claude Code | [Hooks](harnesses/claude-code/hooks/README.md) |
+| Teaching skill | Claude Code and Codex | [Shared workflow](skills/teach/SKILL.md) |
 | Review and browser verification prompts | Any harness accepting text prompts | [Prompts](prompts/README.md) |
+| Optional instruction modules | Any harness accepting instruction files | [Instructions](instructions/README.md) |
+| Hook reference examples | Claude Code payloads; not deployed | [Examples](examples/claude-code/hooks/README.md) |
 | Agent configuration examples | Claude Code | [Agents](harnesses/claude-code/agents/README.md) |
 
 ## Installation
 
-Claude Code components are under `harnesses/claude-code/`. From this checkout,
-run `/sync` in Claude Code to compare the collection with your user
-configuration. Individual component READMEs describe manual installation.
-Session utilities run from a terminal; use `--list` to inspect history without
-launching an interactive agent.
+Choose a harness and scope, then preview the selected components:
+
+```bash
+python3 tools/install.py --harness codex --scope user \
+  --component skills --component scripts
+```
+
+Add `--apply` to create the links. Existing conflicting files are preserved.
+See [installation](docs/installation.md) for scope, components, configuration,
+and removal. `/sync` in Claude Code wraps this same installer. Session
+utilities run from a terminal; `--list` and `--json` only inspect history.
 
 ## Repository layout
 
 ```text
 agent-toolbox/
+├── skills/               # Shared workflows
+├── prompts/              # Optional task prompts
+├── instructions/         # Opt-in policy modules
+├── tools/                # Installer and common utility code
 ├── harnesses/
-│   └── claude-code/       # Claude hooks, skills, agents, settings, utilities
+│   ├── claude-code/      # Claude wrappers, hooks, settings, utilities
+│   └── codex/            # Codex wrappers and session utility
+├── examples/             # Reference implementations, excluded from install
+├── docs/                 # Installation and migration
 ├── tests/                # Automated and live integration checks
 ├── AGENTS.md             # Repository development conventions
 ├── CLAUDE.md             # Claude entry point to those conventions
@@ -42,7 +58,9 @@ The existing Git history is retained. The `claude-code-baseline` tag marks
 the collection before this migration. Source directories formerly at the
 repository root now live under `harnesses/claude-code/`; update any links or
 scripts that refer to checkout paths. Installed `~/.claude/` paths are
-unchanged by this source reorganization.
+unchanged by this source reorganization. Follow the
+[migration notes](docs/migration.md) to remove retired installations and
+update session utility links.
 
 ## Related
 
