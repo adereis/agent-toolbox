@@ -6,15 +6,14 @@ Claude Code settings configurations. Add these snippets to your `~/.claude/setti
 
 A two-row columnar statusline with dim headers and colored values. Adapts to your setup — vim mode only appears if enabled, the quota columns only on a subscription, and memory detection works on both Linux and macOS. It mirrors the three windows `/usage` shows: the 5-hour session limit, the weekly all-models limit, and any per-model weekly limit.
 
-![Statusline in a terminal, showing dim headers over colored values](statusline.png)
-
-*Cropped past `workspace`; vim mode is off in this session, so `mode` is absent.*
-
-**Example output** (with vim mode enabled):
+**Illustrative output** (fictitious values, with vim mode enabled):
 ```
-mode   workspace            branch   model    effort   session   cost    ↻14:30   week   fable   profile   memory
-[NOR]  ~/projects/my-app    main*+%  Opus 5   max      23%       $1.23   42%      40%    17%     max 5x    312.5 MB
+mode   workspace            branch   model    effort   session   cost    @14:30   week   model-B   profile   memory
+[NOR]  ~/projects/demo-app  main*    model-A  high     23%       $1.23   42%      40%    17%       example   312.5 MB
 ```
+
+The ASCII `@14:30` represents the reset-time header; the terminal uses a
+clock-arrow symbol. Model and profile labels depend on the actual session.
 
 Columns are grouped by what they describe: the conversation (`session`, `cost`),
 then the plan windows that outlive it (`↻14:30`, `week`, per-model).

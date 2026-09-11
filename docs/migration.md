@@ -38,3 +38,8 @@ rules do not reliably indicate a problem. The useful review and browser
 verification guidance is retained as short, opt-in
 [prompts](../prompts/README.md), without automatic delegation or installation
 of browser dependencies.
+
+## Statusline illustration
+
+The terminal screenshot has been removed. The statusline remains supported;
+its README uses a generic ASCII example with fictitious values.
