@@ -2,7 +2,8 @@
 
 Utilities for Claude Code. Run them from this checkout or use symlinks.
 Keep the checkout intact: session recovery imports the shared
-`tools/_session_resume.py` module, and the memory scripts need their sibling
+`tools/_session_resume.py` module, the release digest imports
+`tools/_whats_new.py`, and the memory scripts need their sibling
 `claude-memory-lib.sh`. Copying just an entry point is insufficient.
 
 ## claude-code-session-resume.py
@@ -56,6 +57,69 @@ To run it from anywhere, symlink it onto your `PATH`:
 ```bash
 ln -s "$PWD/harnesses/claude-code/scripts/claude-code-session-resume.py" ~/bin/
 ```
+
+## claude-code-whats-new.py
+
+Reports the Claude Code releases published since its last digest, tagging each
+changelog entry with the parts of your configuration it touches. It answers
+"does this update affect me", and — with `--topic` — "when did this land".
+
+It is the utility behind the `whats-new` skill, which supplies the judgement
+this script deliberately withholds. Run it directly when you want the raw
+tagged digest.
+
+```bash
+# Everything since the last digest, then record that you have read it
+python3 harnesses/claude-code/scripts/claude-code-whats-new.py
+python3 harnesses/claude-code/scripts/claude-code-whats-new.py --commit
+
+# A fixed window; --relevant-only drops entries matching nothing here
+python3 harnesses/claude-code/scripts/claude-code-whats-new.py --releases 10
+python3 harnesses/claude-code/scripts/claude-code-whats-new.py --months 1 --relevant-only
+
+# Trace a feature, passing every name it has carried
+python3 harnesses/claude-code/scripts/claude-code-whats-new.py \
+    --topic 'auto[- ]mode' --topic 'auto[- ]accept'
+```
+
+**Sources.** The changelog comes from `~/.claude/cache/changelog.md`, which is
+byte-identical to the published `CHANGELOG.md`. That cache is read but never
+written, and it is trusted only when it already contains the running release;
+otherwise the published changelog is fetched and mirrored under
+`~/.cache/agent-toolbox/`, so the hours between a release and the cache
+catching up cost one download rather than one per run. `--offline` forbids the
+network and says when it is falling back to a stale cache. Changelog headings
+carry no dates, so `--days` and `--months` need release dates from the npm
+packument; every other window works without them.
+
+**Correlation.** The digest prints an `## Environment` block — settings,
+permission rules, hooks, plugins, MCP servers, statusline, skills, agents,
+terminal, and platform — and tags each bullet with the signals it matched.
+`[-]` marks an entry no signal matched, which includes genuinely new features,
+so knobs and commands that did not exist are tagged unconditionally rather
+than disappearing under `--relevant-only`. Environment variables contribute
+their names only; values may hold credentials and are never printed.
+
+The terminal is identified from the variables it sets for itself
+(`KITTY_WINDOW_ID`, `WEZTERM_PANE`, `GHOSTTY_RESOURCES_DIR`, and so on),
+falling back to `TERM` only when none is present. This is what Claude Code
+itself does, and it survives a wrapper or profile that rewrites `TERM`; when
+`TERM` does not name the detected terminal the digest says so, because that
+mismatch is a configuration choice with consequences. `tmux` and `screen` are
+tagged separately. Terminal entries are never filtered, since one entry
+commonly names several terminals that share the kitty keyboard protocol.
+
+**What it withholds.** Entries owned by another host or platform (`[VSCode]`
+without an IDE extension installed, `[Claude Tag]`, `Windows:` off Windows)
+are removed, and the count is always reported with the reason; `--no-filter`
+keeps them. A window wider than `--max-releases` (default 25) is refused
+rather than truncated, because silently dropping the middle of a window and
+then advancing the baseline past it would lose those releases for good.
+
+**State.** The baseline lives in
+`~/.local/state/agent-toolbox/claude-code-whats-new.json` and holds the last
+five entries, so an earlier digest can be re-read with `--since`. Only
+`--commit` moves it, and only for a window report.
 
 ## claude-memory — Memory Portability
 

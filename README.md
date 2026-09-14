@@ -11,9 +11,11 @@ harnesses; each component documents where it works.
 | Session history and resume | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md) |
 | Session history and resume | Codex | [Codex integration](harnesses/codex/README.md) |
 | Memory export, import, and status | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-memory--memory-portability) |
+| Release digest against local configuration | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-code-whats-newpy) |
 | Statusline and quota display | Claude Code | [Settings](harnesses/claude-code/settings/README.md) |
 | Hooks | Claude Code | [Hooks](harnesses/claude-code/hooks/README.md) |
 | Teaching skill | Claude Code and Codex | [Shared workflow](skills/teach/SKILL.md) |
+| Release digest skill | Claude Code | [Shared workflow](skills/whats-new/SKILL.md) |
 | Review and browser verification prompts | Any harness accepting text prompts | [Prompts](prompts/README.md) |
 | Optional instruction modules | Any harness accepting instruction files | [Instructions](instructions/README.md) |
 | Hook reference examples | Claude Code payloads; not deployed | [Examples](examples/claude-code/hooks/README.md) |

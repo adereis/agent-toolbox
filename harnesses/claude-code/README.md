@@ -13,5 +13,12 @@ The `teach` skill is a thin explicit-invocation entry point to the shared
 workflow under `skills/teach/`. Its `references/workflow.md` link resolves
 to that canonical source both in the checkout and when installed.
 
+The `whats-new` skill follows the same split and stays model-invocable, so a
+question about what changed reaches it. It supplies the Claude Code command
+line and state locations for the shared workflow under `skills/whats-new/`,
+and reports the releases published since its last digest against this
+machine's configuration. Installing it without the `scripts` component leaves
+the skill without the utility it drives.
+
 The old reviewer/verifier pairs and tmp, test-edit, and continue-plan hooks
 are retired. See the [migration notes](../../docs/migration.md).
