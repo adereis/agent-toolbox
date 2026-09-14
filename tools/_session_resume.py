@@ -6,21 +6,11 @@ import os
 import re
 import shlex
 import sys
-import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
 
-
-def safe_text(text):
-    """Prevent transcript data from injecting terminal control sequences."""
-    text = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", str(text))
-    return "".join(" " if ch in "\n\t" else ch for ch in text
-                   if not unicodedata.category(ch).startswith("C") or ch in "\n\t")
-
-
-def warn(message):
-    print(f"Warning: {message}", file=sys.stderr)
+from _text import safe_text, warn  # Re-exported for the harness entry points.
 
 
 def read_jsonl(path):
