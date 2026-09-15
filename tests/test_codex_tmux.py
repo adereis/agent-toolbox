@@ -315,6 +315,112 @@ class LauncherTests(TemporaryTest):
 class TmuxIntegrationTests(TemporaryTest):
     """Exercise the real tmux server with a fake Codex process and no credentials."""
 
+    def assert_mouse_scrollback(self, mouse_reporting):
+        binary = self.root / "bin"
+        binary.mkdir()
+        store = self.root / "codex-home"
+        store.mkdir()
+        shutil.copy(REPO / "harnesses/codex/profiles/subscription.config.toml", store)
+        # Even a user's full-screen default must leave output in pane history.
+        (store / "config.toml").write_text('[tui]\nalternate_screen="always"\n')
+        received = self.root / "received"
+        received.touch()
+        fake = binary / "codex"
+        fake.write_text('''#!/usr/bin/env python3
+import os, pathlib, sys, tty
+tty.setraw(sys.stdin.fileno())
+if os.environ["DEMO_MOUSE"] == "1":
+    sys.stdout.write("\\x1b[?1000h\\x1b[?1006h")
+for i in range(2300):
+    sys.stdout.write(f"Synthetic answer {i:04d}\\r\\n")
+sys.stdout.write("Synthetic prompt ready")
+sys.stdout.flush()
+with pathlib.Path(os.environ["DEMO_RECEIVED"]).open("ab", buffering=0) as received:
+    while True:
+        received.write(os.read(sys.stdin.fileno(), 4096))
+''')
+        fake.chmod(0o755)
+        env = {**launcher.clean_environment(), "TERM": "xterm-256color", "CODEX_HOME": str(store),
+               "PATH": str(binary) + os.pathsep + os.environ["PATH"],
+               "DEMO_MOUSE": str(int(mouse_reporting)), "DEMO_RECEIVED": str(received)}
+        with patch.dict(os.environ, env, clear=True), \
+             patch.object(launcher, "attach", side_effect=lambda directory: directory):
+            launch = launcher.launch_spec("subscription", [], store)
+            runtime = launcher.launch(launch)
+        self.addCleanup(lambda: shutil.rmtree(runtime) if runtime.exists() else None)
+        self.addCleanup(lambda: launcher.tmux(runtime, "kill-server", check=False))
+        master, slave = pty.openpty()
+        termios.tcsetwinsize(slave, (24, 80))
+        self.addCleanup(os.close, master)
+        client = subprocess.Popen(["tmux", "-S", str(runtime / "socket"), "attach-session", "-t", "codex"],
+                                  stdin=slave, stdout=slave, stderr=slave,
+                                  env=env, start_new_session=True)
+        os.close(slave)
+        def close_client():
+            if client.poll() is None:
+                client.kill()
+            client.wait(timeout=5)
+        self.addCleanup(close_client)
+        terminal = bytearray()
+
+        def wait_for(predicate, message):
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                if select.select([master], [], [], .05)[0]:
+                    terminal.extend(os.read(master, 65536))
+                if predicate():
+                    return
+            self.fail(message)
+
+        def pane_value(format):
+            return launcher.tmux(runtime, "display-message", "-p", "-t", "codex:0", format).stdout.strip()
+
+        wait_for(lambda: b"Synthetic prompt ready" in terminal, "synthetic prompt did not reach the terminal")
+        self.assertEqual(pane_value("#{mouse_any_flag}"), str(int(mouse_reporting)))
+        live = launcher.tmux(runtime, "capture-pane", "-p", "-t", "codex:0").stdout
+        first_visible = int(re.search(r"Synthetic answer (\d+)", live)[1])
+        older_line = f"Synthetic answer {first_visible - 1:04d}".encode()
+        expected_input = b"draft"
+        os.write(master, expected_input)
+        wait_for(lambda: received.read_bytes() == expected_input, "draft did not reach the prompt")
+        # SGR wheels over the prompt and legacy X10 wheels over the output.
+        # These bytes enter the attached client, not tmux's send-keys shortcut.
+        for up, down, cancel, keys in ((b"\x1b[<64;5;22M", b"\x1b[<65;5;22M", b"q", "emacs"),
+                                       (b"\x1b[M`%%", b"\x1b[Ma%%", b"\x1b", "vi")):
+            with self.subTest(up=up):
+                launcher.tmux(runtime, "set-option", "-w", "-t", "codex:0", "mode-keys", keys)
+                terminal.clear()
+                os.write(master, up)
+                wait_for(lambda: pane_value("#{pane_in_mode}") == "1", "wheel-up did not enter scrollback")
+                self.assertGreater(int(pane_value("#{scroll_position}")), 0)
+                # capture-pane -M can still return the live grid on tmux 3.7.
+                # Prove older text is actually sent to the attached terminal.
+                wait_for(lambda: older_line in terminal, "earlier output did not reach the terminal")
+                os.write(master, down * 20)
+                wait_for(lambda: pane_value("#{pane_in_mode}") == "0", "wheel-down did not return to the prompt")
+                # Extra downward scrolling at the bottom must never reach Codex.
+                os.write(master, down * 3)
+                os.write(master, up)
+                wait_for(lambda: pane_value("#{pane_in_mode}") == "1", "second wheel-up did not enter scrollback")
+                os.write(master, cancel)
+                wait_for(lambda: pane_value("#{pane_in_mode}") == "0", "cancel key did not leave scrollback")
+                os.write(master, b"typed")
+                expected_input += b"typed"
+                wait_for(lambda: received.read_bytes().count(b"typed") == expected_input.count(b"typed"),
+                         "typing did not reach the prompt")
+                self.assertEqual(received.read_bytes(), expected_input, "a scroll event or copy-mode key reached Codex")
+        self.assertIn('tui.alternate_screen="never"', launch["command"])
+        # Verify the pane's actual history, not just a late global option change.
+        self.assertEqual(pane_value("#{history_limit}"), "100000")
+        history = launcher.tmux(runtime, "capture-pane", "-p", "-S", "-", "-t", "codex:0").stdout
+        self.assertIn("Synthetic answer 0000", history)
+
+    def test_wheel_scrolls_output_without_sending_prompt_history_keys(self):
+        self.assert_mouse_scrollback(mouse_reporting=False)
+
+    def test_wheel_scrolls_output_even_when_application_requests_mouse(self):
+        self.assert_mouse_scrollback(mouse_reporting=True)
+
     def test_ctrl_d_replays_resume_output_after_leaving_tmux(self):
         binary = self.root / "bin"
         binary.mkdir()

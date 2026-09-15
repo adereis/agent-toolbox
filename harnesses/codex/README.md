@@ -358,6 +358,31 @@ tool fees, regional uplifts, credits, and account-specific discounts.
 For a subscription it is an API-equivalent estimate, not an additional bill.
 For API billing, reconcile charges with your account's usage reports.
 
+### Scrolling and text selection
+
+Scroll with the mouse wheel or trackpad to read earlier messages and tool
+output. Scrolling over the input box also scrolls the conversation. It does
+not cycle through prompt history. Scroll down to the bottom or press `q`
+or `Escape` to return to the live prompt before typing. Codex keeps running
+while you read earlier output.
+
+The launcher enables tmux mouse handling and gives wheel events to tmux
+scrollback, even when the application requests mouse input. It defaults
+Codex to inline output with `tui.alternate_screen="never"`, which overrides
+the saved screen preference for this launch. Keep that setting when passing
+native configuration overrides so earlier output remains in pane history.
+The private server retains up to 100,000 history lines per pane. Older lines
+beyond that limit fall out of tmux scrollback.
+
+For keyboard scrolling, press `Ctrl-b [` and use Page Up or Page Down.
+Press `q` or `Escape` to return. Mouse dragging uses tmux selection; hold
+Shift while dragging to use your terminal's native text selection instead
+(the override modifier depends on the terminal).
+
+These settings apply to new launches. Exit and resume through the updated
+launcher to apply them to an existing conversation; `--attach` reconnects
+to the existing server with its original settings.
+
 ### Sessions, detach, and compatibility
 
 Every launch owns a private tmux server under a random directory in `~/tmp`.

@@ -141,7 +141,9 @@ def launch_spec(backend, arguments, codex_home):
         raise ValueError("service_tier must be a string")
     # The explicit config override also prevents 0.154.0 from reusing a shared
     # app-server daemon. The owned process must hold its own rollout descriptors.
+    # Inline output accumulates in tmux history instead of an alternate screen.
     command = ["codex", "--profile", backend, "-c", "tui.status_line=[]",
+               "-c", 'tui.alternate_screen="never"',
                "-c", "service_tier=" + json.dumps(tier), *arguments]
     if backend == "api":
         command = [str(API_HELPER), "--", *command[1:]]
@@ -310,14 +312,27 @@ def launch(spec):
     size = shutil.get_terminal_size((160, 40))
     initial_rows = render({"cwd": spec["cwd"], "backend": spec["backend"], "notice": "starting"}, size.columns)
     try:
-        tmux(directory, "-f", "/dev/null", "new-session", "-d", "-s", "codex",
+        # A pane inherits its history limit when created on supported tmux
+        # versions. Set it in the same command queue before creating the pane.
+        tmux(directory, "-f", "/dev/null", "set-option", "-g", "history-limit", "100000", ";",
+             "new-session", "-d", "-s", "codex",
              "-x", str(size.columns), "-y", str(size.lines), "-c", spec["cwd"],
              sys.executable, str(HERE), "_run", str(directory))
         for option, value in (("status", "2"), ("status-position", "bottom"),
                               ("status-style", "bg=default,fg=default"), ("status-interval", "1"),
                               ("status-format[0]", initial_rows[0]), ("status-format[1]", initial_rows[1]),
+                              ("mouse", "on"),
                               ("set-titles", "off"), ("allow-rename", "off"), ("update-environment", "")):
             tmux(directory, "set-option", "-g", option, value)
+        # Always give wheels to scrollback, including over the composer or an
+        # application that requests mouse input. The default copy-mode tables
+        # handle subsequent wheels; -e returns to Codex at the bottom.
+        tmux(directory, "bind-key", "-n", "WheelUpPane",
+             "copy-mode -e -t = ; send-keys -X -N 5 -t = scroll-up")
+        tmux(directory, "bind-key", "-n", "WheelDownPane", "if-shell", "-F", "-t", "=",
+             "#{pane_in_mode}", "send-keys -M")
+        for table in ("copy-mode", "copy-mode-vi"):
+            tmux(directory, "bind-key", "-T", table, "Escape", "send-keys", "-X", "cancel")
         (directory / "ready").touch()
     except BaseException:
         tmux(directory, "kill-server", check=False)
@@ -357,6 +372,13 @@ Sessions and keys:
   Ctrl-b d detaches. Use the printed --attach command to reconnect.
   On exit, the final pane output is replayed in your calling terminal.
   API mode uses the login keyring through codex-api-profile.sh.
+
+Scrolling:
+  Mouse wheels and trackpads scroll the conversation, including over the input.
+  Scroll down to the bottom or press q to return to the live prompt.
+  Ctrl-b [ enters scrollback from the keyboard. Escape also leaves scrollback.
+  Codex defaults to inline output; tmux retains up to 100,000 history lines.
+  Hold Shift while dragging for native selection (terminal-dependent).
 
 Service tier and cost:
   The tier comes from the selected profile/base config (Standard if unset).

@@ -111,6 +111,19 @@ each footer follows its own session. Exit one and confirm the other keeps
 running. Resume an existing session under the other backend and check that
 the estimate starts afresh and old quota/plan labels do not carry over.
 
+**Mouse and trackpad scrolling:** In a new wrapper session with several
+screens of messages and tool output, scroll up with the pointer over the
+output and then over the input box. Earlier output should move into view
+without changing the draft or selecting an older prompt. Scroll down to
+the bottom and confirm typing works immediately. Repeat using `q` and
+`Escape` to leave scrollback, including while Codex generates output.
+Check Page Up/Page Down after `Ctrl-b [` and terminal-native text selection
+with Shift-drag (or the terminal's mouse override modifier). Repeat after
+detach/reattach and inside an existing tmux server with mouse forwarding
+enabled. Confirm the outer server's options are unchanged. The automated
+tests inject SGR and legacy X10 wheel events through a real attached tmux
+client; physical trackpad behavior still requires this terminal check.
+
 **Detach and cleanup:** Detach with `Ctrl-b d` and use the printed `--attach`
 command. Confirm the session and estimate survive. Repeat from inside an
 existing tmux server and verify its options remain intact. Exit Codex and
