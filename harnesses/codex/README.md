@@ -69,6 +69,37 @@ API requests are billed separately from subscription usage. Some features
 that depend on ChatGPT workspace access differ in API mode. There is no
 automatic fallback to paid API usage when subscription limits are reached.
 
+### Store the key in the keyring
+
+`codex-api-profile.sh` keeps the key in the login keyring instead of your
+shell history or a plaintext file, and exports it for the Codex process
+alone. Install it with the `scripts` component and store the key once:
+
+```bash
+python3 tools/install.py --harness codex --scope user \
+  --component scripts --apply
+~/.agents/scripts/codex-api-profile.sh --store   # input is not echoed
+```
+
+Then run Codex through the wrapper. It appends `--profile api` unless the
+arguments already select a profile:
+
+```bash
+codex-api-profile.sh                 # interactive session
+codex-api-profile.sh exec "say ok"   # non-interactive
+codex-api-profile.sh resume --last   # resume under the API profile
+codex-api-profile.sh --status        # stored or missing; never prints the key
+codex-api-profile.sh --clear         # remove the stored key
+```
+
+The wrapper reads the keyring through `secret-tool` (libsecret) and does not
+implement the macOS keychain. On macOS it exits with the equivalent
+`security add-generic-password` and `security find-generic-password`
+commands instead of failing quietly; see
+[portability](../../AGENTS.md#portability). Storing the key in the keyring
+does not change the saved ChatGPT login, and the wrapper never runs
+`codex login`.
+
 ### Resume and shared state
 
 Select either profile for an existing session:
@@ -77,6 +108,8 @@ Select either profile for an existing session:
 codex resume --last --profile subscription
 # Requires CODEX_OPENAI_API_KEY in this process's environment
 codex resume --last --profile api
+# Or let the wrapper supply the key from the keyring
+codex-api-profile.sh resume --last
 python3 harnesses/codex/scripts/codex-code-session-resume.py --profile api
 ```
 

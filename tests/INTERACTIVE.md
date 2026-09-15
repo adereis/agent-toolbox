@@ -63,6 +63,14 @@ variable absent, verify that the API profile reports the missing variable
 and does not send a subscription request. Do not record the key in test
 output.
 
+**Keyring wrapper:** Store the key with `codex-api-profile.sh --store` and
+confirm `--status` reports `stored` without printing it. Start
+`codex-api-profile.sh`, check `/status` for the `openai_api` provider, and
+send a small prompt. Confirm `codex login status` still reports ChatGPT
+afterwards. On macOS, confirm the wrapper exits naming the `security`
+commands rather than running; the stubbed paths are covered by
+`tests/test_codex_api_profile.sh`, but the real macOS keychain is not.
+
 **Preservation and resume:** After the API run, verify `codex login status`
 still reports ChatGPT. Resume a subscription session with `--profile api`
 and the API variable supplied, and confirm the selected provider in

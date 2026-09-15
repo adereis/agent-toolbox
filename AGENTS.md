@@ -37,6 +37,37 @@ destinations. Preflight and roll back a mixed installation across all roots.
 Profile files contain provider and authentication settings only; keep
 credentials and machine-specific defaults in the user's configuration.
 
+## Portability
+
+Consumers run Linux and macOS. Implement the platform you can test, and make
+the untested path fail loudly instead of silently: detect the unsupported
+platform and exit non-zero naming the command that works there. Prefer a
+breadcrumb over an untested implementation, because a wrong implementation
+fails in the user's session while a breadcrumb costs them one step.
+
+Add a portable fallback where one is cheap. `file_sha` in
+`claude-memory-lib.sh` tries `sha256sum` and falls back to `shasum -a 256`.
+Where no such fallback exists, name the alternative: `codex-api-profile.sh`
+implements the libsecret keyring only and prints the equivalent macOS
+`security` commands when it runs on Darwin.
+
+State the supported platform with the component, and do not claim support
+for a platform without evidence that the code ran there.
+
+## Agent-mediated use
+
+Most consumers reach this repository through a coding agent rather than by
+reading it themselves. That agent sees error output, `--help` text, and
+README prose; it cannot see intent that was never written down.
+
+Write failures so an agent can act on them unaided: name the missing tool,
+the platform, and the command that would succeed. "Keyring not supported"
+strands the agent, while a message naming `security find-generic-password`
+lets it finish the task on macOS without asking the user.
+
+Keep usage next to the component and keep help text able to stand alone,
+because an agent may read only one of the two.
+
 ## Validation
 
 Run `./tests/run.sh` for all automated checks, or

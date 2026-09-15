@@ -11,6 +11,7 @@ harnesses; each component documents where it works.
 | Session history and resume | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md) |
 | Session history and resume | Codex | [Codex integration](harnesses/codex/README.md) |
 | Subscription and API authentication profiles | Codex | [Authentication profiles](harnesses/codex/README.md#authentication-profiles) |
+| Keyring-backed API key wrapper | Codex | [Store the key in the keyring](harnesses/codex/README.md#store-the-key-in-the-keyring) |
 | Memory export, import, and status | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-memory--memory-portability) |
 | Release digest against local configuration | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-code-whats-newpy) |
 | Statusline and quota display | Claude Code | [Settings](harnesses/claude-code/settings/README.md) |
@@ -37,6 +38,19 @@ Add `--apply` to create the links. Existing conflicting files are preserved.
 See [installation](docs/installation.md) for scope, components, configuration,
 and removal. `/sync` in Claude Code wraps this same installer. Session
 utilities run from a terminal; `--list` and `--json` only inspect history.
+
+## Using this repository with an agent
+
+Most people install and operate these components through a coding agent
+rather than by hand. Point the agent at this repository and describe the
+outcome you want; it reads the component table above, runs the installer,
+and follows the README for the harness it selected.
+
+Components are written for that workflow. When a component cannot run on
+your platform it exits with the command that works there instead of failing
+quietly, so the agent can finish the task without a round trip through you.
+Supported platforms are stated with each component; Linux is tested, and
+macOS support varies by component.
 
 ## Repository layout
 
