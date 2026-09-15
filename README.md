@@ -11,6 +11,7 @@ harnesses; each component documents where it works.
 | Session history and resume | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md) |
 | Session history and resume | Codex | [Codex integration](harnesses/codex/README.md) |
 | Subscription and API authentication profiles | Codex | [Authentication profiles](harnesses/codex/README.md#authentication-profiles) |
+| Personal context, compaction, and Vim preferences | Codex; bootstrap reference | [Configuration template](examples/codex/README.md) |
 | Keyring-backed API key wrapper | Codex | [Store the key in the keyring](harnesses/codex/README.md#store-the-key-in-the-keyring) |
 | Tmux launcher with backend and status display | Codex | [Tmux status display](harnesses/codex/README.md#tmux-status-display) |
 | Memory export, import, and status | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-memory--memory-portability) |

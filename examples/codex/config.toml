@@ -1,0 +1,19 @@
+# Personal bootstrap preferences recorded on 2026-09-15.
+# Configuration loading checked with Codex CLI 0.154.0 on Linux.
+# Merge these keys into your user config. See README.md for the rationale
+# and the separate hook needed to block automatic compaction.
+
+# Request a large context budget. The effective window still depends on
+# the active model and the headroom Codex reserves.
+model_context_window = 1050000
+
+# Keep the explicit compaction threshold at the same requested budget.
+# These settings postpone compaction; they do not disable it.
+model_auto_compact_token_limit = 1050000
+
+# Count growth after the carried compaction-window prefix.
+model_auto_compact_token_limit_scope = "body_after_prefix"
+
+[tui]
+# Start in Vim normal mode. Press i to type.
+vim_mode_default = true

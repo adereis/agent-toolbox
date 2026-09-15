@@ -58,6 +58,10 @@ Installation does not edit `config.toml`, change the saved login, select a
 default profile, or store an API key. Follow the profile documentation to
 establish the subscription default and supply an API key when needed.
 
+For personal context-window, compaction, and Vim preferences, use the
+[Codex bootstrap template](../examples/codex/README.md). Follow its merge
+instructions separately; the installer does not apply reference examples.
+
 The installer reports unavailable combinations, missing source files, and
 conflicts. It checks every destination before changing anything and refuses
 to overwrite regular files or links to other sources. Back up and resolve

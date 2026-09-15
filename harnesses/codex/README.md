@@ -5,6 +5,13 @@ profiles, utilities, and the shared `teach` and `whats-new` skills. The `teach`
 adapter preserves explicit invocation through `agents/openai.yaml`.
 The release digest skill supports normal automatic discovery.
 
+## Personal configuration template
+
+The [bootstrap template](../../examples/codex/README.md) records the
+maintainer's context-window budget, compaction threshold and scope, and Vim
+preference. It documents the reasons for those choices and how to merge
+them into a new setup. The example is separate from installed components.
+
 ## Release digest
 
 `codex-whats-new.py` tags release notes with the settings they touch on this
