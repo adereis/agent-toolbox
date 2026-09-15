@@ -1,0 +1,4 @@
+# Use the ChatGPT login saved by `codex login`.
+# A mismatched saved login is cleared by Codex; see ../README.md.
+model_provider = "openai"
+forced_login_method = "chatgpt"

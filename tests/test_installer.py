@@ -26,6 +26,14 @@ class InstallerTests(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()):
             installer.install(target, links, apply)
 
+    def run_cli(self, *args, codex_home=""):
+        out, err = io.StringIO(), io.StringIO()
+        with patch.object(installer.Path, "home", return_value=self.root), \
+             patch.dict(os.environ, {"CODEX_HOME": str(codex_home)}), \
+             contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            result = installer.main(list(args))
+        return result, out.getvalue(), err.getvalue()
+
     def test_dry_run_does_not_create_destination(self):
         target = self.root / "not-created"
         self.install(target, installer.catalog("codex", ["skills", "scripts"]))
@@ -93,7 +101,130 @@ class InstallerTests(unittest.TestCase):
             installer.catalog("codex", ["hooks"])
 
     def test_examples_and_retired_components_are_not_installable(self):
-        links = installer.catalog("claude-code", list(installer.COMPONENTS))
+        links = installer.catalog("claude-code", [c for c in installer.COMPONENTS if c != "profiles"])
         self.assertTrue(all("examples" not in source.parts for source in links.values()))
         self.assertEqual({Path(path).name for path in links if path.startswith("hooks/")},
                          {"git-push-guard.sh", "jira-mcp-subagent-guard.sh"})
+
+    def test_profile_dry_run_uses_codex_home_without_creating_it(self):
+        target = self.root / "custom codex home"
+        result, out, err = self.run_cli(
+            "--harness", "codex", "--scope", "user", "--component", "profiles", codex_home=target)
+        self.assertEqual((result, err), (0, ""))
+        self.assertIn(str(target / "api.config.toml"), out)
+        self.assertIn(str(target / "subscription.config.toml"), out)
+        self.assertFalse(target.exists())
+
+    def test_mixed_install_uses_each_native_root(self):
+        args = ["--harness", "codex", "--scope", "user", "--component", "skills",
+                "--component", "profiles", "--apply"]
+        result, _, err = self.run_cli(*args)
+        self.assertEqual((result, err), (0, ""))
+        self.assertTrue((self.root / ".agents/skills/teach/SKILL.md").is_symlink())
+        for name in ("api", "subscription"):
+            installed = self.root / ".codex" / f"{name}.config.toml"
+            self.assertEqual(installed.resolve(), REPO / "harnesses/codex/profiles" / installed.name)
+            self.assertFalse((self.root / ".agents" / installed.name).exists())
+        self.assertFalse((self.root / ".codex/skills").exists())
+
+    def test_profiles_preserve_login_config_history_and_other_profiles(self):
+        target = self.root / "selected codex home"
+        target.mkdir()
+        existing = {
+            "config.toml": 'model = "demo-model"\n',
+            "auth.json": '{"synthetic": "saved login fixture"}\n',
+            "history.jsonl": '{"synthetic": "history fixture"}\n',
+            "work.config.toml": 'model = "work-model"\n',
+        }
+        for name, content in existing.items():
+            (target / name).write_text(content)
+        args = ["--harness", "codex", "--scope", "user", "--component", "profiles", "--apply"]
+        result, _, err = self.run_cli(*args, codex_home=target)
+        self.assertEqual((result, err), (0, ""))
+        before = {p.name: p.lstat().st_ino for p in target.iterdir()}
+        result, _, err = self.run_cli(*args, codex_home=target)
+        self.assertEqual((result, err), (0, ""))
+        self.assertEqual(before, {p.name: p.lstat().st_ino for p in target.iterdir()})
+        for name, content in existing.items():
+            self.assertEqual((target / name).read_text(), content)
+        self.assertFalse((self.root / ".codex").exists())
+
+    def test_explicit_profile_target_overrides_codex_home(self):
+        target = self.root / "staged config"
+        other = self.root / "unselected config"
+        result, _, err = self.run_cli(
+            "--harness", "codex", "--scope", "user", "--component", "profiles",
+            "--target", str(target), "--apply", codex_home=other)
+        self.assertEqual((result, err), (0, ""))
+        self.assertTrue((target / "api.config.toml").is_symlink())
+        self.assertTrue((target / "subscription.config.toml").is_symlink())
+        self.assertFalse(other.exists())
+        self.assertFalse((self.root / ".codex").exists())
+
+    def test_explicit_target_applies_to_all_selected_components(self):
+        target = self.root / "staging"
+        result, _, err = self.run_cli(
+            "--harness", "codex", "--scope", "user", "--component", "profiles",
+            "--component", "scripts", "--target", str(target), "--apply")
+        self.assertEqual((result, err), (0, ""))
+        self.assertTrue((target / "api.config.toml").is_symlink())
+        self.assertTrue((target / "scripts/codex-code-session-resume.py").is_symlink())
+        self.assertFalse((self.root / ".agents").exists())
+        self.assertFalse((self.root / ".codex").exists())
+
+    def test_profiles_reject_project_scope_even_with_explicit_target(self):
+        for extra in ([], ["--target", str(self.root / "staging")]):
+            with self.subTest(extra=extra):
+                result, _, err = self.run_cli(
+                    "--harness", "codex", "--scope", "project", "--component", "scripts",
+                    "--component", "profiles", "--apply", *extra)
+                self.assertEqual(result, 1)
+                self.assertIn("require --scope user", err)
+                self.assertEqual(list(self.root.iterdir()), [])
+
+    def test_profiles_reject_claude_without_installing_other_components(self):
+        result, _, err = self.run_cli(
+            "--harness", "claude-code", "--scope", "user", "--component", "skills",
+            "--component", "profiles", "--target", str(self.root / "claude"), "--apply")
+        self.assertEqual(result, 1)
+        self.assertIn("profiles is not available for claude-code", err)
+        self.assertFalse((self.root / "claude").exists())
+
+    def test_mixed_install_preflights_conflicts_across_roots(self):
+        target = self.root / "codex"
+        target.mkdir()
+        existing = target / "subscription.config.toml"
+        existing.write_text("# Custom profile\n")
+        result, _, err = self.run_cli(
+            "--harness", "codex", "--scope", "user", "--component", "skills",
+            "--component", "profiles", "--apply", codex_home=target)
+        self.assertEqual(result, 1)
+        self.assertIn("Existing files differ", err)
+        self.assertEqual(existing.read_text(), "# Custom profile\n")
+        self.assertFalse((target / "api.config.toml").exists())
+        self.assertFalse((self.root / ".agents").exists())
+
+    def test_mixed_install_rolls_back_links_across_roots(self):
+        target = self.root / "codex"
+        original = os.symlink
+
+        def race(src, name, *, dir_fd):
+            if name == "subscription.config.toml":
+                descriptor = os.open(name, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600, dir_fd=dir_fd)
+                try:
+                    os.write(descriptor, b"# Concurrent user profile\n")
+                finally:
+                    os.close(descriptor)
+                raise FileExistsError(name)
+            return original(src, name, dir_fd=dir_fd)
+
+        with patch.object(installer.os, "symlink", side_effect=race):
+            result, _, err = self.run_cli(
+                "--harness", "codex", "--scope", "user", "--component", "skills",
+                "--component", "profiles", "--apply", codex_home=target)
+        self.assertEqual(result, 1)
+        self.assertIn("Target changed during installation", err)
+        self.assertEqual((target / "subscription.config.toml").read_text(), "# Concurrent user profile\n")
+        self.assertFalse((target / "api.config.toml").exists())
+        self.assertFalse((self.root / ".agents/skills/teach/SKILL.md").exists())
+        self.assertFalse((self.root / ".agents/skills/teach/agents/openai.yaml").exists())

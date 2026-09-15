@@ -133,12 +133,18 @@ class CodexSessionTests(unittest.TestCase):
 
     def test_resume_preserves_selected_store_profile_and_cwd(self):
         self.write_rollout()
-        with patch("os.execvpe") as launch, patch("os.chdir") as change:
-            result, _, _ = self.run_cli("--all", "--profile", "demo", interactive=True, inputs=["", "y"])
-        self.assertEqual(result, 0)
-        change.assert_called_once_with(self.project)
-        self.assertEqual(launch.call_args.args[1], ["codex", "resume", SID, "--profile", "demo"])
-        self.assertEqual(launch.call_args.args[2]["CODEX_HOME"], str(self.store))
+        for profile in ("subscription", "api"):
+            with self.subTest(profile=profile), \
+                 patch.dict(os.environ, {"CODEX_OPENAI_API_KEY": "synthetic-test-credential"}), \
+                 patch("os.execvpe") as launch, patch("os.chdir") as change:
+                result, out, _ = self.run_cli(
+                    "--all", "--profile", profile, interactive=True, inputs=["", "y"])
+                self.assertEqual(result, 0)
+                change.assert_called_once_with(self.project)
+                self.assertEqual(launch.call_args.args[1], ["codex", "resume", SID, "--profile", profile])
+                self.assertEqual(launch.call_args.args[2]["CODEX_HOME"], str(self.store))
+                self.assertEqual(launch.call_args.args[2]["CODEX_OPENAI_API_KEY"], "synthetic-test-credential")
+                self.assertNotIn("synthetic-test-credential", out)
 
     def test_separate_stores_do_not_share_titles_or_transcripts(self):
         self.write_rollout()

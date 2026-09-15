@@ -1,0 +1,10 @@
+# Select API billing without replacing the saved ChatGPT login.
+model_provider = "openai_api"
+
+[model_providers.openai_api]
+name = "OpenAI API"
+base_url = "https://api.openai.com/v1"
+wire_api = "responses"
+env_key = "CODEX_OPENAI_API_KEY"
+env_key_instructions = "Supply CODEX_OPENAI_API_KEY for this process; see the Agent Toolbox Codex README."
+requires_openai_auth = false

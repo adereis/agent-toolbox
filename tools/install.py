@@ -10,7 +10,7 @@ import sys
 
 
 REPO = Path(__file__).resolve().parents[1]
-COMPONENTS = ("skills", "scripts", "hooks", "settings", "prompts", "instructions")
+COMPONENTS = ("skills", "scripts", "hooks", "settings", "prompts", "instructions", "profiles")
 
 
 def catalog(harness, components):
@@ -26,6 +26,12 @@ def catalog(harness, components):
             else:
                 result["skills/teach/SKILL.md"] = REPO / "skills/teach/SKILL.md"
                 result["skills/teach/agents/openai.yaml"] = REPO / "harnesses/codex/skills/teach/agents/openai.yaml"
+        elif component == "profiles":
+            if harness != "codex":
+                raise ValueError(f"{component} is not available for {harness}")
+            for name in ("subscription", "api"):
+                filename = f"{name}.config.toml"
+                result[filename] = REPO / "harnesses/codex/profiles" / filename
         elif component in ("prompts", "instructions"):
             for source in (REPO / component).glob("*.md"):
                 if source.name != "README.md":
@@ -76,23 +82,30 @@ def link_status(root, relative, source):
 
 
 def install(root, links, apply=False):
+    install_roots({root: links}, apply)
+
+
+def install_roots(plans, apply=False):
+    """Preflight and roll back one invocation across all installation roots."""
     statuses = {}
-    for relative, source in links.items():
+    entries = [(root, relative, source)
+               for root, links in plans.items() for relative, source in links.items()]
+    for root, relative, source in entries:
         if Path(relative).is_absolute() or ".." in Path(relative).parts:
             raise ValueError(f"Destination must remain under the installation root: {relative}")
         if not source.is_file():
             raise ValueError(f"Missing source file: {source}")
-        statuses[relative] = link_status(root, relative, source)
-        print(f"{statuses[relative]:8} {root / relative}")
+        statuses[root, relative] = link_status(root, relative, source)
+        print(f"{statuses[root, relative]:8} {root / relative}")
     if "conflict" in statuses.values():
         raise ValueError("Existing files differ from the proposed links; back up and resolve conflicts first")
     if not apply:
         print("Dry run; add --apply to create these links.")
         return
-    root.mkdir(parents=True, exist_ok=True)
     created = []
     try:
-        for relative, source in links.items():
+        for root, relative, source in entries:
+            root.mkdir(parents=True, exist_ok=True)
             with parent_fd(root, relative, create=True) as descriptor:
                 name = Path(relative).name
                 try:
@@ -134,16 +147,24 @@ def main(argv=None):
     if args.target and args.project:
         parser.error("Choose --target or --project")
     directory = ".claude" if args.harness == "claude-code" else ".agents"
-    if args.target:
-        target = args.target
-    elif args.scope == "project":
-        target = (args.project or Path.cwd()) / directory
-    elif args.harness == "claude-code":
-        target = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / directory)
-    else:
-        target = Path.home() / directory
     try:
-        install(target.expanduser().resolve(), catalog(args.harness, args.component), args.apply)
+        plans = {}
+        for component in dict.fromkeys(args.component):
+            links = catalog(args.harness, [component])
+            if component == "profiles" and args.scope != "user":
+                raise ValueError("Codex profiles require --scope user; project config cannot select providers")
+            if args.target:
+                target = args.target
+            elif args.scope == "project":
+                target = (args.project or Path.cwd()) / directory
+            elif component == "profiles":
+                target = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+            elif args.harness == "claude-code":
+                target = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / directory)
+            else:
+                target = Path.home() / directory
+            plans.setdefault(target.expanduser().resolve(), {}).update(links)
+        install_roots(plans, args.apply)
     except (OSError, ValueError) as error:
         print(f"Installation failed: {error}", file=sys.stderr)
         return 1

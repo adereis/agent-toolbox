@@ -1,8 +1,97 @@
 # Codex integration
 
-Use the [scoped installer](../../docs/installation.md) for utilities and the
-shared `teach` skill. The Codex skill adapter preserves explicit invocation
-through `agents/openai.yaml`; it does not change other skill policies.
+Use the [scoped installer](../../docs/installation.md) for authentication
+profiles, utilities, and the shared `teach` skill. The Codex skill adapter
+preserves explicit invocation through `agents/openai.yaml`; it does not
+change other skill policies.
+
+## Authentication profiles
+
+Keep subscription access as your normal login and select API billing when
+needed. The profiles require Codex CLI 0.134.0 or newer and use separate
+`<name>.config.toml` files; their configuration was checked with 0.154.0.
+They inherit your model, reasoning, MCP, and other settings from the base
+configuration. Choose a model available to the selected account.
+
+```bash
+# Preview both profiles; add --apply to install
+python3 tools/install.py --harness codex --scope user --component profiles
+```
+
+The installer links the files from `profiles/` into `$CODEX_HOME` (default
+`~/.codex`). It preserves existing conflicting files and does not edit your
+base config or login. Provider configuration belongs at user scope, so the
+installer rejects `--scope project` for this component.
+
+| Profile | Command | Authentication |
+|---------|---------|----------------|
+| `subscription` | `codex --profile subscription` | Built-in OpenAI provider; requires a saved ChatGPT login |
+| `api` | `codex --profile api` | OpenAI Responses API using `CODEX_OPENAI_API_KEY` |
+
+### Establish the subscription default
+
+Run `codex login` and complete the ChatGPT browser sign-in, then verify it
+with `codex login status`. Keep the base `model_provider` set to `"openai"`
+or unset (its default). Plain `codex` then uses that saved login; installing
+the profiles does not change the default provider. Avoid supplying built-in
+authentication overrides such as `CODEX_API_KEY` when using the subscription.
+
+Use `codex --profile subscription` when you want explicit enforcement. Its
+`forced_login_method = "chatgpt"` prevents use of a saved API-key login.
+Codex clears a mismatched saved login and exits, so establish the ChatGPT
+login first. The restriction belongs to this profile, not a global switch
+that you toggle between backends.
+
+### Use the API key for one run
+
+Supply `CODEX_OPENAI_API_KEY` through your secret manager or enter it in a
+terminal. This Bash example hides the input and limits the variable to the
+subshell and its child process:
+
+```bash
+(
+  read -rsp 'OpenAI API key: ' CODEX_OPENAI_API_KEY || exit
+  printf '\n'
+  export CODEX_OPENAI_API_KEY
+  codex --profile api
+)
+```
+
+The API provider requires this variable and does not fall back to the saved
+ChatGPT login when it is missing. The distinct variable name keeps the key
+specific to this provider. `requires_openai_auth = false` makes Codex use
+`env_key`; setting it to `true` would ignore that variable and select the
+shared OpenAI login instead. Do not put the key in TOML, shell arguments,
+or this repository, and do not run `codex login --with-api-key` to switch to
+this profile: that command changes the shared saved login.
+
+API requests are billed separately from subscription usage. Some features
+that depend on ChatGPT workspace access differ in API mode. There is no
+automatic fallback to paid API usage when subscription limits are reached.
+
+### Resume and shared state
+
+Select either profile for an existing session:
+
+```bash
+codex resume --last --profile subscription
+# Requires CODEX_OPENAI_API_KEY in this process's environment
+codex resume --last --profile api
+python3 harnesses/codex/scripts/codex-code-session-resume.py --profile api
+```
+
+Profiles sharing `CODEX_HOME` share session history and saved login state;
+they are configuration layers, not isolated accounts. The API profile reads
+its key from the environment without replacing the subscription login.
+Use a separate `CODEX_HOME` if you need separate histories and login stores,
+and install the profiles into that home as well. Existing sessions retain
+their launch configuration; select a profile for a new or resumed process.
+
+Official OpenAI documentation: [configuration profiles](https://learn.chatgpt.com/docs/config-file/config-advanced#profiles),
+[authentication and login restrictions](https://learn.chatgpt.com/docs/auth),
+and [custom provider authentication](https://learn.chatgpt.com/docs/auth#alternative-model-providers).
+Live checks requiring your accounts are described in
+[interactive validation](../../tests/INTERACTIVE.md#it-07-codex-authentication-profiles).
 
 ## codex-code-session-resume.py
 

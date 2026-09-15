@@ -31,6 +31,12 @@ Installation must preserve unrelated local configuration and distinguish
 project scope from user scope. Keep machine-specific MCP launchers, secrets,
 session histories, and memory data outside this repository.
 
+Codex authentication profiles live in `harnesses/codex/profiles/` and install
+at the user `CODEX_HOME`; other Codex components retain their `.agents`
+destinations. Preflight and roll back a mixed installation across all roots.
+Profile files contain provider and authentication settings only; keep
+credentials and machine-specific defaults in the user's configuration.
+
 ## Validation
 
 Run `./tests/run.sh` for all automated checks, or

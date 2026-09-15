@@ -10,6 +10,7 @@ harnesses; each component documents where it works.
 |-----------|---------|---------------|
 | Session history and resume | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md) |
 | Session history and resume | Codex | [Codex integration](harnesses/codex/README.md) |
+| Subscription and API authentication profiles | Codex | [Authentication profiles](harnesses/codex/README.md#authentication-profiles) |
 | Memory export, import, and status | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-memory--memory-portability) |
 | Release digest against local configuration | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-code-whats-newpy) |
 | Statusline and quota display | Claude Code | [Settings](harnesses/claude-code/settings/README.md) |
@@ -47,7 +48,7 @@ agent-toolbox/
 ├── tools/                # Installer and common utility code
 ├── harnesses/
 │   ├── claude-code/      # Claude wrappers, hooks, settings, utilities
-│   └── codex/            # Codex wrappers and session utility
+│   └── codex/            # Codex profiles, wrappers, and session utility
 ├── examples/             # Reference implementations, excluded from install
 ├── docs/                 # Installation and migration
 ├── tests/                # Automated and live integration checks
