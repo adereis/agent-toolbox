@@ -10,14 +10,20 @@ selection used by the harness session utilities. Launch the entry point
 documented under `harnesses/`; this module is not itself a
 command. Keep it with the checkout when running or symlinking those utilities.
 
-`_whats_new.py` parses a Markdown changelog whose releases are `## <version>`
-headings, selects a window by baseline version, release count, or date, and
-stores the baseline under `$XDG_STATE_HOME`. It reads a harness's own
+`_whats_new.py` supplies release windows, baseline history, atomic JSON writes,
+and terminal detection for both release digest utilities. It also parses a
+Markdown changelog whose releases are `## <version>` headings. The Claude
+adapter reads a harness's own
 changelog cache but never writes to it, keeping its copies under
 `$XDG_CACHE_HOME/agent-toolbox/`. A cache is trusted only when it already
 documents the running release, so a harness that updated moments ago does not
-appear to have changed nothing. Release dates come from the npm packument and
+appear to have changed nothing. Claude release dates come from the npm packument and
 are optional: only an explicit date window fails without them.
+
+The Codex adapter in `harnesses/codex/_release_digest.py` owns GitHub archive
+pagination, stable CLI selection, and the file-based configuration inventory.
+Its baseline is scoped by Codex home, project, and profile. Its cache contains
+public release notes only. See the [Codex release digest](../harnesses/codex/README.md#release-digest).
 
 `_text.py` holds the terminal-safe rendering both of the above rely on.
 Transcript and changelog text are untrusted input and must not reach a

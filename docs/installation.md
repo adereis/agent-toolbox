@@ -34,7 +34,7 @@ project-specific skill installation. This installer does not change
 
 | Component | Claude Code | Codex | Installation behavior |
 |-----------|-------------|-------|-----------------------|
-| `skills` | Yes | Yes | Installs the shared `teach` workflow with native explicit-invocation metadata; Claude Code also gets the `whats-new` release digest |
+| `skills` | Yes | Yes | Installs `teach` with native explicit-invocation metadata and the configuration-aware `whats-new` release digest |
 | `scripts` | Yes | Yes | Links harness utilities under `<root>/scripts/` |
 | `hooks` | Yes | Unavailable | Links the remaining hook scripts; registration is manual |
 | `settings` | Yes | Unavailable | Links statusline scripts at the Claude configuration root |

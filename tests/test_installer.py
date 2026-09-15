@@ -46,6 +46,9 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual((claude / "skills/teach/references/workflow.md").resolve(), REPO / "skills/teach/SKILL.md")
         self.assertEqual((codex / "skills/teach/SKILL.md").resolve(), REPO / "skills/teach/SKILL.md")
         self.assertEqual((codex / "skills/teach/agents/openai.yaml").resolve(), REPO / "harnesses/codex/skills/teach/agents/openai.yaml")
+        for target in (claude, codex):
+            self.assertEqual((target / "skills/whats-new/references/workflow.md").resolve(), REPO / "skills/whats-new/SKILL.md")
+            self.assertTrue((target / "skills/whats-new/SKILL.md").is_file())
         self.assertFalse((codex / "settings.json").exists())
         self.assertFalse((claude / "settings.json").exists())
 

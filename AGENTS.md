@@ -46,6 +46,13 @@ ambiguous telemetry visibly unavailable. Per-response cost estimates use
 the dated price table beside that module; update its source/date and cost
 tests when pricing rules change.
 
+The Codex release digest reads configuration files without exposing arbitrary
+values. Keep credentials, hook commands, MCP arguments, and provider endpoints
+out of its fingerprint. State is isolated by Codex home, project, and profile;
+serialize baseline writes and never regress a recorded release. Only complete
+public release archives may replace the cache. Shared release-window, terminal,
+and baseline primitives stay in `tools/_whats_new.py`.
+
 ## Portability
 
 Consumers run Linux and macOS. Implement the platform you can test, and make

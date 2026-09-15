@@ -210,7 +210,7 @@ def load_state(path):
     return data
 
 
-def save_state(path, release, previous=None, reported=None, source=None):
+def save_state(path, release, previous=None, reported=None, source=None, scope=None):
     """Record a new baseline, retaining recent ones so a digest can be re-read."""
     previous = previous or {}
     history = [entry for entry in previous.get("history", []) if isinstance(entry, dict)]
@@ -219,6 +219,7 @@ def save_state(path, release, previous=None, reported=None, source=None):
     moment = reported or datetime.now(timezone.utc)
     record = {
         "version": STATE_VERSION,
+        **({"scope": scope} if scope is not None else {}),
         "baseline": {
             "release": release,
             "reported_at": moment.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -244,3 +245,42 @@ def _xdg(variable, default, name, env=None):
     env = os.environ if env is None else env
     home = Path(env.get("HOME") or Path.home())
     return Path(env.get(variable) or home / default).expanduser() / "agent-toolbox" / name
+
+
+# Terminals identify themselves through their own variables, which survive a
+# wrapper that rewrites TERM. Trusting TERM alone would both mislabel the
+# terminal and miss its entries.
+TERMINALS = (
+    ("kitty", ("KITTY_WINDOW_ID", "KITTY_PID"), r"\bkitty\b"),
+    ("ghostty", ("GHOSTTY_RESOURCES_DIR", "GHOSTTY_BIN_DIR"), r"\bghostty\b"),
+    ("wezterm", ("WEZTERM_PANE", "WEZTERM_EXECUTABLE"), r"\bwezterm\b"),
+    ("alacritty", ("ALACRITTY_LOG", "ALACRITTY_WINDOW_ID"), r"\balacritty\b"),
+    ("konsole", ("KONSOLE_VERSION",), r"\bkonsole\b"),
+    ("gnome-terminal", ("GNOME_TERMINAL_SCREEN", "GNOME_TERMINAL_SERVICE"), r"gnome ?terminal"),
+    ("iterm2", ("ITERM_SESSION_ID",), r"\biterm2?\b"),
+    ("tilix", ("TILIX_ID",), r"\btilix\b"),
+    ("terminator", ("TERMINATOR_UUID",), r"\bterminator\b"),
+    ("rio", ("RIO_CONFIG",), r"\brio\b"),
+    ("foot", ("FOOT_PID",), r"\bfoot\b"),
+)
+
+
+def detect_terminal(environ=None):
+    """Name the terminal from its own variables, then fall back to TERM.
+
+    Returns the name, the evidence for it, and whether TERM disagrees, which
+    is worth surfacing: a TERM that misdescribes the terminal is a
+    configuration choice with consequences of its own.
+    """
+    environ = os.environ if environ is None else environ
+    term = environ.get("TERM", "")
+    program = environ.get("TERM_PROGRAM", "")
+    for name, variables, _ in TERMINALS:
+        for variable in variables:
+            if environ.get(variable):
+                disagrees = bool(term) and name not in term.lower() and name not in program.lower()
+                return name, variable, disagrees
+    for name, _, _ in TERMINALS:
+        if name in term.lower() or name in program.lower():
+            return name, "TERM", False
+    return (program or term).split("-")[0].lower(), "TERM", False

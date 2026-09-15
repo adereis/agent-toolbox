@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "tools"))
 from _text import safe_text, warn
 from _whats_new import (
+    TERMINALS, detect_terminal,
     cache_path, day, load_changelog, load_state, parse_changelog, release_dates,
     save_state, search, select, state_path, version_key,
 )
@@ -86,44 +87,6 @@ SIGNALS = (
 )
 
 MODEL_FAMILIES = ("opus", "sonnet", "haiku", "fable")
-
-# Terminals identify themselves through their own variables, which survive a
-# wrapper that rewrites TERM. Claude Code identifies them the same way, so
-# trusting TERM alone would both mislabel the terminal and miss its entries.
-TERMINALS = (
-    ("kitty", ("KITTY_WINDOW_ID", "KITTY_PID"), r"\bkitty\b"),
-    ("ghostty", ("GHOSTTY_RESOURCES_DIR", "GHOSTTY_BIN_DIR"), r"\bghostty\b"),
-    ("wezterm", ("WEZTERM_PANE", "WEZTERM_EXECUTABLE"), r"\bwezterm\b"),
-    ("alacritty", ("ALACRITTY_LOG", "ALACRITTY_WINDOW_ID"), r"\balacritty\b"),
-    ("konsole", ("KONSOLE_VERSION",), r"\bkonsole\b"),
-    ("gnome-terminal", ("GNOME_TERMINAL_SCREEN", "GNOME_TERMINAL_SERVICE"), r"gnome ?terminal"),
-    ("iterm2", ("ITERM_SESSION_ID",), r"\biterm2?\b"),
-    ("tilix", ("TILIX_ID",), r"\btilix\b"),
-    ("terminator", ("TERMINATOR_UUID",), r"\bterminator\b"),
-    ("rio", ("RIO_CONFIG",), r"\brio\b"),
-    ("foot", ("FOOT_PID",), r"\bfoot\b"),
-)
-
-
-def detect_terminal(environ=None):
-    """Name the terminal from its own variables, then fall back to TERM.
-
-    Returns the name, the evidence for it, and whether TERM disagrees, which
-    is worth surfacing: a TERM that misdescribes the terminal is a
-    configuration choice with consequences of its own.
-    """
-    environ = os.environ if environ is None else environ
-    term = environ.get("TERM", "")
-    program = environ.get("TERM_PROGRAM", "")
-    for name, variables, _ in TERMINALS:
-        for variable in variables:
-            if environ.get(variable):
-                disagrees = bool(term) and name not in term.lower() and name not in program.lower()
-                return name, variable, disagrees
-    for name, _, _ in TERMINALS:
-        if name in term.lower() or name in program.lower():
-            return name, "TERM", False
-    return (program or term).split("-")[0].lower(), "TERM", False
 
 # A session served by Bedrock, Vertex, Foundry, or a gateway takes a different
 # code path from a first-party one, and the changelog says so explicitly.

@@ -1,9 +1,131 @@
 # Codex integration
 
 Use the [scoped installer](../../docs/installation.md) for authentication
-profiles, utilities, and the shared `teach` skill. The Codex skill adapter
-preserves explicit invocation through `agents/openai.yaml`; it does not
-change other skill policies.
+profiles, utilities, and the shared `teach` and `whats-new` skills. The `teach`
+adapter preserves explicit invocation through `agents/openai.yaml`.
+The release digest skill supports normal automatic discovery.
+
+## Release digest
+
+`codex-whats-new.py` tags release notes with the settings they touch on this
+machine. The `whats-new` skill turns that evidence into a digest of changes
+to act on, fixes relevant to your setup, and capabilities worth knowing.
+For example, a configured MCP server makes OAuth fixes worth inspecting.
+A tag indicates a possible connection; it does not prove that a bug affected
+your session.
+
+**Requirements:** Linux and Python 3.11+. Online fetching also needs GitHub CLI
+authenticated with `gh auth login --hostname github.com`. On Fedora, install
+it with `sudo dnf install gh`; on Debian/Ubuntu, use `sudo apt install gh`.
+Configuration paths and profile
+behavior were checked against Codex CLI 0.154.0. The CLI itself is optional;
+without it the installed version is reported as unknown. macOS execution
+is not verified, so the utility exits with a command to open the release
+archive there.
+
+```bash
+python3 tools/install.py --harness codex --scope user \
+  --component skills --component scripts --apply
+
+# Changes since the last digest, or five releases on the first run
+~/.agents/scripts/codex-whats-new.py
+
+# Inspect the selected profile and project
+~/.agents/scripts/codex-whats-new.py --profile api --project ~/projects/demo-app
+
+# Select a window or trace a topic through stable CLI history
+~/.agents/scripts/codex-whats-new.py --days 14 --relevant-only
+~/.agents/scripts/codex-whats-new.py --since 0.153.0 --through 0.154.0
+~/.agents/scripts/codex-whats-new.py --topic 'multi.agent' --topic subagent
+```
+
+Invoke `$whats-new` in Codex for the interpreted digest. Keep the checkout
+intact when using installed script symlinks. Project-scope installations
+put both components under `<project>/.agents/`.
+
+| Option | Behavior |
+|---|---|
+| `--releases N` | Newest N stable CLI releases |
+| `--days N`, `--months N` | Publication-date window; a month means 30 days |
+| `--since VERSION`, `--through VERSION` | Exclusive baseline and inclusive ceiling |
+| `--topic PATTERN` | Case-insensitive regex; repeat for alternative names |
+| `--limit N` | Recent topic matches to show; default 40, zero shows all |
+| `--relevant-only` | Show tagged entries while reporting unmatched counts |
+| `--no-filter` | Include explicitly labelled entries for another platform |
+| `--max-releases N` | Refuse wider windows; default 25; `--relevant-only` lifts this limit |
+| `--codex-dir PATH`, `--profile NAME` | Inspect a particular Codex home and separate profile file |
+| `--refresh`, `--offline` | Refresh the archive or forbid network access |
+| `--changelog FILE` | Read a local JSON array in GitHub releases API format |
+| `--json` | Structured output in window and topic modes |
+| `--state FILE` | Explicit baseline file; its recorded scope must match |
+| `--commit` | Record a digest baseline after successful output; no Git operation |
+
+### Sources and configuration evidence
+
+The source is the public [Codex release archive](https://github.com/openai/codex/releases).
+The first fetch follows all cursor pages through `gh api graphql`. The REST
+API stops at 1,000 release records, which previews can fill before the oldest
+stable versions appear. Cursor pagination avoids that history gap.
+Only non-draft, non-prerelease
+`rust-vX.Y.Z` tags qualify; SDK and other product releases are excluded.
+Release bodies retain prose, feature summaries, and the detailed changelog.
+Wrapped entries stay together. All entries in a New Features section remain
+tagged even when they introduce something absent from your configuration.
+Platform filtering requires an explicit label such as `Windows:`.
+Mentioning a platform or terminal somewhere in an entry never removes it.
+Withheld and unmatched counts are always reported, including zero.
+
+The archive is cached for 24 hours under
+`$XDG_CACHE_HOME/agent-toolbox/codex-releases.json`, defaulting to
+`~/.cache/agent-toolbox/codex-releases.json`. An installed version absent
+from the cache also triggers a refresh. A failed refresh can use a previous
+complete cache with a visible notice. A partial fetch never replaces it.
+Offline and local-file reports state their snapshot limitation. The utility
+uses GitHub CLI's existing authentication without reading or copying its
+credentials. No Codex credentials, model calls, or harness cache modifications
+are involved. Cached and local-file reports do not require GitHub CLI.
+
+The environment block inventories system configuration, user configuration,
+the explicitly selected `<name>.config.toml`, and project layers from the
+Git root to the chosen directory. Project layers require recorded trust in
+the system or user configuration. The closest recorded trust decision wins.
+Settings merge in that order. Hook event names accumulate across layers.
+Separate profiles require Codex 0.134+; legacy embedded profile tables are
+reported as ignored. The utility never reads `auth.json` or session contents.
+
+This is a file-based view. It does not resolve CLI overrides, cloud defaults,
+enforced requirements, plugin-bundled content, or hook trust decisions.
+Unspecified feature defaults remain unknown. Installed skills and configured
+hook events do not prove runtime activation. Environment variables contribute
+names only. Hook commands, MCP arguments, provider endpoints, and arbitrary
+configuration values are omitted. Invalid configuration fails with a path
+and a repair instruction instead of being treated as absent.
+
+Official configuration references: [layer precedence](https://developers.openai.com/codex/config-basic),
+[file profiles](https://developers.openai.com/codex/config-advanced#profiles),
+and [hook sources](https://developers.openai.com/codex/hooks).
+
+### Remembering a completed digest
+
+After reading the report, repeat its window and configuration arguments with
+`--through NEWEST_PRESENTED_VERSION --commit`. For example:
+
+```bash
+~/.agents/scripts/codex-whats-new.py --profile api \
+  --since 0.153.0 --through 0.154.0 --commit
+```
+
+The ceiling prevents a release published between the read and the commit
+from being marked as already discussed. Topic searches reject `--commit`.
+Re-reading an older window cannot move the baseline backward.
+
+Each Codex home, project, and profile has a separate baseline under
+`$XDG_STATE_HOME/agent-toolbox/codex-whats-new/`, defaulting to
+`~/.local/state/agent-toolbox/codex-whats-new/`. The report prints its exact
+path. Baselines use private atomic files with serialized writes and retain
+five previous records. Ordinary reports do not create baseline files.
+An empty window means no matching releases in that snapshot; it does not
+claim that the installed CLI is current.
 
 ## Authentication profiles
 
