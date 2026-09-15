@@ -126,6 +126,164 @@ and [custom provider authentication](https://learn.chatgpt.com/docs/auth#alterna
 Live checks requiring your accounts are described in
 [interactive validation](../../tests/INTERACTIVE.md#it-07-codex-authentication-profiles).
 
+## Tmux status display
+
+`codex-tmux.py` opens Codex with an explicit billing backend and a two-row
+status area beneath it. It uses the same column order and color thresholds
+as the Claude Code status line. The API path calls the existing keyring
+helper, so backend selection and the display have one launch command.
+
+**Requirements:** Linux with readable `/proc`, Python 3.11+, tmux 3.2+, Git,
+and Codex CLI. The transcript format was checked against Codex 0.154.0.
+The automated integration tests exercise real tmux with synthetic Codex
+processes. Account-backed checks are listed separately in
+[interactive validation](../../tests/INTERACTIVE.md#it-08-codex-tmux-display).
+On Fedora, install terminal dependencies with `sudo dnf install tmux git`.
+On Debian/Ubuntu, use `sudo apt install tmux git`.
+
+Install the scripts and authentication profiles:
+
+```bash
+python3 tools/install.py --harness codex --scope user \
+  --component scripts --component profiles --apply
+
+# Store the API key once, using the existing libsecret helper
+~/.agents/scripts/codex-tmux.py --store-key
+
+# Subscription is the default
+~/.agents/scripts/codex-tmux.py
+~/.agents/scripts/codex-tmux.py --backend api
+
+# Native Codex arguments follow --
+~/.agents/scripts/codex-tmux.py --backend api -- resume --last
+~/.agents/scripts/codex-tmux.py --backend subscription -- -m gpt-6-astra
+~/.agents/scripts/codex-tmux.py --backend api -- -C ~/projects/demo-app
+```
+
+Establish the saved ChatGPT login as described under
+[authentication profiles](#authentication-profiles) before using subscription
+mode. The launcher checks the selected profile's authentication settings.
+It refuses competing native `--profile`, provider, and remote-server
+overrides. Use `--backend` to choose billing. Model, reasoning, permissions,
+resume, fork, and other interactive arguments remain native Codex options.
+For a known initial pricing rate, the launcher explicitly sets the service
+tier from the selected profile or base user config. It selects Standard
+when neither specifies one. This takes precedence over project or model
+catalog defaults. Select a different tier with a native override such as
+`-- -c service_tier=priority` (Fast) or `-- -c service_tier=flex`.
+Use `codex` or `codex-api-profile.sh` directly for non-interactive commands
+such as `exec`, login management, and maintenance.
+
+The keyring controls are `--store-key`, `--key-status`, and `--clear-key`.
+API mode requires a stored key. Inherited OpenAI API-key variables are
+removed before starting tmux. The helper retrieves the key inside the pane
+and exports it only to Codex. Runtime metadata contains no credentials.
+
+Illustrative output with fictitious usage:
+
+```text
+workspace            branch   model                 effort   session   cost~   ↻14:30   week   profile   memory
+~/projects/demo-app  main*+?  gpt-6-astra [828k]     high     23%       $1.23   42%      40%    pro       312.5 MB
+```
+
+| Column | Color | Meaning |
+|--------|-------|---------|
+| `workspace` | Bold blue | Current turn's working directory, with `~` for your home |
+| `branch` | Yellow | Git branch or detached commit; `*` unstaged, `+` staged, `?` untracked |
+| `model` | Green | Model recorded for the current turn; windows under one million tokens appear in brackets |
+| `effort` | Magenta | Recorded reasoning effort; dim at `low`, bold at `max` |
+| `session` | Green → yellow → red | Last request's total tokens divided by its reported context window |
+| `cost~` | Cyan | Estimated main-thread token cost since this launch, in USD |
+| `↻HH:MM`, `week` | Green → yellow → red | Reported subscription quota usage; the first header shows its local reset time |
+| `profile` | Cyan; API dim | Selected backend, refined by current runtime settings and a reported subscription plan |
+| `memory` | Cyan | RSS of the process holding this main thread's transcript |
+| `status` | Dim while waiting; red for errors | Waiting state or a visible explanation when telemetry is unavailable |
+
+Headers are dim. The colors match the Claude Code status line.
+They come from the terminal's standard palette.
+Both rows have a two-character margin on each side. Those margins count
+toward the available width, so the footer still fits narrow terminals.
+
+Context and quota values are green below 50%, yellow from 50%, and red
+from 80%. Quotas older than 15 minutes, or past their reset time, go dim
+and show their age. A narrow terminal drops less essential columns first;
+the backend remains visible. Extra per-model quota buckets and Claude's
+vim mode are not available from this Codex transcript format.
+
+The context percentage uses the reported token count directly. Codex's own
+footer subtracts a fixed baseline, so the percentages can differ. Model,
+effort, and quota changes appear after Codex persists the corresponding
+event. A new idle session can show `waiting for local transcript` until its
+first turn. The display reads local telemetry and makes no usage API calls.
+
+### Cost estimates
+
+The estimate prices each completed response with the model and service tier
+active for that response. It includes cached-input discounts, cache-write
+charges, long-context pricing above 272,000 input tokens, and Standard,
+Fast/Priority, or Flex processing. Reasoning output is already included in
+output tokens and is not charged twice. Resuming starts a fresh estimate.
+
+Bundled rates cover GPT-6 Astra and GPT-5.6 Sol, Terra, and Luna. They were
+checked against [OpenAI pricing](https://developers.openai.com/api/docs/pricing/)
+and the model pages on September 15, 2026. They are a versioned snapshot;
+GPT-5.6 Sol currently has promotional pricing. Unknown models, missing
+per-response usage, and unknown service tiers produce `n/a` with a reason.
+They never produce a guessed price or an understated partial total.
+
+This is the main thread's token estimate. It excludes delegated agents,
+tool fees, regional uplifts, credits, and account-specific discounts.
+For a subscription it is an API-equivalent estimate, not an additional bill.
+For API billing, reconcile charges with your account's usage reports.
+
+### Sessions, detach, and compatibility
+
+Every launch owns a private tmux server under a random directory in `~/tmp`.
+It does not load your tmux configuration. The standard prefix is `Ctrl-b`;
+press `Ctrl-b d` to detach. The launcher prints a command such as:
+
+```bash
+codex-tmux.py --attach ~/tmp/codex-tmux-EXAMPLE
+```
+
+That command reconnects to the same process and its existing billing choice.
+When nested inside another tmux, send the prefix through the outer server
+first (with the standard bindings, `Ctrl-b Ctrl-b d` detaches the inner one).
+The private server does not modify the outer server's options or environment.
+After Ctrl+D or another normal exit, the final pane output is replayed in
+your calling terminal. Token totals and the resume command remain visible
+after tmux closes. Wrapped lines are joined so commands stay copyable.
+The capture includes up to 100 rows of recent scrollback for short terminals.
+
+The launcher returns Codex's exit code and removes the runtime directory
+when attached. If Codex exits while detached, `--attach` replays its output
+and collects the exit status before cleanup. The directory also holds
+`status.json` and `errors.log` for troubleshooting. Successful exits save
+their text in private `output.txt`; failures use `failure.txt` and are
+replayed to standard error.
+
+The display follows transcript file descriptors held by the launched process
+tree. Two sessions in the same project and `CODEX_HOME` therefore keep their
+own displays. It excludes subagent transcripts and never chooses the newest
+file. Multiple open main threads, inaccessible telemetry, or replaced files
+produce a visible error instead of an arbitrary session choice. The display
+requires one writer per saved conversation. If another accessible process
+also has that transcript open for writing, telemetry stops with a restart
+instruction. Start distinct conversations when running parallel windows;
+the transcript has no process identifier for separating concurrent writers.
+The display always describes the main thread, including when you inspect
+a subagent in Codex. Local legacy JSONL transcripts are required; remote servers and
+paginated history storage are outside this first version's support.
+
+The wrapper's configuration override makes Codex 0.154.0 use an embedded
+app server. Its built-in status line is disabled for this invocation.
+Keep the checkout intact when installing script symlinks; the entry point
+imports the adjacent telemetry module and published price table.
+
+macOS is not implemented because the process ownership check uses Linux
+`/proc`. The launcher exits with a direct `codex --profile subscription`
+fallback. API keychain instructions remain available from the keyring helper.
+
 ## codex-code-session-resume.py
 
 Browse recent local Codex sessions with their titles, a prompt arc, recognized

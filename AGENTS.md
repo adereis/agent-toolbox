@@ -37,6 +37,15 @@ destinations. Preflight and roll back a mixed installation across all roots.
 Profile files contain provider and authentication settings only; keep
 credentials and machine-specific defaults in the user's configuration.
 
+The Codex tmux launcher composes the authentication profiles and existing
+keyring helper. Acquire API keys inside the pane, after the private server
+starts; never put credentials in its environment, commands, or runtime
+metadata. Its telemetry module lives under `harnesses/codex/` and follows
+open process descriptors, not the newest session file. Keep unknown or
+ambiguous telemetry visibly unavailable. Per-response cost estimates use
+the dated price table beside that module; update its source/date and cost
+tests when pricing rules change.
+
 ## Portability
 
 Consumers run Linux and macOS. Implement the platform you can test, and make

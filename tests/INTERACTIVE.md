@@ -4,6 +4,11 @@ Tests that require live harness sessions or account access. Run the relevant
 checks explicitly (e.g., "run the interactive tests" or "test the push hook
 live"). Automated test results do not imply these checks ran.
 
+The automated runner (`./tests/run.sh`) makes no real model calls and uses
+no model tokens. It uses fake Codex/keyring executables, mocked launch and
+network calls, and a local HTTP server. The live checks below can consume
+subscription quota or incur API charges when explicitly invoked.
+
 ## IT-01: git-push-guard fires on push
 
 **Setup:** Create a temp bare repo and local repo in ~/tmp.
@@ -80,3 +85,41 @@ and the API variable supplied, and confirm the selected provider in
 `mktemp -d "$HOME/tmp/codex-auth.XXXXXXXX"` directory, check that the
 subscription profile rejects an API-key login. Codex may clear that saved
 login; never run this check against an account store you intend to preserve.
+
+## IT-08: Codex tmux display
+
+**Prerequisites:** Linux, tmux 3.2+, Python 3.11+, Git, installed Codex profiles,
+and the IT-07 authentication setup. `./tests/run.sh codex_tmux` runs real
+isolated tmux servers with synthetic Codex/keyring processes and an attached
+pseudo-terminal. It does not validate account-backed Codex telemetry.
+
+**Subscription:** Run `codex-tmux.py`, submit a small prompt, and check model,
+effort, context, process memory, and subscription profile. Compare quotas
+with `/status`. Check the model after changing it. Observe the display at
+wide and narrow terminal widths. The context percentage intentionally uses
+raw reported usage, whereas Codex's native footer subtracts a baseline.
+
+**API:** When paid API testing is requested, run
+`codex-tmux.py --backend api`, submit a small prompt, and confirm `api` in
+the display. The estimate should advance without quota columns. Check
+`codex login status` afterwards to verify the saved ChatGPT login remains.
+Do not capture credentials or real session contents in fixtures.
+
+**Concurrency and resume:** Run distinct subscription and API sessions in
+the same project and store. Give them different effort settings and verify
+each footer follows its own session. Exit one and confirm the other keeps
+running. Resume an existing session under the other backend and check that
+the estimate starts afresh and old quota/plan labels do not carry over.
+
+**Detach and cleanup:** Detach with `Ctrl-b d` and use the printed `--attach`
+command. Confirm the session and estimate survive. Repeat from inside an
+existing tmux server and verify its options remain intact. Exit Codex and
+check that the wrapper returns its exit status and removes its private
+runtime directory. If Codex exits while detached, reattach once to collect
+the exit status and clean up.
+
+**Exit output:** Exit normally with Ctrl+D after a turn. Confirm the token
+summary and native resume command remain on the calling terminal after
+tmux closes. Repeat in a narrow terminal and verify the replayed resume
+command is a single copyable line. Check `--help` for separate examples,
+requirements, session/key behavior, and service-tier/cost sections.
