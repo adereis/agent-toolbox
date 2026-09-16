@@ -14,6 +14,12 @@ model_auto_compact_token_limit = 1050000
 # Count growth after the carried compaction-window prefix.
 model_auto_compact_token_limit_scope = "body_after_prefix"
 
+# Prefer the largest available model at high reasoning effort. Model
+# availability differs per account, so confirm the name for the account
+# the selected authentication profile uses.
+model = "gpt-6-astra"
+model_reasoning_effort = "high"
+
 [tui]
 # Start in Vim normal mode. Press i to type.
 vim_mode_default = true

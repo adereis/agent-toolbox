@@ -6,7 +6,7 @@ against the live configuration on September 15, 2026. Codex CLI 0.154.0 on
 Linux accepts the template. It is a reviewed snapshot. It does not sync
 automatically with the live configuration.
 
-## Context and editing preferences
+## Context, model, and editing preferences
 
 The context settings express a preference for long sessions with delayed
 compaction. For example, the requested context budget and explicit
@@ -17,6 +17,8 @@ compaction threshold are both 1,050,000 tokens.
 | `model_context_window` | `1050000` | Request a large context budget |
 | `model_auto_compact_token_limit` | `1050000` | Keep the explicit compaction threshold at that budget |
 | `model_auto_compact_token_limit_scope` | `"body_after_prefix"` | Count growth after the carried compaction-window prefix |
+| `model` | `"gpt-6-astra"` | Prefer the largest available model |
+| `model_reasoning_effort` | `"high"` | Spend more reasoning effort by default |
 | `tui.vim_mode_default` | `true` | Start each session in Vim normal mode |
 
 The requested window does not guarantee that every model can use 1,050,000
@@ -42,15 +44,16 @@ Ask the agent configuring the machine to use this template:
 
 The destination is `$CODEX_HOME/config.toml` when `CODEX_HOME` is set.
 Otherwise it is `~/.codex/config.toml`. On a fresh setup, the template can
-seed that file. On an existing setup, merge the three context keys at the
-top level and `vim_mode_default` into the existing `[tui]` table. Preserve
-unrelated preferences, authentication settings, MCP integrations, and trust
-state. Do not replace an existing configuration wholesale or duplicate a
-TOML table.
+seed that file. On an existing setup, merge the five top-level keys and
+`vim_mode_default` into the existing `[tui]` table. Preserve unrelated
+preferences, authentication settings, MCP integrations, and trust state.
+Do not replace an existing configuration wholesale or duplicate a TOML
+table.
 
-Choose the model and authentication separately. The
+Choose authentication separately. The
 [subscription and API profiles](../../harnesses/codex/README.md#authentication-profiles)
-inherit these user preferences. The
+select a provider and inherit the model recorded here, so confirm that
+model is available to the account behind the profile you use. The
 [tmux wrapper](../../harnesses/codex/README.md#tmux-status-display) also inherits
 them. Restart Codex after merging the settings. New sessions start in Vim
 normal mode. Press `i` to type. `/vim` toggles editing mode for the current
