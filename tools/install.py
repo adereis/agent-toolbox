@@ -18,12 +18,15 @@ def catalog(harness, components):
     result = {}
     for component in components:
         if component == "skills":
+            result["skills/adopt-baseline/references/workflow.md"] = REPO / "skills/adopt-baseline/SKILL.md"
+            result["skills/adopt-baseline/SKILL.md"] = REPO / "harnesses" / harness / "skills/adopt-baseline/SKILL.md"
             if harness == "claude-code":
                 result["skills/teach/SKILL.md"] = REPO / "harnesses/claude-code/skills/teach/SKILL.md"
                 result["skills/teach/references/workflow.md"] = REPO / "skills/teach/SKILL.md"
                 result["skills/whats-new/SKILL.md"] = REPO / "harnesses/claude-code/skills/whats-new/SKILL.md"
                 result["skills/whats-new/references/workflow.md"] = REPO / "skills/whats-new/SKILL.md"
             else:
+                result["skills/adopt-baseline/agents/openai.yaml"] = REPO / "harnesses/codex/skills/adopt-baseline/agents/openai.yaml"
                 result["skills/teach/SKILL.md"] = REPO / "skills/teach/SKILL.md"
                 result["skills/teach/agents/openai.yaml"] = REPO / "harnesses/codex/skills/teach/agents/openai.yaml"
                 result["skills/whats-new/SKILL.md"] = REPO / "harnesses/codex/skills/whats-new/SKILL.md"

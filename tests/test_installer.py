@@ -52,6 +52,35 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse((codex / "settings.json").exists())
         self.assertFalse((claude / "settings.json").exists())
 
+    def test_baseline_skill_shares_one_workflow_across_harnesses(self):
+        claude, codex = self.root / "claude", self.root / "codex"
+        for name, target in (("claude-code", claude), ("codex", codex)):
+            self.install(target, installer.catalog(name, ["skills"]), True)
+            workflow = target / "skills/adopt-baseline/references/workflow.md"
+            self.assertEqual(workflow.resolve(), REPO / "skills/adopt-baseline/SKILL.md")
+            entry = target / "skills/adopt-baseline/SKILL.md"
+            self.assertEqual(entry.resolve(), REPO / "harnesses" / name / "skills/adopt-baseline/SKILL.md")
+        self.assertEqual((codex / "skills/adopt-baseline/agents/openai.yaml").resolve(),
+                         REPO / "harnesses/codex/skills/adopt-baseline/agents/openai.yaml")
+        self.assertFalse((claude / "skills/adopt-baseline/agents").exists())
+
+    def test_instruction_modules_install_without_touching_policy_files(self):
+        for name in ("claude-code", "codex"):
+            with self.subTest(harness=name):
+                target = self.root / name
+                self.install(target, installer.catalog(name, ["instructions"]), True)
+                module = target / "instructions/global-baseline.md"
+                self.assertEqual(module.resolve(), REPO / "instructions/global-baseline.md")
+                self.assertFalse((target / "instructions/README.md").exists())
+                for policy in ("CLAUDE.md", "AGENTS.md"):
+                    self.assertFalse((target / policy).exists())
+
+    def test_global_baseline_module_stays_harness_neutral(self):
+        text = (REPO / "instructions/global-baseline.md").read_text()
+        for token in ("Claude-Session", "CLAUDE_CONFIG_DIR", "CODEX_HOME", "mcpServers",
+                      "config.toml", "subagent", "~/.claude", "~/.codex", "~/.agents"):
+            self.assertNotIn(token, text, f"harness-specific token in shared module: {token}")
+
     def test_repeated_install_is_idempotent(self):
         target = self.root / "install"
         links = installer.catalog("codex", ["skills", "scripts"])

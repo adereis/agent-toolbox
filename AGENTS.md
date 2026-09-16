@@ -31,6 +31,10 @@ Installation must preserve unrelated local configuration and distinguish
 project scope from user scope. Keep machine-specific MCP launchers, secrets,
 session histories, and memory data outside this repository.
 
+The installer handles only unambiguous linking. Work that requires judgment,
+such as merging shared policy into a user's instruction file, belongs in an
+agent workflow that reports what it changed, not in installer logic.
+
 Codex authentication profiles live in `harnesses/codex/profiles/` and install
 at the user `CODEX_HOME`; other Codex components retain their `.agents`
 destinations. Preflight and roll back a mixed installation across all roots.

@@ -34,7 +34,7 @@ project-specific skill installation. This installer does not change
 
 | Component | Claude Code | Codex | Installation behavior |
 |-----------|-------------|-------|-----------------------|
-| `skills` | Yes | Yes | Installs `teach` with native explicit-invocation metadata and the configuration-aware `whats-new` release digest |
+| `skills` | Yes | Yes | Installs `teach` and `adopt-baseline` with native explicit-invocation metadata and the configuration-aware `whats-new` release digest |
 | `scripts` | Yes | Yes | Links harness utilities under `<root>/scripts/` |
 | `hooks` | Yes | Unavailable | Links the remaining hook scripts; registration is manual |
 | `settings` | Yes | Unavailable | Links statusline scripts at the Claude configuration root |
@@ -76,6 +76,11 @@ configuration documented under the Claude [hooks](../harnesses/claude-code/hooks
 or [settings](../harnesses/claude-code/settings/README.md) pages to the scope
 you selected, using the actual installed script path. Reference examples and
 retired components are excluded from the installer.
+
+Instruction modules are inert until an instruction file adopts them. The
+installer never edits `AGENTS.md`, `CLAUDE.md`, or user-level instructions;
+the [baseline adoption workflow](../skills/adopt-baseline/SKILL.md) performs
+that merge and reports what it changed.
 
 Run installed session utilities from a terminal, for example:
 
