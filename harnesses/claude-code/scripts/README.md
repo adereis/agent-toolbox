@@ -35,9 +35,14 @@ python3 harnesses/claude-code/scripts/claude-code-session-resume.py --list --all
 
 
 `--claude-dir PATH` selects a separate Claude configuration directory;
-otherwise the utility honors `CLAUDE_CONFIG_DIR` and then `~/.claude`. The
-selected store is passed to the resumed child process. Cached index paths
-never redirect reads into another profile. Sessions are ordered by transcript
+otherwise the utility honors `CLAUDE_CONFIG_DIR` and then `~/.claude`. A store
+you chose explicitly, by either of those two means, is passed to the resumed
+child process so it cannot stray into another profile. The default store is
+not, because `CLAUDE_CONFIG_DIR` also moves the `.claude.json` configuration
+file, which lives beside `~/.claude` rather than inside it; exporting the
+default session directory would point the child at a configuration path that
+has never existed and start it on a blank profile. Cached index paths never
+redirect reads into another profile. Sessions are ordered by transcript
 file modification time, with the newest displayed last.
 
 `--json` emits a machine-readable listing. Piped output never starts an

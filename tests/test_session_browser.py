@@ -120,6 +120,35 @@ class SessionBrowserTests(unittest.TestCase):
         self.assertEqual(launch.call_args.args[2]["CLAUDE_CONFIG_DIR"], str(self.store))
         self.assertIn("'" + str(self.project) + "'", out)
 
+    def test_default_store_leaves_child_configuration_alone(self):
+        """The variable also moves the config file, which sits outside the
+        default session directory; setting it there would hand the child a
+        config path that has never existed and a blank profile with it."""
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), \
+             patch.object(out, "isatty", return_value=True), \
+             patch("sys.stdin.isatty", return_value=True), \
+             patch("builtins.input", side_effect=["", "yes"]), \
+             patch.object(claude.ClaudeSessions, "default_dir", str(self.store)), \
+             patch.dict(os.environ), \
+             patch("os.execvpe") as launch, patch("os.chdir"):
+            os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            result = claude.main(["--all"])
+        self.assertEqual(result, 0)
+        self.assertNotIn("CLAUDE_CONFIG_DIR", launch.call_args.args[2])
+
+    def test_environment_store_still_confines_the_child(self):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), \
+             patch.object(out, "isatty", return_value=True), \
+             patch("sys.stdin.isatty", return_value=True), \
+             patch("builtins.input", side_effect=["", "yes"]), \
+             patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": str(self.store)}), \
+             patch("os.execvpe") as launch, patch("os.chdir"):
+            result = claude.main(["--all"])
+        self.assertEqual(result, 0)
+        self.assertEqual(launch.call_args.args[2]["CLAUDE_CONFIG_DIR"], str(self.store))
+
     def test_invalid_count_is_rejected(self):
         with self.assertRaises(SystemExit) as caught:
             self.run_cli("--count", "0")

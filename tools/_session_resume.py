@@ -353,7 +353,10 @@ def run_browser(adapter, argv=None):
                         help="Explicit working directory override when resuming")
     adapter.add_arguments(parser)
     args = parser.parse_args(argv)
-    root = (args.data_dir or Path(os.environ.get(adapter.directory_env) or adapter.default_dir)).expanduser().resolve()
+    # An explicitly chosen store is the only reason to override the child's
+    # configuration directory when resuming; see the launch branch below.
+    selected = args.data_dir or os.environ.get(adapter.directory_env)
+    root = (Path(selected) if selected else Path(adapter.default_dir)).expanduser().resolve()
     target = Path(args.project or Path.cwd()).expanduser().resolve()
     try:
         entries = adapter.discover(root, args)
@@ -421,10 +424,15 @@ def run_browser(adapter, argv=None):
         if confirm not in ("", "y", "yes"):
             print("Expected yes or no; no session was started.", file=sys.stderr)
             return 1
-        # Only the child uses this selected harness store; never read another
-        # profile's sessions or silently resume from its default directory.
+        # Confine the child to an explicitly chosen store so it never reads
+        # another profile's sessions. Leave the environment untouched for the
+        # default store: this variable also relocates the harness configuration
+        # file, which does not live inside the default session directory, so
+        # setting it there sends the child to a config path that has never
+        # existed and it silently starts from a blank profile.
         environment = os.environ.copy()
-        environment[adapter.directory_env] = str(root)
+        if selected:
+            environment[adapter.directory_env] = str(root)
         os.chdir(directory)
         os.execvpe(command[0], command, environment)
     except (EOFError, KeyboardInterrupt):
