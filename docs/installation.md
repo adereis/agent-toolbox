@@ -19,10 +19,10 @@ python3 tools/install.py --harness claude-code --scope project \
   --project /path/to/demo-project --component skills --apply
 ```
 
-| Scope | Claude Code root | Codex components | Codex `profiles` |
-|-------|------------------|------------------|------------------|
-| User | `$CLAUDE_CONFIG_DIR` or `~/.claude` | `~/.agents` | `$CODEX_HOME` or `~/.codex` |
-| Project | `<project>/.claude` | `<project>/.agents` | Unavailable |
+| Scope | Claude Code root | Codex components | Codex `profiles` | `commands` |
+|-------|------------------|------------------|------------------|------------|
+| User | `$CLAUDE_CONFIG_DIR` or `~/.claude` | `~/.agents` | `$CODEX_HOME` or `~/.codex` | `~/.local/bin` |
+| Project | `<project>/.claude` | `<project>/.agents` | Unavailable | Unavailable |
 
 `--target PATH` explicitly replaces the installation root for every selected
 component, useful for staging or a custom setup. With `--component profiles`,
@@ -41,6 +41,7 @@ project-specific skill installation. This installer does not change
 | `prompts` | Yes | Yes | Links plain text under `<root>/prompts/`; no automatic invocation |
 | `instructions` | Yes | Yes | Links opt-in modules under `<root>/instructions/`; no policy files overwritten |
 | `profiles` | Unavailable | User scope only | Links `subscription.config.toml` and `api.config.toml` directly into the Codex configuration directory |
+| `commands` | Yes | Yes | User scope only; links the utilities you run yourself into `~/.local/bin`, without their file extension |
 
 Install the Codex [authentication profiles](../harnesses/codex/README.md#authentication-profiles)
 with:
@@ -82,18 +83,28 @@ installer never edits `AGENTS.md`, `CLAUDE.md`, or user-level instructions;
 the [baseline adoption workflow](../skills/adopt-baseline/SKILL.md) performs
 that merge and reports what it changed.
 
-Run installed session utilities from a terminal, for example:
+Put the utilities you run yourself on your `PATH` with the `commands`
+component. It links them into `~/.local/bin` under the name their own help
+text already prints, so the extension disappears:
 
 ```bash
-python3 ~/.agents/scripts/codex-code-session-resume.py --all
-python3 ~/.claude/scripts/claude-code-session-resume.py --all
+python3 tools/install.py --harness codex --scope user \
+  --component commands --apply
+
+codex-code-session-resume --all
+codex-tmux
 ```
 
-You can also symlink a session entry point directly onto your `PATH`:
+`commands` withholds two groups on purpose. A skill invokes each `whats-new`
+utility by path and supplies the judgement that utility deliberately omits,
+and its `--commit` flag moves the digest baseline, so running it by hand
+would mark releases read behind the skill's back. The memory scripts resolve
+`claude-memory-lib.sh` relative to `$0` and need their siblings in a single
+directory. Reach both groups through their installed `scripts` path:
 
 ```bash
-mkdir -p ~/bin
-ln -s "$PWD/harnesses/codex/scripts/codex-code-session-resume.py" ~/bin/
+python3 ~/.claude/scripts/claude-code-whats-new.py
+~/.claude/scripts/claude-memory-status.sh
 ```
 
 To remove an installation, remove only its symlinks; remove any hook or

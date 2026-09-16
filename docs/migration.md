@@ -15,6 +15,26 @@ The `claude-code-baseline` tag preserves the previous collection. Harness
 components moved from the root into `harnesses/claude-code/`; update any
 checkout-relative paths, aliases, or symlinks you maintain.
 
+## Hand-made PATH symlinks
+
+Earlier instructions told you to symlink a session utility into `~/bin`
+yourself. The `commands` component now owns that job and installs into
+`~/.local/bin` without the file extension. Remove the hand-made links so one
+tool cannot answer to two names:
+
+```bash
+rm -f ~/bin/claude-code-session-resume.py ~/bin/codex-code-session-resume.py
+rm -f ~/bin/codex-api-profile.sh ~/bin/codex-tmux.py
+python3 tools/install.py --harness codex --scope user \
+  --component commands --apply
+```
+
+Check the removal against your own `~/bin` before running it; the installer
+never deletes files it did not create. If both directories are on your
+`PATH`, confirm with `type -a <command>` that no stale entry remains. The
+`whats-new` and memory utilities never belonged on `PATH`; run them from
+their installed `scripts` directory instead.
+
 ## Retired hooks
 
 Remove these command registrations from your Claude Code settings before

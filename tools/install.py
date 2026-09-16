@@ -10,7 +10,19 @@ import sys
 
 
 REPO = Path(__file__).resolve().parents[1]
-COMPONENTS = ("skills", "scripts", "hooks", "settings", "prompts", "instructions", "profiles")
+COMPONENTS = ("skills", "scripts", "hooks", "settings", "prompts", "instructions",
+              "profiles", "commands")
+
+# Utilities a person runs at a shell prompt, installed without their extension.
+# The whats-new scripts are deliberately absent: a skill invokes them by path
+# and interprets output they withhold judgement on, and a stray --commit would
+# move the digest baseline out from under that skill. The memory scripts are
+# absent because they resolve their library through "$0" and need their
+# siblings, including the library itself, in the same directory.
+COMMANDS = {
+    "claude-code": ("claude-code-session-resume.py",),
+    "codex": ("codex-api-profile.sh", "codex-code-session-resume.py", "codex-tmux.py"),
+}
 
 
 def catalog(harness, components):
@@ -37,6 +49,9 @@ def catalog(harness, components):
             for name in ("subscription", "api"):
                 filename = f"{name}.config.toml"
                 result[filename] = REPO / "harnesses/codex/profiles" / filename
+        elif component == "commands":
+            for name in COMMANDS[harness]:
+                result[Path(name).stem] = REPO / "harnesses" / harness / "scripts" / name
         elif component in ("prompts", "instructions"):
             for source in (REPO / component).glob("*.md"):
                 if source.name != "README.md":
@@ -158,12 +173,16 @@ def main(argv=None):
             links = catalog(args.harness, [component])
             if component == "profiles" and args.scope != "user":
                 raise ValueError("Codex profiles require --scope user; project config cannot select providers")
+            if component == "commands" and args.scope != "user":
+                raise ValueError("Commands require --scope user; PATH is a property of the account, not a project")
             if args.target:
                 target = args.target
             elif args.scope == "project":
                 target = (args.project or Path.cwd()) / directory
             elif component == "profiles":
                 target = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+            elif component == "commands":
+                target = Path.home() / ".local/bin"
             elif args.harness == "claude-code":
                 target = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / directory)
             else:

@@ -35,13 +35,18 @@ Choose a harness and scope, then preview the selected components:
 git clone https://github.com/adereis/agent-toolbox.git
 cd agent-toolbox
 python3 tools/install.py --harness codex --scope user \
-  --component skills --component scripts
+  --component skills --component scripts --component commands
 ```
 
 Add `--apply` to create the links. Existing conflicting files are preserved.
 See [installation](docs/installation.md) for scope, components, configuration,
-and removal. `/sync` in Claude Code wraps this same installer. Session
-utilities run from a terminal; `--list` and `--json` only inspect history.
+and removal. `/sync` in Claude Code wraps this same installer.
+
+`scripts` links every harness utility where a skill can reach it by path.
+`commands` puts the ones you run yourself on your `PATH` in `~/.local/bin`,
+without the file extension, so the session browser is typed as
+`codex-code-session-resume` rather than as a path. Session utilities run
+from a terminal; `--list` and `--json` only inspect history.
 
 ## Using this repository with an agent
 

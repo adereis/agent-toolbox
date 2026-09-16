@@ -260,3 +260,46 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse((target / "api.config.toml").exists())
         self.assertFalse((self.root / ".agents/skills/teach/SKILL.md").exists())
         self.assertFalse((self.root / ".agents/skills/teach/agents/openai.yaml").exists())
+
+    def test_commands_install_on_path_without_their_extensions(self):
+        result, _, err = self.run_cli(
+            "--harness", "codex", "--scope", "user", "--component", "commands", "--apply")
+        self.assertEqual((result, err), (0, ""))
+        expected = {"codex-api-profile": "codex-api-profile.sh",
+                    "codex-code-session-resume": "codex-code-session-resume.py",
+                    "codex-tmux": "codex-tmux.py"}
+        installed = self.root / ".local/bin"
+        self.assertEqual({path.name for path in installed.iterdir()}, set(expected))
+        for command, script in expected.items():
+            self.assertEqual((installed / command).resolve(),
+                             REPO / "harnesses/codex/scripts" / script)
+
+    def test_commands_exclude_agent_invoked_and_sourced_scripts(self):
+        """A skill reads whats-new by path; the memory library is sourced, never run."""
+        commands = set()
+        for harness in ("claude-code", "codex"):
+            commands |= set(installer.catalog(harness, ["commands"]))
+        for withheld in ("claude-code-whats-new", "codex-whats-new", "claude-memory-lib",
+                         "claude-memory-export", "claude-memory-import", "claude-memory-status"):
+            self.assertNotIn(withheld, commands)
+        self.assertTrue(all("." not in command for command in commands),
+                        "commands install under the name their own help text prints")
+
+    def test_commands_require_user_scope(self):
+        result, _, err = self.run_cli(
+            "--harness", "codex", "--scope", "project", "--component", "commands", "--apply")
+        self.assertEqual(result, 1)
+        self.assertIn("PATH is a property of the account", err)
+        self.assertFalse((self.root / ".local/bin").exists())
+
+    def test_commands_and_scripts_reach_separate_roots(self):
+        """The same script is a named command on PATH and a path the agent reads."""
+        result, _, err = self.run_cli(
+            "--harness", "codex", "--scope", "user", "--component", "commands",
+            "--component", "scripts", "--apply")
+        self.assertEqual((result, err), (0, ""))
+        source = REPO / "harnesses/codex/scripts/codex-code-session-resume.py"
+        self.assertEqual((self.root / ".local/bin/codex-code-session-resume").resolve(), source)
+        self.assertEqual((self.root / ".agents/scripts/codex-code-session-resume.py").resolve(), source)
+        self.assertFalse((self.root / ".local/bin/codex-whats-new").exists())
+        self.assertTrue((self.root / ".agents/scripts/codex-whats-new.py").is_symlink())

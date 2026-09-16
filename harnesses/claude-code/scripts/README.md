@@ -52,10 +52,13 @@ Commit extraction is best effort for recognized shell calls; quiet commits
 may have only a summary. Distinct observed SHAs remain visible even when
 subjects match, including commits later replaced by an amend or reset.
 
-To run it from anywhere, symlink it onto your `PATH`:
+To run it from anywhere, install the `commands` component. It links the
+script into `~/.local/bin` as `claude-code-session-resume`, matching the
+name its own usage line prints:
 
 ```bash
-ln -s "$PWD/harnesses/claude-code/scripts/claude-code-session-resume.py" ~/bin/
+python3 tools/install.py --harness claude-code --scope user \
+  --component commands --apply
 ```
 
 ## claude-code-whats-new.py
