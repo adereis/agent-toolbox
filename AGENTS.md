@@ -13,6 +13,10 @@ implement the agreed scope, and document usage with the change.
   when those components are introduced. Create directories for real content.
 - Keep one authoritative source for shared content. Harness entry points
   should reference or package it rather than maintain independent copies.
+- A harness entry point that links shared text keeps a committed
+  `references/workflow.md` symlink beside it, so the link resolves in an
+  uninstalled checkout as well as in an installation. An agent often reads
+  the skill from the checkout before anything is installed.
 - Root `AGENTS.md` governs development here. Distributed instruction modules
   are opt-in content, not automatically active repository policy.
 - README files document usage and installation. This file documents developer
