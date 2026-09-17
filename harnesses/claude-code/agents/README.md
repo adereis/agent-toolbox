@@ -47,6 +47,16 @@ You are a Jira/Atlassian specialist ...
 Find your real launcher with `claude mcp get atlassian` (copy its `Command`,
 `Args`, `Type`) before removing the global entry.
 
+Declare the model in `model:` and nowhere else. A line in the body such as
+"you run on Sonnet" is redundant with the model identity the harness already
+supplies, and it silently becomes false when `model:` changes or when the
+definition is copied to a harness that resolves subagent models differently.
+Body prose cannot bind a model, so it can only agree with the runtime or lie
+about it, and nothing keeps the two in step. The `description` is a different
+case: the main thread reads it when choosing whether to delegate, so naming
+the model there is routing rationale rather than a claim aimed at the agent
+itself.
+
 ### Setup
 
 1. Create `~/.claude/agents/jira.md` from the template above with your real
