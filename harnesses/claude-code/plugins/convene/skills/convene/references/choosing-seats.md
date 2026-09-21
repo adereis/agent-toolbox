@@ -1,0 +1,37 @@
+# Choosing seats
+
+A seat is persona × harness × model × tools. Choose each on purpose.
+
+**Persona.** `convene personas list` prints the catalog. The starter set
+covers a skeptic (`quinn-t-shun`), an adversary (`ada-versary`), a
+maintainer (`connie-tinuity`), a measurer (`emma-pirical`), a threat
+modeler (`sec-urity`), a reader of the outside (`axel-cess`), an
+architect (`archie-tecture`), a tester (`tess-tcase`), a domain expert
+(`xavier-pert`, who takes the domain from the brief) and a performance
+reviewer (`percy-formance`). A
+project can add its own under `.convene/personas/`; a project persona
+shadows a plugin one with the same id. Three seats with three
+perspectives beat five seats with one.
+
+**Harness and model.** Independence is the point. When you are Claude,
+put at least one seat on Codex when it is installed, and prefer a model
+that is not the one you are running on. Every seat's served model is
+verified from the harness's own evidence and stamped on its receipt; a
+mismatch fails the seat rather than passing quietly. Claude accepts
+`opus`, `sonnet`, `haiku` or a full id; Codex needs a slug its catalog
+lists (`~/.codex/models_cache.json`).
+
+**Tools.** `read` (the default) lets a seat read the repository and its
+materials. `none` is for a seat that must answer from the brief alone;
+it cannot take materials. `write` adds edit and shell tools, which a
+panel does not need. `research` adds the web; use it only when a seat
+must check a source, and expect the board to mark that seat.
+
+**Isolation.** `strongest` (the default) picks `enforced` on Linux with
+bubblewrap, else `private-home`. Set a seat to `none` only for a
+deliberate test of the difference, and expect its receipt to say so.
+
+**Cost.** Seats run one at a time by default. Put a cheap seat first
+when the brief is new: a broken assignment is found by whichever seat
+runs first, and that seat should be the one it costs least to throw
+away.

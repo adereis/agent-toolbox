@@ -136,3 +136,37 @@ summary and native resume command remain on the calling terminal after
 tmux closes. Repeat in a narrow terminal and verify the replayed resume
 command is a single copyable line. Check `--help` for separate examples,
 requirements, session/key behavior, and service-tier/cost sections.
+
+## IT-09: Convene panel with live seats
+
+**Prerequisites:** the plugin loaded (`claude --plugin-dir
+harnesses/claude-code/plugins/convene`, or installed from the checkout
+marketplace), `claude` and `codex` logged in, and on Linux `bwrap` on PATH.
+One cheap seat per harness (Claude `haiku`, the cheapest Codex slug the
+catalog lists) keeps the cost to a short exchange each.
+
+**Doctor:** `bin/convene doctor`. Expected: both harnesses with versions and
+`credentials present`, every probe `✓`, and `isolation enforced` available
+on Linux. A `✗` on a probe means a flag the blindness relies on went dead
+in an upgrade; stop there.
+
+**Panel:** `/convene:panel HEAD~3..HEAD seat=claude/haiku seat=codex/<slug>`
+in this repository. Expected: `prepare` prints `isolation=enforced` per seat
+on Linux (`private-home` on macOS), `run` posts both seats, and the
+synthesis cites both by id. Inspect `records/<seat>/r001/receipt.json` in
+the run directory: `model` is the served id (`claude-haiku-*` for `haiku`;
+the exact slug for Codex), `isolation.tier` matches what `prepare` printed,
+`tool_calls` is small, `compaction_observed` is false, `inputs_intact` is
+true. `launch.json` lists environment variable names only; grep the run
+directory for the access token and find nothing.
+
+**Canary (enforced tier):** prepare a plan with `workspace = "none"` and a
+brief asking the seat to report what is in its `HOME`, whether it can read
+this checkout's `AGENTS.md` by absolute path, and which tools it has.
+Expected: an empty home apart from the harness's own directory, the read
+fails, no `mcp__*` or web tools. Repeat with `isolation = "private-home"`:
+the read succeeds, and the receipt's red flags say `isolation is advisory`.
+
+**Quota hold:** only when a quota window is genuinely exhausted, run a
+panel and confirm `status` reports the round as HELD with the seat and the
+reset time, and that `board` prints nothing for that round.

@@ -23,6 +23,10 @@ same script can be a path the agent reads and a name you type. Do not add
 the `whats-new` or memory utilities to `commands`; `tools/install.py`
 records why, and `tests/test_installer.py` enforces it.
 
+Plugins (`harnesses/claude-code/plugins/`) are not installer components.
+They install natively: `claude plugin marketplace add <checkout>` then
+`claude plugin install convene@agent-toolbox`; see docs/installation.md.
+
 Hooks and settings are opt-in components. Installing their scripts does not
 register hooks or change settings; follow docs/installation.md for the
 selected scope when configuration changes are requested.

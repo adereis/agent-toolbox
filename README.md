@@ -4,10 +4,41 @@ Reusable tools, prompts, instructions, skills, and hooks for coding agents.
 Shared components live alongside explicit integrations for individual
 harnesses; each component documents where it works.
 
+## Convene: panels of independent AI reviewers
+
+[Convene](harnesses/claude-code/plugins/convene/README.md) is a Claude Code
+plugin that runs several **independent** coding-agent sessions on the same
+brief and brings back what each wrote, with a receipt for what actually ran.
+Seats are native CLIs (`claude -p`, `codex exec`) with a declared persona,
+model, tool set and isolation tier; the foreground Claude is the operator
+that writes the brief, reads the board and synthesizes.
+
+```
+/convene:panel HEAD~3..HEAD seat=codex/gpt-5.5 seat=claude/opus --persona sec-urity
+```
+
+That convenes a security reviewer on Codex and a skeptic on Claude over the
+last three commits, each in its own process with no MCP servers, no project
+instruction files and no operator memory, then reports the findings with the
+served model, the isolation tier and every red flag per seat. On Linux with
+bubblewrap the seats are jailed at the OS level; elsewhere they get a private
+home and the receipt says so. It installs through Claude Code's own plugin
+commands, not through `tools/install.py`:
+
+```bash
+claude plugin marketplace add /path/to/agent-toolbox
+claude plugin install convene@agent-toolbox
+```
+
+This version ships the one-round panel. Rooms (seats discussing over rounds
+on a shared board) and blind fanouts (parallel implementations sealed before
+reading) follow on the same engine.
+
 ## Available components
 
 | Component | Harness | Documentation |
 |-----------|---------|---------------|
+| Convene: multi-seat review panels with isolation tiers and receipts | Claude Code plugin; seats on Claude Code and Codex | [Convene](harnesses/claude-code/plugins/convene/README.md) |
 | Session history and resume | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md) |
 | Session history and resume | Codex | [Codex integration](harnesses/codex/README.md) |
 | Subscription and API authentication profiles | Codex | [Authentication profiles](harnesses/codex/README.md#authentication-profiles) |
@@ -70,9 +101,10 @@ agent-toolbox/
 ├── instructions/         # Opt-in policy modules
 ├── tools/                # Installer and common utility code
 ├── harnesses/
-│   ├── claude-code/      # Claude wrappers, hooks, settings, utilities
+│   ├── claude-code/      # Claude wrappers, hooks, settings, utilities, plugins
 │   └── codex/            # Codex profiles, wrappers, and session utility
 ├── examples/             # Reference implementations, excluded from install
+├── .claude-plugin/       # Marketplace manifest: the checkout is a local plugin marketplace
 ├── docs/                 # Installation and migration
 ├── tests/                # Automated and live integration checks
 ├── AGENTS.md             # Repository development conventions

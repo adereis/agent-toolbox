@@ -107,6 +107,27 @@ python3 ~/.claude/scripts/claude-code-whats-new.py
 ~/.claude/scripts/claude-memory-status.sh
 ```
 
+## Plugins
+
+Claude Code plugins live under `harnesses/claude-code/plugins/` and are
+installed with Claude Code's own commands. The repository root carries a
+marketplace manifest, so a checkout is a local marketplace:
+
+```bash
+claude plugin marketplace add /path/to/agent-toolbox
+claude plugin install convene@agent-toolbox
+
+# Development: load the checkout in place, without installing
+claude --plugin-dir /path/to/agent-toolbox/harnesses/claude-code/plugins/convene
+```
+
+`tools/install.py` does not manage plugins and has no `plugin` component.
+Claude Code discovers plugins only through its own registry
+(`~/.claude/plugins/installed_plugins.json`), and an installer writing there
+would be a second source of truth for the same state. Update an installed
+plugin with `claude plugin update convene@agent-toolbox`; remove it with
+`claude plugin uninstall convene@agent-toolbox`.
+
 To remove an installation, remove only its symlinks; remove any hook or
 statusline registration before removing the script it runs. The installer
 never imports local configuration or content back into the repository.

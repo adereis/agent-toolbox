@@ -4,6 +4,7 @@
 - [Statusline configuration](settings/README.md)
 - [Supported hooks](hooks/README.md)
 - [Local agent configuration patterns](agents/README.md)
+- [Convene plugin: multi-seat review panels](plugins/convene/README.md)
 
 Use the [scoped installer](../../docs/installation.md) to link selected
 components from this checkout. Hook and statusline activation remains an
@@ -19,6 +20,10 @@ line and state locations for the shared workflow under `skills/whats-new/`,
 and reports the releases published since its last digest against this
 machine's configuration. Installing it without the `scripts` component leaves
 the skill without the utility it drives.
+
+Plugins under `plugins/` are installed with Claude Code's own plugin
+commands, not with the installer; the repository root is a local
+marketplace. See the [installation notes](../../docs/installation.md#plugins).
 
 The old reviewer/verifier pairs and tmp, test-edit, and continue-plan hooks
 are retired. See the [migration notes](../../docs/migration.md).

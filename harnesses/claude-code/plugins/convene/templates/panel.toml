@@ -1,0 +1,72 @@
+# A panel: several independent reviewers over one commit range.
+#
+# Copy this file, edit the brief and the seats, then:
+#   convene prepare panel.toml --range A..B
+#   convene run <name>
+#   convene board <name>
+#
+# Every field under [defaults] can be repeated inside a [[seats]] table to
+# override it for that seat. Fields shown with their default value.
+
+schema = 1
+kind = "panel"
+title = "Review the change"
+rounds = 1                    # this version runs one round
+jobs = 1                      # seats in parallel; 1 because seats on one
+                              # account hit the same quota wall together
+
+# Seat defaults. `strongest` picks enforced (bwrap, Linux), then
+# private-home, then none; the resolved tier is frozen and stamped on
+# every receipt.
+harness = "claude"            # claude | codex
+model = "opus"                # a model the harness accepts
+effort = "high"
+tools = "read"                # none | read | write | research
+isolation = "strongest"       # strongest | enforced | private-home | none
+workspace = "repo-ro"         # none | repo-ro   (a panel defaults to repo-ro)
+compaction = "forbid"         # forbid pins the whole window; allow lets it compact
+instrument = "review"         # what every seat is asked to produce
+
+# Doors, closed by default. Open them here for every seat, or per seat.
+# grants = ["web", "mcp", "settings", "instructions", "hooks"]
+# claude_args = ["--mcp-config", "/path/to/mcp.json"]
+# codex_args = ["-c", "mcp_servers.docs.command=\"docs-mcp\""]
+# env = ["MY_TOKEN"]          # operator variables passed through by name
+
+[brief]
+text = """
+Review this change as a maintainer about to merge it. The commit messages
+say what it is for; check that the code does that, and look for what the
+author did not think of.
+"""
+# Or: path = "brief.md"   (relative to this file)
+
+# Extra material every seat gets, beside the generated diff.patch and
+# log.txt. Paths are relative to the project root unless relative_to = "plan".
+# A label is what the seats are told; a filename carrying a verdict or an
+# author name would put that in the room.
+# [[materials]]
+# path = "docs/design.md"
+# label = "the design note the change claims to implement"
+
+[[seats]]
+id = "skeptic"
+persona = "quinn-t-shun"
+
+[[seats]]
+id = "maintainer"
+persona = "connie-tinuity"
+harness = "codex"
+model = "gpt-5.5"
+
+[[seats]]
+id = "security"
+persona = "sec-urity"
+
+# A seat may bring its own material, unseen by the others:
+# [[seats.materials]]
+# path = "notes/threat-model.md"
+# label = "the threat model"
+
+[synthesis]
+by = "operator"               # the foreground Claude reads the board and writes synthesis.md

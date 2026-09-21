@@ -1,7 +1,9 @@
 """Source-tree invariants: documentation links and deployable profile content."""
 
 from pathlib import Path
+import json
 import re
+import sys
 import tomllib
 import unittest
 
@@ -72,6 +74,52 @@ class CodexProfileTests(unittest.TestCase):
                                  f"{profile.name} restates personal keys {sorted(overlap)}; "
                                  "the subscription profile has no matching key, so the "
                                  "model would change silently when switching profiles")
+
+
+PLUGINS = REPO / "harnesses/claude-code/plugins"
+sys.path.insert(0, str(PLUGINS / "convene/engine"))
+
+
+class PluginTests(unittest.TestCase):
+    def test_every_plugin_manifest_names_its_directory(self):
+        """Claude Code installs a plugin under its manifest name; a mismatch
+        with the marketplace entry leaves `/name:command` pointing nowhere."""
+        marketplace = json.loads((REPO / ".claude-plugin/marketplace.json").read_text())
+        listed = {entry["name"]: (REPO / entry["source"]).resolve() for entry in marketplace["plugins"]}
+        for plugin in sorted(p for p in PLUGINS.iterdir() if p.is_dir()):
+            with self.subTest(plugin=plugin.name):
+                manifest = json.loads((plugin / ".claude-plugin/plugin.json").read_text())
+                self.assertEqual(manifest["name"], plugin.name)
+                self.assertEqual(listed.get(plugin.name), plugin.resolve(),
+                                 "the repository marketplace must list every plugin at its path")
+
+    def test_commands_reach_the_engine_through_the_plugin_root(self):
+        """An installed plugin is a copy under the plugin cache; a command that
+        spells a checkout path breaks there."""
+        for command in sorted(PLUGINS.rglob("commands/*.md")):
+            with self.subTest(command=command.relative_to(REPO)):
+                text = command.read_text()
+                self.assertTrue(text.startswith("---\n"), "commands carry frontmatter")
+                self.assertIn("${CLAUDE_PLUGIN_ROOT}", text)
+                self.assertNotIn("harnesses/claude-code/plugins", text)
+
+    def test_convene_catalogs_validate(self):
+        from convene import instruments, personas
+        plugin = PLUGINS / "convene"
+        for path in sorted((plugin / "personas").glob("*.json")):
+            with self.subTest(persona=path.name):
+                snapshot = personas.resolve(path.stem)
+                self.assertEqual(snapshot["source"]["path"], str(path))
+        for path in sorted((plugin / "instruments").glob("*.json")):
+            with self.subTest(instrument=path.name):
+                instruments.resolve(path.stem)
+
+    def test_convene_template_parses_and_names_only_plugin_personas(self):
+        from convene import personas
+        template = tomllib.loads((PLUGINS / "convene/templates/panel.toml").read_text())
+        known = set(personas.catalog())
+        for seat in template["seats"]:
+            self.assertIn(seat["persona"], known)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,18 @@
+{
+  "name": "agent-toolbox",
+  "owner": {
+    "name": "Ademar Reis"
+  },
+  "metadata": {
+    "description": "Plugins from the Agent Toolbox checkout.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "convene",
+      "description": "Multi-seat panels, rooms and fanouts over native coding-agent CLIs, with isolation tiers and receipts.",
+      "version": "0.1.0",
+      "source": "./harnesses/claude-code/plugins/convene"
+    }
+  ]
+}
