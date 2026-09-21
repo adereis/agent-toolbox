@@ -79,6 +79,8 @@ def report(*, probes=True, project_root=None):
         out["harnesses"][name] = entry
     for name, tier in isolation.tiers().items():
         out["tiers"][name] = tier.available()
+    if sys.platform.startswith("linux"):
+        out["excluded_mounts"] = [str(e) for e in bwrap.excluded_mounts()]
     return out
 
 
@@ -100,6 +102,9 @@ def render(data):
     for name, reason in data["tiers"].items():
         lines.append(f"{'✓' if reason is None else '✗'} isolation {name}" +
                      ("" if reason is None else f": {reason}"))
+    if data.get("excluded_mounts"):
+        lines.append("  network and automount filesystems left out of every jail: "
+                     + ", ".join(data["excluded_mounts"]))
     bad = any(not e["installed"] or any(not p["ok"] for p in e["probes"])
               for e in data["harnesses"].values())
     return "\n".join(lines), bad

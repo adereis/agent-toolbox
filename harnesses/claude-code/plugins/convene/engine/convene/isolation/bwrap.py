@@ -24,6 +24,87 @@ from convene.isolation import Launch
 BWRAP = "bwrap"
 BLANKED = ("$HOME", "/tmp", "/var/tmp")
 WORKSPACE_NAME = "workspace"
+MOUNTS = "/proc/self/mounts"
+# Filesystems that never enter a jail. Two reasons, either sufficient: a
+# network share is the operator's personal or shared data, which a seat
+# has no business reaching; and bwrap applies mount flags recursively to
+# every submount of a bind, so a stale or slow share under `/` makes the
+# whole root bind fail with "Unable to apply mount flags".
+EXCLUDED_FSTYPES = {"autofs", "cifs", "smb3", "nfs", "nfs4", "afs", "9p", "fuse.sshfs",
+                    "fuse.rclone", "fuse.gvfsd-fuse", "davfs", "ceph", "glusterfs"}
+
+
+def excluded_mounts(path=MOUNTS):
+    """Mount points of network and automount filesystems, deepest last."""
+    found = []
+    try:
+        lines = Path(path).read_text().splitlines()
+    except OSError:
+        return found
+    for line in lines:
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        target, fstype = parts[1].replace("\\040", " "), parts[2]
+        if fstype in EXCLUDED_FSTYPES or fstype.startswith("fuse."):
+            found.append(Path(target))
+    return sorted(set(found), key=lambda p: (len(p.parts), str(p)))
+
+
+def root_binds(excluded, root=Path("/"), skip=()):
+    """Binds that reassemble `/` without the excluded mount points.
+
+    `--bind / /` is one line when nothing under `/` is excluded. With an
+    exclusion, the directories on the path to it are bound entry by entry
+    and the excluded mount itself is left out, so the jail's root simply
+    has no such directory. Symlinks at any level are recreated as symlinks
+    (Fedora's `/bin` -> `usr/bin`), never bound through.
+    """
+    out = []
+    excluded = [e for e in excluded if e != root]
+    inside = [e for e in excluded if root in e.parents]
+    if not inside:
+        return [("--bind", str(root), str(root))]
+    for child in sorted(root.iterdir()):
+        if child in skip or child in excluded:
+            continue
+        if child.is_symlink():
+            out.append(("--symlink", os.readlink(child), str(child)))
+        elif child.is_dir():
+            out += root_binds(excluded, child, skip)
+        elif child.is_file():
+            out.append(("--ro-bind", str(child), str(child)))
+    return out
+
+
+def launcher_paths(link, hops=10):
+    """Every directory needed to follow a launcher's symlink chain.
+
+    One hop at a time rather than `resolve()`, collecting each element's
+    parent, so an intermediate link like codex's `current` still has
+    somewhere to point inside the jail.
+    """
+    out, seen, current = [], set(), Path(link)
+    for _ in range(hops):
+        if current in seen:
+            break
+        seen.add(current)
+        out.append(current.parent)
+        if not current.is_symlink():
+            break
+        current = Path(os.path.normpath(os.path.join(current.parent, os.readlink(current))))
+    out.append(current if current.is_dir() else current.parent)
+    return list(dict.fromkeys(out))
+
+
+def version():
+    try:
+        result = subprocess.run([BWRAP, "--version"], capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout.strip() or None
+
+
 class Enforced:
     name = "enforced"
 
@@ -53,8 +134,11 @@ class Enforced:
         virtual_harness_home = home / harness.home_name
         virtual_workspace = home / WORKSPACE_NAME
         workspace, project_root = Path(workspace), Path(project_root)
-        jail = [BWRAP, "--die-with-parent", "--bind", "/", "/", "--dev-bind", "/dev", "/dev",
-                "--proc", "/proc"]
+        excluded = excluded_mounts()
+        jail = [BWRAP, "--die-with-parent"]
+        for triple in root_binds(excluded, skip=(Path("/dev"), Path("/proc"))):
+            jail += list(triple)
+        jail += ["--dev-bind", "/dev", "/dev", "--proc", "/proc"]
         blanked = [str(home) if b == "$HOME" else b for b in BLANKED]
         for target in blanked:
             jail += ["--tmpfs", target]
@@ -102,6 +186,7 @@ class Enforced:
             "tier": "enforced", "enforced": True, "backend": "bwrap",
             "backend_version": version(), "blanked": blanked,
             "read_only_binds": [t for _, t in read_only],
+            "excluded_mounts": [str(e) for e in excluded],
             "writable": [str(virtual_workspace)], "read_only_in_workspace":
             [str(virtual_workspace / n) for n in ("materials", "START.md", "board")],
             "harness_home": str(virtual_harness_home), "harness_home_source": str(private),

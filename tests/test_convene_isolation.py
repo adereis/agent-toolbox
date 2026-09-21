@@ -122,6 +122,27 @@ class BwrapArgvTests(unittest.TestCase):
         launched = self.wrap(repo_ro=True, project=outside)
         self.assertNotIn(str(outside), launched.attestation["blanked"])
 
+    def test_network_mounts_are_left_out_of_the_root(self):
+        table = self.box.root / "mounts"
+        table.write_text("rootfs / ext4 rw 0 0\n/etc/auto.nas /nas autofs rw 0 0\n"
+                         "//srv/home /nas/me cifs rw 0 0\nsrv:/x /mnt/share\\040two nfs4 rw 0 0\n"
+                         "tmpfs /tmp tmpfs rw 0 0\n")
+        excluded = bwrap.excluded_mounts(table)
+        self.assertEqual(excluded, [Path("/nas"), Path("/mnt/share two"), Path("/nas/me")])
+        fake = self.box.root / "fakeroot"
+        for name in ("usr", "etc", "mnt/share two", "mnt/other", "nas/me", "home"):
+            (fake / name).mkdir(parents=True)
+        (fake / "bin").symlink_to("usr/bin")
+        (fake / "vmlinuz").write_text("")
+        binds = bwrap.root_binds([fake / "nas", fake / "mnt/share two"], fake)
+        self.assertNotIn(str(fake / "nas"), [b[1] for b in binds])
+        self.assertIn(("--bind", str(fake / "mnt/other"), str(fake / "mnt/other")), binds)
+        self.assertNotIn(("--bind", str(fake / "mnt"), str(fake / "mnt")), binds)
+        self.assertIn(("--bind", str(fake / "usr"), str(fake / "usr")), binds)
+        self.assertIn(("--symlink", "usr/bin", str(fake / "bin")), binds)
+        self.assertIn(("--ro-bind", str(fake / "vmlinuz"), str(fake / "vmlinuz")), binds)
+        self.assertEqual(bwrap.root_binds([], fake), [("--bind", str(fake), str(fake))])
+
     def test_launcher_paths_follow_intermediate_links(self):
         real = self.box.root / "opt/app-1.0/bin"
         real.mkdir(parents=True)
