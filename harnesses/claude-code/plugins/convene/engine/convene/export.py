@@ -9,12 +9,13 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from convene import board, round as rounds_, runs
+from convene import board, round as rounds_, runs, seal
 from convene.storage import read, write
 
 
 def export(root, directory):
     root, plan = runs.load(root)
+    seal.guard(root, plan, "export")
     directory = Path(directory).expanduser().resolve()
     if directory.exists() and any(directory.iterdir()):
         raise ValueError(f"export directory is not empty: {directory}")
@@ -22,6 +23,8 @@ def export(root, directory):
     shutil.copyfile(root / "plan.json", directory / "plan.json")
     if (root / "board").exists():
         shutil.copytree(root / "board", directory / "board", dirs_exist_ok=True)
+    if (root / "sealed").exists():
+        shutil.copytree(root / "sealed", directory / "sealed", dirs_exist_ok=True)
     receipts = {}
     for seat in plan["seats"]:
         for path in sorted((root / "records" / seat["id"]).glob("r[0-9][0-9][0-9]/*.json")):

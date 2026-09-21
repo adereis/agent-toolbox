@@ -70,7 +70,8 @@ def _brief(supplied, plan_dir):
 def _phases(supplied, rounds, seat_ids, kind):
     declared = supplied.get("phases") or []
     if not declared:
-        return [{"name": "findings" if kind == "panel" else "discussion", "rounds": rounds}]
+        return [{"name": {"panel": "findings", "fanout": "attempt", "room": "discussion"}[kind],
+                 "rounds": rounds}]
     total = 0
     for phase in declared:
         if not isinstance(phase, dict) or not isinstance(phase.get("rounds"), int) or phase["rounds"] < 1:
@@ -228,8 +229,9 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
     if not isinstance(rounds, int) or rounds < 1:
         raise ValueError("rounds must be a positive integer")
     synthesis = supplied.get("synthesis", {"by": "operator"})
-    if not isinstance(synthesis, dict) or synthesis.get("by") != "operator":
-        raise ValueError(f"synthesis by a seat {LATER}; use by = \"operator\"")
+    if not isinstance(synthesis, dict) or not isinstance(synthesis.get("by"), str):
+        raise ValueError("synthesis.by must be \"operator\" or a seat id")
+    synthesizer = None if synthesis["by"] == "operator" else identifier(synthesis["by"])
 
     defaults = dict(DEFAULTS)
     configured, config_sources = config.load(project_root, environ)
@@ -249,6 +251,14 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         raise ValueError("post_length must be a positive word count")
     if kind == "panel" and "workspace" not in supplied:
         defaults["workspace"] = "repo-ro"
+    if kind == "fanout":
+        # Blind by construction: the seats never see each other, each gets
+        # its own checkout, and the operator reads the results sealed.
+        for key, value in (("visibility", "blind"), ("workspace", "worktree"), ("tools", "write")):
+            if supplied.get(key, value) != value:
+                raise ValueError(f"a fanout fixes {key} = \"{value}\"; use kind = \"room\" for "
+                                 "anything else")
+            defaults[key] = value
 
     brief = _brief(supplied, plan_dir)
     common = [staging.entry(m, plan_dir, project_root) for m in supplied.get("materials", [])]
@@ -261,19 +271,55 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
     elif spec:
         raise ValueError("--range applies to kind = \"panel\" only")
 
-    instrument_ref = supplied.get("instrument", "review" if kind == "panel" else None)
+    instrument_ref = supplied.get("instrument", {"panel": "review", "fanout": "implement",
+                                                  "room": None}[kind])
     instrument = instruments.resolve(instrument_ref, project_root) if instrument_ref else None
 
     if not supplied.get("seats"):
         raise ValueError("declare at least one seat")
-    seats = [_seat(item, defaults, project_root, plan_dir, environ) for item in supplied["seats"]]
+    seats = []
+    for item in supplied["seats"]:
+        if synthesizer and item.get("id") == synthesizer:
+            # The synthesizer reads the board and never works blind; a
+            # fanout's other seats keep the kind's own settings.
+            item = {**item, "visibility": "board", "workspace": item.get("workspace", "none"),
+                    "tools": item.get("tools", "read")}
+            seats.append(_seat(item, {**defaults, "visibility": "board", "workspace": "none",
+                                      "tools": "read"}, project_root, plan_dir, environ))
+        else:
+            seats.append(_seat(item, defaults, project_root, plan_dir, environ))
     if len({s["id"] for s in seats}) != len(seats):
         raise ValueError("duplicate seat id")
+    if synthesizer and synthesizer not in {s["id"] for s in seats}:
+        raise ValueError(f"synthesis.by names no seat: {synthesizer!r}")
     for seat in seats:
         if seat["tools"] == "none" and (common or seat["_private"]):
             raise ValueError(f"seat {seat['id']!r}: tools = \"none\" cannot read materials; "
                              "give the seat Read (tools = \"read\") or inline the brief")
-    phases = _phases(supplied, rounds, [s["id"] for s in seats], kind)
+    ids = [s["id"] for s in seats]
+    if synthesizer:
+        # One more round at the end, in which only the synthesizer acts and
+        # writes synthesis.md; every other phase seats everyone else.
+        declared = supplied.get("phases") or []
+        if any(synthesizer in (p.get("seats") or ids) for p in declared):
+            raise ValueError(f"the synthesizer {synthesizer!r} may not act in a declared phase")
+        working = [s for s in ids if s != synthesizer]
+        if not working:
+            raise ValueError("a synthesizer needs at least one other seat")
+        if not declared:
+            declared = [{"name": "attempt" if kind == "fanout" else "discussion",
+                         "rounds": rounds, "seats": working}]
+        synth = instruments.resolve("synthesize", project_root)
+        declared = declared + [{"name": "synthesis", "rounds": 1, "seats": [synthesizer],
+                                "deliverable": "synthesis.md",
+                                "instruction": synth["profile"]["prompt"].strip()}]
+        rounds += 1
+        supplied = {**supplied, "phases": declared}
+    phases = _phases(supplied, rounds, ids, kind)
+    if kind == "fanout":
+        for phase in phases:
+            if phase.get("seats") != [synthesizer] and not phase.get("deliverable"):
+                phase["deliverable"] = "report.md"
     if any(s["workspace"] == "worktree" for s in seats):
         base = workspace.base_commit(project_root)
     else:

@@ -1,0 +1,46 @@
+---
+description: Fan a brief out to N blind seats that each implement it in their own worktree; read the attempts sealed, judge, then unseal
+argument-hint: "[seats=N] [seat=harness/model ...] [--persona ID ...] [synthesizer=ID] [grant=...] brief text"
+disable-model-invocation: true
+---
+
+Run a fanout with the convene engine at `${CLAUDE_PLUGIN_ROOT}/bin/convene`.
+Read the operator procedure first: `${CLAUDE_PLUGIN_ROOT}/skills/convene/SKILL.md`,
+especially its section on reading a sealed round.
+
+Arguments: `$ARGUMENTS`
+
+Interpret them as:
+
+- `seats=N` or `seat=harness/model` (repeatable) declares the attempts;
+  with neither, use the template's three, on two harnesses when both are
+  installed;
+- `--persona ID` (repeatable) assigns personas in order;
+- `synthesizer=ID` adds a seat of that id that synthesizes instead of
+  you (`[synthesis] by = ID`); leave it out to synthesize yourself;
+- `grant=...` opens doors for every seat (see the skill);
+- everything else is the brief: what to implement and how it will be
+  verified.
+
+Then:
+
+1. `${CLAUDE_PLUGIN_ROOT}/bin/convene doctor --no-probes`.
+2. Write a plan from `${CLAUDE_PLUGIN_ROOT}/templates/fanout.toml` into a
+   directory under the user's home (`~/tmp/convene/` when it exists,
+   otherwise `mktemp -d` under `$HOME`), with the brief and seats
+   resolved.
+3. `${CLAUDE_PLUGIN_ROOT}/bin/convene prepare PLAN`, then
+   `${CLAUDE_PLUGIN_ROOT}/bin/convene run NAME`. N implementations take
+   a while; say so.
+4. `convene status NAME`. A held round is a quota stop: name the seat and
+   the reset time; `continue`, `promote`, `run` as the skill describes.
+5. `convene seal NAME`. Read every letter under `sealed/r001/` in the run
+   directory: `post.md`, `report.md`, `changes.patch`. Do not run
+   `board`, `usage` or `export`; they are withheld and say so. Write your
+   judgment to `sealed/r001/judgment.md`: which attempt to take, what to
+   change in it first, what each other attempt got right, all by letter.
+6. `convene unseal NAME` prints the key. Report the judgment first, as
+   written, then the key, then the receipts and every red flag verbatim.
+   With a synthesizer seat, the synthesis is on the board under its post;
+   read it after your own judgment, never before.
+7. `convene export NAME DIR`, then offer `convene prune NAME`.

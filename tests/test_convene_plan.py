@@ -70,9 +70,10 @@ class PlanTests(unittest.TestCase):
             self.prepare(self.box.plan(seats=[{"id": "a", "persona": "sec-urity",
                                                "harness": "codex", "model": "gpt-9"}]))
 
-    def test_later_phase_features_are_refused_by_name(self):
+    def test_unsupported_plan_shapes_are_refused_by_name(self):
         for fields, message in (
-            ({"synthesis": {"by": "skeptic"}}, "synthesis by a seat"),
+            ({"synthesis": {"by": "skeptic"}}, "needs at least one other seat"),
+            ({"synthesis": {"by": 3}}, "synthesis.by must be"),
             ({"workspace": "worktree"}, "needs tools"),
             ({"phases": [{"name": "a", "rounds": 1, "deliverable": "changes.patch"}]},
              "captured from a worktree"),
@@ -122,7 +123,7 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(names, {"quinn-t-shun", "ada-versary", "connie-tinuity", "emma-pirical",
                                  "sec-urity", "axel-cess", "archie-tecture", "tess-tcase",
                                  "xavier-pert", "percy-formance"})
-        self.assertEqual(set(instruments.catalog()), {"review", "design", "implement"})
+        self.assertEqual(set(instruments.catalog()), {"review", "design", "implement", "synthesize"})
         self.assertIn("json_schema", instruments.catalog()["review"]["profile"])
 
     def test_run_resolution_by_name_and_path(self):

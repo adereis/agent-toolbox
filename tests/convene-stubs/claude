@@ -123,7 +123,7 @@ if asked:
     os.makedirs("outbox", exist_ok=True)
     with open(os.path.join("outbox", asked.group(1)), "w") as made:
         made.write(f"Deliverable {asked.group(1)} from {served}.\n")
-if scenario == "edit-repo" or (os.path.isdir("repo") and "edit repo" in prompt):
+if os.path.isdir("repo") and (scenario == "edit-repo" or "edit repo" in prompt):
     with open(os.path.join("repo", "app.py"), "a") as handle:
         handle.write("# edited by the stub seat\n")
     with open(os.path.join("repo", "NEW.md"), "w") as handle:

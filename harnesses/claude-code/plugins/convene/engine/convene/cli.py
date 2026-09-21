@@ -7,7 +7,7 @@ import json
 import sys
 from pathlib import Path
 
-from convene import doctor as doctor_, export as export_, personas, plan as plan_, runs
+from convene import doctor as doctor_, export as export_, personas, plan as plan_, runs, seal as seal_
 from convene import round as round_, board as board_
 
 HELP = """\
@@ -21,6 +21,8 @@ convene: multi-seat panels over native coding-agent CLIs.
   promote RUN N [--absent]                    close a round by hand
   extend RUN ROUNDS                           raise the round budget
   prune RUN [--force]                         remove worktrees and private homes
+  seal RUN [--round N]                        letter a blind round's drafts for reading
+  unseal RUN [--round N]                      print the key, once judgment.md is written
   status RUN                                  what each seat did, with red flags
   board RUN [--round N] [--raw]               the published posts, attributed
   export RUN DIR                              copy board and receipts out
@@ -85,6 +87,16 @@ def main(argv=None):
     p = sub.add_parser("prune", help="remove worktrees and private homes; keep the records")
     p.add_argument("run")
     p.add_argument("--force", action="store_true")
+
+    p = sub.add_parser("seal", help="shuffle a round's drafts under letters; the key is never printed")
+    p.add_argument("run")
+    p.add_argument("--round", dest="round_number", type=int, default=None)
+    p.add_argument("--seed", type=int, default=None, help="reproducible shuffle, for tests")
+    p.add_argument("--force", action="store_true", help="reseal a round that is already sealed")
+
+    p = sub.add_parser("unseal", help="print the identity key after judgment.md is on file")
+    p.add_argument("run")
+    p.add_argument("--round", dest="round_number", type=int, default=None)
 
     for name in ("status", "usage"):
         p = sub.add_parser(name)
@@ -195,12 +207,27 @@ def dispatch(args):
         removed = round_.prune(runs.resolve(args.run, project), force=args.force)
         print("removed:\n" + "\n".join(f"  {r}" for r in removed) if removed else "nothing to remove")
         return 0
+    if args.command == "seal":
+        result = seal_.seal(runs.resolve(args.run, project), args.round_number, seed=args.seed,
+                            force=args.force)
+        print(f"round {result['round']} sealed as {', '.join(result['letters'])} under "
+              f"{result['directory']}\nread each letter's post.md and files, write your judgment to "
+              f"{result['judgment']}, then: convene unseal {args.run}")
+        return 0
+    if args.command == "unseal":
+        result = seal_.unseal(runs.resolve(args.run, project), args.round_number)
+        print(f"round {result['round']} unsealed:")
+        for letter, who in result["key"].items():
+            print(f"  {letter} = {who['seat']} ({who['served']})")
+        return 0
     if args.command == "status":
         data = round_.status(_run(args, project))
         print(json.dumps(data, indent=2) if args.json else round_.render_status(data))
         return 0
     if args.command == "usage":
-        rows = round_.usage(_run(args, project))
+        root, plan = runs.load(_run(args, project), verify=False)
+        seal_.guard(root, plan, "usage")
+        rows = round_.usage(root)
         if args.json:
             print(json.dumps(rows, indent=2))
         else:
@@ -214,6 +241,7 @@ def dispatch(args):
         return 0
     if args.command == "board":
         root, plan = runs.load(_run(args, project), verify=False)
+        seal_.guard(root, plan, "the board")
         print(board_.text(root, plan, round_number=args.round_number, attribute=not args.raw), end="")
         return 0
     if args.command == "export":

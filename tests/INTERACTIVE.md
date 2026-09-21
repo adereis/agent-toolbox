@@ -193,3 +193,16 @@ receipt shows `isolation.worktree_git` naming the project's `.git`.
 `status` reports HELD with the seat, `continue NAME SEAT` after the reset
 answers in the same session (interrupted) or with the same prompt
 (refused), `promote NAME N` publishes, and `run NAME` finishes the phases.
+
+## IT-11: Convene fanout read sealed
+
+**Prerequisites:** as IT-09. Two cheap seats on two harnesses, one round.
+
+**Fanout:** a plan from `templates/fanout.toml` with two seats (Claude
+`haiku`, a Codex slug) and a small brief, enforced tier. After `run`,
+`bin/convene board NAME` must refuse naming `convene seal`; `seal` must
+print letters and the judgment path and never the key; `sealed/r001/A`
+and `B` must each hold `post.md`, `report.md` and `changes.patch`;
+`status` must show `withheld` for seconds and tool calls; `unseal` must
+refuse until `judgment.md` has text, then print `A = <seat> (<harness>/
+<model>)`, after which `board` is attributed and `usage` prints.

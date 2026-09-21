@@ -7,12 +7,13 @@ persona, model, tool set and isolation tier. The foreground Claude Code
 session is the operator: it writes the brief, runs the seats, reads the
 board and synthesizes.
 
-Two kinds ship: the **panel**, a one-round review of a commit range by
-independent reviewers who do not see each other, and the **room**, where
-seats discuss a brief over rounds on a shared board, one seat drafts the
-change in its own git worktree, and the room critiques and revises it.
-Fanouts (blind parallel implementations, sealed before reading) follow on
-the same engine.
+Three kinds ship. The **panel** is a one-round review of a commit range by
+independent reviewers who do not see each other. The **room** has seats
+discuss a brief over rounds on a shared board, one seat draft the change in
+its own git worktree, and the room critique and revise it. The **fanout**
+hands the same brief to N seats that each implement it blind in their own
+worktree; the operator reads the attempts sealed under letters, records a
+judgment, and only then learns who wrote what.
 
 ## Why a panel rather than a subagent
 
@@ -53,6 +54,7 @@ In Claude Code:
 /convene:panel HEAD~3..HEAD
 /convene:panel HEAD seat=codex/gpt-5.5 seat=claude/opus --persona sec-urity --persona quinn-t-shun
 /convene:room Add a --json flag to the session browser that prints what --list prints
+/convene:fanout seats=3 Implement --json for the session browser; verify with the existing tests
 /convene:status
 ```
 
@@ -85,6 +87,23 @@ $convene prune NAME                  # remove worktrees and private homes; recor
 
 An operator note for the next round goes in `chair/rNNN.md` inside the run
 directory; every acting seat reads it that round and the digest records it.
+
+A fanout is read sealed:
+
+```bash
+$convene seal NAME                   # sealed/r001/{A,B,C}/{post.md,report.md,changes.patch}
+$EDITOR ~/.local/state/agent-toolbox/convene/*/NAME/sealed/r001/judgment.md
+$convene unseal NAME                 # prints A = two (codex/gpt-5.5), ...
+$convene board NAME                  # attributed from here on
+```
+
+Until `unseal`, `board`, `usage` and `export` refuse and say why, and
+`status` withholds each seat's duration and tool count: those numbers are
+near-unique per seat and would be the identity key by arithmetic. The key
+file is written at `seal` and never printed before a judgment is on file.
+A plan may name a seat as the synthesizer (`[synthesis] by = "ID"`): it
+acts alone in one extra round, sees the board, and writes `synthesis.md`;
+the operator still reads the attempts sealed first.
 
 `convene --help` lists every verb. Runs live under
 `$XDG_STATE_HOME/agent-toolbox/convene/<project-key>/<run>/` (default

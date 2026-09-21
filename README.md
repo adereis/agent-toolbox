@@ -30,17 +30,18 @@ claude plugin marketplace add /path/to/agent-toolbox
 claude plugin install convene@agent-toolbox
 ```
 
-Two kinds ship: the one-round **panel**, and the **room**, where seats
+Three kinds ship: the one-round **panel**; the **room**, where seats
 discuss a feature over rounds on a shared board, one seat drafts it in its
-own git worktree, and the room critiques and revises the patch. Blind
-fanouts (parallel implementations sealed before reading) follow on the same
-engine.
+own git worktree, and the room critiques and revises the patch; and the
+**fanout**, where N seats implement the same brief blind in their own
+worktrees and the operator judges the attempts sealed under letters before
+learning who wrote what.
 
 ## Available components
 
 | Component | Harness | Documentation |
 |-----------|---------|---------------|
-| Convene: multi-seat review panels and design rooms with isolation tiers and receipts | Claude Code plugin; seats on Claude Code and Codex | [Convene](harnesses/claude-code/plugins/convene/README.md) |
+| Convene: multi-seat review panels, design rooms and blind fanouts with isolation tiers and receipts | Claude Code plugin; seats on Claude Code and Codex | [Convene](harnesses/claude-code/plugins/convene/README.md) |
 | Session history and resume | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md) |
 | Session history and resume | Codex | [Codex integration](harnesses/codex/README.md) |
 | Subscription and API authentication profiles | Codex | [Authentication profiles](harnesses/codex/README.md#authentication-profiles) |

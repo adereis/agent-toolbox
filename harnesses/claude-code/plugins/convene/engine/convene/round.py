@@ -18,7 +18,8 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from convene import board, harnesses, isolation, observe, platform, quota, runs, sessions, workspace
+from convene import (board, harnesses, isolation, observe, platform, quota, runs, seal,
+                     sessions, workspace)
 from convene.storage import digest, event, hashes, lock, read, trail, write, write_text
 
 
@@ -45,8 +46,17 @@ def turn_prompt(root, plan, seat, n, *, cold=False):
     name = seat["id"]
     phase = board.phase_for(plan, n)
     start = (Path(root) / "work" / name / "START.md").read_text(encoding="utf-8")
+    first = next((r for r in range(1, n + 1) if name in board.acting(plan, r)), n)
     if n == 1:
         text = start + "\nNobody has posted yet. Post now."
+    elif n == first and not cold:
+        # The seat's first scheduled turn: a synthesizer, or a seat a phase
+        # kept quiet until now. It has the assignment and, when it sees the
+        # board, the rounds so far.
+        text = start + ("\nThe others have posted; the latest board is "
+                        f"board/round-{n - 1:03d}/digest.md and earlier rounds are beside it. "
+                        "Read them, then post." if seat["visibility"] == "board"
+                        else "\nPost now.")
     elif cold:
         text = (start + "\nYou are joining a room already in progress. Read the boards under "
                 f"board/, beginning with board/round-{n - 1:03d}/digest.md, then post as the "
@@ -63,8 +73,8 @@ def turn_prompt(root, plan, seat, n, *, cold=False):
                 + (f" round {heard}: board/round-{heard:03d}/digest.md." if heard
                    else " the room opened.")
                 + " Post again. Anything you asked them is still outstanding, not declined.")
-    missed = [r for r in range(1, n) if name not in board.acting(plan, r)]
-    if missed and n > 1 and not cold and seat["visibility"] == "board":
+    missed = [r for r in range(first, n) if name not in board.acting(plan, r)]
+    if missed and n > first and not cold and seat["visibility"] == "board":
         text += (f" You did not post in round{'s' if len(missed) > 1 else ''} "
                  f"{', '.join(str(r) for r in missed)}; those boards are under board/ and are "
                  "worth reading first.")
@@ -135,7 +145,8 @@ def run_seat(root, plan, seat, n, *, timeout=None):
     # so it opens a session now and joins in progress, and `status` reports
     # the round it joined so no reading mistakes a late arrival for an
     # independent opening position.
-    cold = n > 1 and not resume
+    first = next((r for r in range(1, n + 1) if name in board.acting(plan, r)), n)
+    cold = n > first and not resume
     mode = "resume" if resume else "start"
     return launch(root, plan, seat, n, turn_prompt(root, plan, seat, n, cold=cold), mode, resume,
                   timeout=timeout)
@@ -395,17 +406,23 @@ def promote_absent(root, n):
 def status(root):
     """A read-only view, safe while a run is in progress."""
     root, plan = runs.load(root, verify=False)
+    withheld = seal.withheld(root, plan)
     seats = {}
     for seat in plan["seats"]:
         state = read(state_path(root, seat["id"]))
         receipts = {}
         for path in sorted((root / "records" / seat["id"]).glob("r[0-9][0-9][0-9]/receipt.json")):
             got = read(path)
-            receipts[int(path.parent.name[1:])] = {
+            n = int(path.parent.name[1:])
+            receipts[n] = {
                 k: got.get(k) for k in ("status", "model", "requested_model", "seconds",
                                         "tool_calls", "red_flags", "error", "quota_stop",
                                         "quota_resets_at", "compaction_observed")}
-            receipts[int(path.parent.name[1:])]["tier"] = (got.get("isolation") or {}).get("tier")
+            receipts[n]["tier"] = (got.get("isolation") or {}).get("tier")
+            if n in withheld:
+                # Seconds and tool counts are near-unique per seat: printed
+                # beside the seat id they are the identity key by arithmetic.
+                receipts[n]["seconds"] = receipts[n]["tool_calls"] = "withheld"
         answered = sorted(int(r) for r, v in state.get("rounds", {}).items()
                           if v.get("status") == "answered")
         seats[seat["id"]] = {
@@ -428,6 +445,7 @@ def status(root):
     held = [r for r in rows if r.get("event") == "round-held"]
     still_held = held[-1:] if held and held[-1].get("round") not in published else []
     return {"run": str(root), "name": plan["name"], "title": plan["title"], "kind": plan["kind"],
+            "sealed": seal.sealed_rounds(root), "withheld": withheld,
             "rounds": board.budget(root, plan), "declared_rounds": plan["rounds"],
             "phases": plan["phases"], "published_rounds": published, "held": still_held,
             "convergence": [{k: c[k] for k in ("round", "novelty", "closing", "converged", "reason")}
@@ -452,6 +470,10 @@ def render_status(data):
         lines.append(f"  HELD: round {data['held'][0].get('round')} waiting on "
                      f"{', '.join(data['held'][0].get('waiting_on', []))} (provider quota); "
                      "`convene continue` them when the window resets")
+    if data["withheld"]:
+        lines.append(f"  blind: rounds {data['withheld']} are read sealed; "
+                     + ("sealed so far: " + ", ".join(f"r{n:03d}" for n in data["sealed"])
+                        if data["sealed"] else "`convene seal` letters the drafts"))
     if data["chair"]["queued"]:
         lines.append("  chair note queued for round " + ", ".join(str(r) for r in data["chair"]["queued"]))
     for name, seat in data["seats"].items():

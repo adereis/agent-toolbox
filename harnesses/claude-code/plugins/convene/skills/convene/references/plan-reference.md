@@ -7,7 +7,7 @@ annotated template is `templates/panel.toml`.
 | Field | Default | Meaning |
 |---|---|---|
 | `schema` | 1 | plan format version |
-| `kind` | `panel` | `panel` or `room` (`fanout` arrives later) |
+| `kind` | `panel` | `panel`, `room` or `fanout`; a fanout fixes `visibility = "blind"`, `workspace = "worktree"`, `tools = "write"` and asks every attempt for `report.md` |
 | `title` | required | shown in status and export |
 | `rounds` | 1 | rounds to play; phases must add up to it |
 | `post_length` | 400 | words per post; a phase may override with `length` |
@@ -35,7 +35,7 @@ annotated template is `templates/panel.toml`.
 | `seats[].grants`, `seats[].args`, `seats[].env` | plan default | this seat's doors; `args` are for its own harness |
 | `phases` | one phase | list of `{ name, rounds, seats?, deliverable?, instruction?, length? }` |
 | `stop_novelty`, `stop_closing` | 55.0, 0.75 | convergence thresholds for an unphased room |
-| `synthesis.by` | `operator` | this version accepts `operator` |
+| `synthesis.by` | `operator` | `operator`, or a seat id: that seat acts alone in one extra final round, sees the board, and writes `synthesis.md`; it may not act in any declared phase |
 
 Defaults for every plan come from `$XDG_CONFIG_HOME/agent-toolbox/convene.toml`
 and `<project>/.convene/config.toml`, which accept the seat-default keys
@@ -57,6 +57,8 @@ homes/<seat>/{claude,codex}/           private harness homes
 board/posts/<seat>/rNNN.md             promoted posts
 board/made/<seat>/rNNN/<file>          deliverables and changes.patch
 board/rounds/rNNN/{digest.md,digest.json,convergence.json}
+sealed/rNNN/{A,B,...}/                 a blind round's drafts under letters
+sealed/rNNN/{identity-key.json,seal.json,judgment.md,unsealed.json}
 records/<seat>/state.json
 records/<seat>/rNNN/{prompt.md,launch.json,events.jsonl,stderr.log,receipt.json,answer.md}
 records/<seat>/rNNN/attempts/NN/       a quota-stopped attempt, archived whole

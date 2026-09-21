@@ -1,0 +1,59 @@
+# A fanout: N seats attempt the same brief, blind to each other, each in
+# its own worktree. The operator reads the attempts sealed under letters,
+# records a judgment, then unseals to learn who wrote what.
+#
+#   convene prepare fanout.toml
+#   convene run <name>
+#   convene seal <name>            # sealed/r001/A, B, C ...
+#   (read post.md, report.md and changes.patch under each letter;
+#    write sealed/r001/judgment.md)
+#   convene unseal <name>          # prints the key
+#   convene board <name>           # now attributed
+#   convene export <name> DIR; convene prune <name>
+#
+# A fanout fixes visibility = "blind", workspace = "worktree" and
+# tools = "write". Every attempt phase asks for report.md beside the post;
+# changes.patch is captured from each worktree.
+
+schema = 1
+kind = "fanout"
+title = "Implement the change three ways"
+rounds = 1
+post_length = 300
+
+harness = "claude"
+model = "opus"
+effort = "high"
+isolation = "strongest"
+instrument = "implement"
+
+[brief]
+text = """
+<what to implement, how it will be verified, and what a good report says>
+"""
+
+[[seats]]
+id = "one"
+persona = "connie-tinuity"
+
+[[seats]]
+id = "two"
+persona = "archie-tecture"
+harness = "codex"
+model = "gpt-5.5"
+
+[[seats]]
+id = "three"
+persona = "tess-tcase"
+
+# Let a seat synthesize instead of the operator: it acts alone in one
+# extra round, sees the board, and writes synthesis.md.
+# [[seats]]
+# id = "synth"
+# persona = "quinn-t-shun"
+#
+# [synthesis]
+# by = "synth"
+
+[synthesis]
+by = "operator"
