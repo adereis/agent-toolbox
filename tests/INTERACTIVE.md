@@ -206,3 +206,39 @@ and `B` must each hold `post.md`, `report.md` and `changes.patch`;
 `status` must show `withheld` for seconds and tool calls; `unseal` must
 refuse until `judgment.md` has text, then print `A = <seat> (<harness>/
 <model>)`, after which `board` is attributed and `usage` prints.
+
+## IT-12: Convene Antigravity seat
+
+**Prerequisites:** `agy` logged in (`~/.gemini/oauth_creds.json`), Linux
+with `bwrap`. One seat on the cheapest Flash tier `agy models` lists.
+
+**Doctor:** `convene doctor` must list `agy` with a version and
+`credentials present`, and its `--model` probe `✓` (this probe reaches the
+network, unlike the others, because agy refreshes its token before
+validating flags).
+
+**Panel:** a one-seat panel with `harness = "agy"`, `tools = "write"`,
+`isolation = "enforced"`. Expected: `prepare` prints the effort variant
+slug (`gemini-3.8-flash-low`); the receipt's `model` equals it,
+`filesystem` says audited, `tool_calls` counts the transcript's tool
+steps; the native transcript is under the run's `homes/<seat>/agy/`.
+Set `isolation = "private-home"` and confirm `prepare` refuses naming
+`enforced` and `none`. Follow the seat with `convene follow NAME SEAT`
+while it runs.
+
+## IT-13: Convene operated from Codex
+
+**Prerequisites:** the toolbox installed for Codex with `skills` and
+`commands` (`python3 tools/install.py --harness codex --scope user
+--component skills --component commands --apply`), `convene` on `PATH`.
+
+**Action:** in a Codex session in this repository, ask it to use the
+convene skill to review `HEAD~1..HEAD` with one cheap Claude seat and one
+cheap Codex seat. Expected: Codex reads `~/.agents/skills/convene/SKILL.md`
+and its references, runs `convene doctor`, writes a plan from the
+template, runs it, reads the board, writes a synthesis, exports, and
+reports every red flag. The receipts must show the seats on their own
+harness homes, not Codex's session store: no new files under the
+operator's `~/.codex/sessions/` from the seats. `agents/openai.yaml` must
+keep the skill explicit-invocation only: a plain "review this commit"
+request must not trigger it.

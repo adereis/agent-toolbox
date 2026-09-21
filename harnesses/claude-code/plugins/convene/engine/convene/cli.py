@@ -7,7 +7,8 @@ import json
 import sys
 from pathlib import Path
 
-from convene import doctor as doctor_, export as export_, personas, plan as plan_, runs, seal as seal_
+from convene import (doctor as doctor_, export as export_, follow as follow_, personas,
+                     plan as plan_, runs, seal as seal_)
 from convene import round as round_, board as board_
 
 HELP = """\
@@ -21,6 +22,7 @@ convene: multi-seat panels over native coding-agent CLIs.
   promote RUN N [--absent]                    close a round by hand
   extend RUN ROUNDS                           raise the round budget
   prune RUN [--force]                         remove worktrees and private homes
+  follow RUN SEAT [--round N] [--thinking]    tail a seat's turn as it runs
   seal RUN [--round N]                        letter a blind round's drafts for reading
   unseal RUN [--round N]                      print the key, once judgment.md is written
   status RUN                                  what each seat did, with red flags
@@ -43,7 +45,11 @@ def main(argv=None):
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--project", default=None, help="project root (default: git top level of cwd)")
     parser.add_argument("--json", action="store_true", help="machine-readable output where supported")
-    sub = parser.add_subparsers(dest="command", required=True)
+    # Accepted after the verb too, which is where a hand types it.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--json", action="store_true", dest="json_after")
+    sub = parser.add_subparsers(dest="command", required=True, parser_class=lambda **kw:
+                                argparse.ArgumentParser(parents=[common], **kw))
 
     p = sub.add_parser("prepare", help="freeze a plan into a run directory")
     p.add_argument("plan")
@@ -88,6 +94,13 @@ def main(argv=None):
     p.add_argument("run")
     p.add_argument("--force", action="store_true")
 
+    p = sub.add_parser("follow", help="print a seat's stream as it grows, until its turn ends")
+    p.add_argument("run")
+    p.add_argument("seat")
+    p.add_argument("--round", dest="round_number", type=int, default=None)
+    p.add_argument("--thinking", action="store_true", help="show reasoning too")
+    p.add_argument("--width", type=int, default=88)
+
     p = sub.add_parser("seal", help="shuffle a round's drafts under letters; the key is never printed")
     p.add_argument("run")
     p.add_argument("--round", dest="round_number", type=int, default=None)
@@ -121,6 +134,7 @@ def main(argv=None):
     p.add_argument("--no-probes", action="store_true", help="skip the flag-liveness probes")
 
     args = parser.parse_args(argv)
+    args.json = args.json or getattr(args, "json_after", False)
     try:
         return dispatch(args)
     except (ValueError, RuntimeError, OSError) as exc:
@@ -207,12 +221,25 @@ def dispatch(args):
         removed = round_.prune(runs.resolve(args.run, project), force=args.force)
         print("removed:\n" + "\n".join(f"  {r}" for r in removed) if removed else "nothing to remove")
         return 0
+    if args.command == "follow":
+        root, plan = runs.load(runs.resolve(args.run, project), verify=False)
+        seat = round_.seat_named(plan, args.seat)
+        record = (root / "records" / seat["id"] / f"r{args.round_number:03d}"
+                  if args.round_number else None)
+        try:
+            follow_.follow(root, seat["id"], seat["harness"], record=record,
+                           thinking=args.thinking, width=args.width)
+        except KeyboardInterrupt:
+            print()
+        return 0
     if args.command == "seal":
         result = seal_.seal(runs.resolve(args.run, project), args.round_number, seed=args.seed,
                             force=args.force)
         print(f"round {result['round']} sealed as {', '.join(result['letters'])} under "
               f"{result['directory']}\nread each letter's post.md and files, write your judgment to "
               f"{result['judgment']}, then: convene unseal {args.run}")
+        if result["judgment_kept"]:
+            print("your existing judgment.md was kept; the letters under it were reshuffled")
         return 0
     if args.command == "unseal":
         result = seal_.unseal(runs.resolve(args.run, project), args.round_number)

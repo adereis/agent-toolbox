@@ -2,10 +2,13 @@
 
 Convene runs several independent AI coding sessions on the same brief and
 brings back what each of them wrote, with a receipt for what actually ran.
-The seats are native CLIs (`claude -p`, `codex exec`), each with a declared
-persona, model, tool set and isolation tier. The foreground Claude Code
+The seats are native CLIs (`claude -p`, `codex exec`, `agy --print`), each
+with a declared persona, model, tool set and isolation tier. The foreground
 session is the operator: it writes the brief, runs the seats, reads the
-board and synthesizes.
+board and synthesizes. Claude Code operates through this plugin; Codex
+operates through the toolbox installer, which puts `convene` on `PATH` and
+links this plugin's operator procedure as a Codex skill (see the
+[Codex integration](../../../codex/README.md#convene-from-codex)).
 
 Three kinds ship. The **panel** is a one-round review of a commit range by
 independent reviewers who do not see each other. The **room** has seats
@@ -42,9 +45,18 @@ claude --plugin-dir /path/to/agent-toolbox/harnesses/claude-code/plugins/convene
 ```
 
 Requirements: Python 3.11+ (the engine is stdlib-only), `git`, and the
-harnesses you seat: `claude` and/or `codex` on `PATH`, logged in. The
+harnesses you seat: `claude`, `codex` and/or `agy` on `PATH`, logged in. The
 `enforced` isolation tier needs `bwrap` (bubblewrap) on Linux; macOS gets
 `private-home`. `bin/convene doctor` reports all of this.
+
+Antigravity (`agy`) is the least confinable seat: it has no tool
+allow-list, no setting-source switch, no context ceiling and nothing that
+relocates its home. An `agy` seat therefore always runs with `tools =
+"write"`, its filesystem and network use are audited from the transcript
+and fail the receipt when they leave the declared workspace, compaction is
+detected rather than prevented (the plan records `compaction = "detected"`),
+and its only tiers are `enforced` (the jail binds a private `~/.gemini`)
+and `none`; `private-home` is refused by name.
 
 ## Use
 
@@ -104,6 +116,9 @@ file is written at `seal` and never printed before a judgment is on file.
 A plan may name a seat as the synthesizer (`[synthesis] by = "ID"`): it
 acts alone in one extra round, sees the board, and writes `synthesis.md`;
 the operator still reads the attempts sealed first.
+
+`convene follow NAME SEAT` tails a running seat: what it says, which tools
+it calls, and its stderr when the turn ends; `--thinking` adds reasoning.
 
 `convene --help` lists every verb. Runs live under
 `$XDG_STATE_HOME/agent-toolbox/convene/<project-key>/<run>/` (default

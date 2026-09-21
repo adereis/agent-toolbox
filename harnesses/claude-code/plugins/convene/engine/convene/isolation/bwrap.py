@@ -58,7 +58,10 @@ def root_binds(excluded, root=Path("/"), skip=()):
     exclusion, the directories on the path to it are bound entry by entry
     and the excluded mount itself is left out, so the jail's root simply
     has no such directory. Symlinks at any level are recreated as symlinks
-    (Fedora's `/bin` -> `usr/bin`), never bound through.
+    (Fedora's `/bin` -> `usr/bin`), never bound through. Sockets and other
+    special files are bound as they are: the session bus socket under
+    `/run/user/<uid>/` is how Antigravity reaches the keyring that holds
+    its token, and `--bind / /` always exposed it.
     """
     out = []
     excluded = [e for e in excluded if e != root]
@@ -74,6 +77,8 @@ def root_binds(excluded, root=Path("/"), skip=()):
             out += root_binds(excluded, child, skip)
         elif child.is_file():
             out.append(("--ro-bind", str(child), str(child)))
+        elif child.exists():
+            out.append(("--bind", str(child), str(child)))
     return out
 
 

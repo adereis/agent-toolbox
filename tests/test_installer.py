@@ -265,14 +265,33 @@ class InstallerTests(unittest.TestCase):
         result, _, err = self.run_cli(
             "--harness", "codex", "--scope", "user", "--component", "commands", "--apply")
         self.assertEqual((result, err), (0, ""))
-        expected = {"codex-api-profile": "codex-api-profile.sh",
-                    "codex-code-session-resume": "codex-code-session-resume.py",
-                    "codex-tmux": "codex-tmux.py"}
+        expected = {"codex-api-profile": "harnesses/codex/scripts/codex-api-profile.sh",
+                    "codex-code-session-resume": "harnesses/codex/scripts/codex-code-session-resume.py",
+                    "codex-tmux": "harnesses/codex/scripts/codex-tmux.py",
+                    "convene": "harnesses/claude-code/plugins/convene/bin/convene"}
         installed = self.root / ".local/bin"
         self.assertEqual({path.name for path in installed.iterdir()}, set(expected))
-        for command, script in expected.items():
-            self.assertEqual((installed / command).resolve(),
-                             REPO / "harnesses/codex/scripts" / script)
+        for command, source in expected.items():
+            self.assertEqual((installed / command).resolve(), REPO / source)
+
+    def test_convene_reaches_both_harnesses_and_codex_reads_the_plugin_skill(self):
+        """Codex reaches the engine directly: the command on PATH and the
+        plugin's own operator procedure linked as a Codex skill."""
+        self.assertEqual(installer.catalog("claude-code", ["commands"])["convene"],
+                         REPO / "harnesses/claude-code/plugins/convene/bin/convene")
+        result, _, err = self.run_cli(
+            "--harness", "codex", "--scope", "user", "--component", "skills", "--apply")
+        self.assertEqual((result, err), (0, ""))
+        skill = self.root / ".agents/skills/convene"
+        plugin = REPO / "harnesses/claude-code/plugins/convene/skills/convene"
+        self.assertEqual((skill / "SKILL.md").resolve(), plugin / "SKILL.md")
+        self.assertEqual((skill / "references/synthesis.md").resolve(), plugin / "references/synthesis.md")
+        self.assertIn("allow_implicit_invocation: false", (skill / "agents/openai.yaml").read_text())
+        text = (skill / "SKILL.md").read_text()
+        self.assertIn("`convene` on PATH", text, "the shared procedure names the command for every harness")
+        self.assertIn("harnesses/claude-code/plugins/convene/bin/convene", text)
+        self.assertFalse((self.root / ".claude/skills/convene").exists(),
+                         "Claude Code gets the skill from the plugin, not the installer")
 
     def test_commands_exclude_agent_invoked_and_sourced_scripts(self):
         """A skill reads whats-new by path; the memory library is sourced, never run."""

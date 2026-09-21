@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+"""A stand-in `agy` for the convene tests; see the claude stub."""
+import json
+import os
+import re
+import sys
+
+args = sys.argv[1:]
+if args == ["--version"]:
+    print("1.2.7")
+    sys.exit(0)
+if args == ["models"]:
+    print("Fetching available models...\ngemini-3.8-flash-high\tGemini 3.8 Flash (High)\n"
+          "gemini-3.8-flash-low\tGemini 3.8 Flash (Low)\ngemini-3.1-pro-high\tGemini 3.1 Pro (High)")
+    sys.exit(0)
+if "--model" in args and args[args.index("--model") + 1] == "bogus-model-xyz":
+    print("Error: model 'bogus-model-xyz' not recognized. Available models: gemini-3.8-flash-low", file=sys.stderr)
+    sys.exit(1)
+
+home = os.path.join(os.path.expanduser("~"), ".gemini")
+os.makedirs(home, exist_ok=True)
+payload = json.loads(sys.stdin.readline() or "{}")
+prompt = "".join(b.get("text", "") for b in payload.get("message", {}).get("content", []))
+scenario = (re.search(r"\[\[stub:([a-z-]+)\]\]", prompt) or [None, "success"])[1]
+model = args[args.index("--model") + 1]
+sid = args[args.index("--conversation") + 1] if "--conversation" in args else "conv-0001"
+with open(os.path.join(home, "stub-calls.jsonl"), "a") as log:
+    log.write(json.dumps({"argv": args, "cwd": os.getcwd(), "scenario": scenario,
+                          "env": {k: os.environ.get(k) for k in ("HOME", "SECRET_FROM_OPERATOR")}}) + "\n")
+
+def emit(row):
+    sys.stdout.write(json.dumps(row) + "\n")
+    sys.stdout.flush()
+
+served = "gemini-3.1-pro-high" if scenario == "mismatch" else model
+emit({"event": "init", "conversation_id": sid, "init": {"model": served}})
+directory = os.path.join(home, "antigravity-cli", "brain", sid, ".system_generated", "logs")
+os.makedirs(directory, exist_ok=True)
+with open(os.path.join(directory, "transcript_full.jsonl"), "a") as handle:
+    handle.write(json.dumps({"type": "USER", "content": prompt[:40]}) + "\n")
+    if scenario == "compaction":
+        handle.write(json.dumps({"type": "CONTEXT_COMPACTION", "event": "compacted"}) + "\n")
+if scenario == "quota-refused":
+    emit({"event": "result", "conversation_id": sid, "result": {"status": "ERROR",
+          "error": "Quota exceeded for this model; resets at 18:00", "response": "",
+          "usage": {"output_tokens": 0}}})
+    sys.exit(1)
+tool = {"path-violation": ("read_file", {"file_path": "/etc/passwd"}),
+        "web": ("search_web", {"query": "x"}), "tools": ("read_file", {"file_path": os.path.join(os.getcwd(), "materials/diff.patch")})}.get(scenario)
+if tool:
+    emit({"event": "step", "conversation_id": sid, "step_update": {"step_type": "tool", "state": "ACTIVE",
+          "tool_name": tool[0], "tool_info": {"parameters": tool[1]}}})
+text = "## F1 Stub finding\n\nseverity: note\n\nAntigravity stub finding.\n"
+if scenario == "canary":
+    text = f"HOME={os.environ.get('HOME')} CWD={os.getcwd()} SECRET={'yes' if os.environ.get('SECRET_FROM_OPERATOR') else 'no'}"
+asked = re.search(r"Write the work itself to outbox/(\S+),", prompt)
+if asked:
+    os.makedirs("outbox", exist_ok=True)
+    with open(os.path.join("outbox", asked.group(1)), "w") as made:
+        made.write(f"Deliverable {asked.group(1)} from agy.\n")
+emit({"event": "result", "conversation_id": sid, "result": {"status": "SUCCESS", "model": served,
+      "response": text, "usage": {"input_tokens": 900, "output_tokens": 120, "thinking_tokens": 30,
+                                  "cache_read_tokens": 0}}})

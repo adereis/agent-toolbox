@@ -44,22 +44,34 @@ def get(name):
     return available[name]
 
 
-def resolve(requested):
+def unavailable(name, harness=None):
+    """Why tier `name` cannot run this harness here, or None."""
+    reason = get(name).available()
+    if reason:
+        return reason
+    if name == "private-home" and harness is not None and not harness.home_variable:
+        return (f"{harness.name} has no variable that relocates its home, so there is no "
+                "private-home tier for it; use \"enforced\" (Linux, bubblewrap) or \"none\"")
+    return None
+
+
+def resolve(requested, harness=None):
     """The tier name a request settles on, or a ValueError naming why not.
 
-    ``strongest`` walks the tiers in order and takes the first available
-    one. A named tier that is unavailable is an error, not a downgrade.
+    ``strongest`` walks the tiers in order and takes the first one available
+    for this harness. A named tier that is unavailable is an error, not a
+    downgrade.
     """
     if requested not in REQUESTS:
         raise ValueError(f"isolation must be one of {', '.join(REQUESTS)}: {requested!r}")
     if requested != "strongest":
-        reason = get(requested).available()
+        reason = unavailable(requested, harness)
         if reason:
             raise ValueError(f"isolation {requested!r} is unavailable: {reason}")
         return requested
     reasons = []
     for name in TIERS:
-        reason = get(name).available()
+        reason = unavailable(name, harness)
         if reason is None:
             return name
         reasons.append(f"{name}: {reason}")

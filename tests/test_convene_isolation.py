@@ -134,7 +134,13 @@ class BwrapArgvTests(unittest.TestCase):
             (fake / name).mkdir(parents=True)
         (fake / "bin").symlink_to("usr/bin")
         (fake / "vmlinuz").write_text("")
+        import socket
+        listener = socket.socket(socket.AF_UNIX)
+        self.addCleanup(listener.close)
+        listener.bind(str(fake / "mnt/bus"))
         binds = bwrap.root_binds([fake / "nas", fake / "mnt/share two"], fake)
+        self.assertIn(("--bind", str(fake / "mnt/bus"), str(fake / "mnt/bus")), binds,
+                      "sockets are bound too; the session bus is how agy reaches its keyring")
         self.assertNotIn(str(fake / "nas"), [b[1] for b in binds])
         self.assertIn(("--bind", str(fake / "mnt/other"), str(fake / "mnt/other")), binds)
         self.assertNotIn(("--bind", str(fake / "mnt"), str(fake / "mnt")), binds)

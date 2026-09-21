@@ -83,8 +83,16 @@ def seal(root, n=None, *, seed=None, force=False):
         raise ValueError("more than 26 seats cannot be lettered")
     shuffled = list(present)
     random.Random(seed if seed is not None else os.urandom(16)).shuffle(shuffled)
+    judgment = target / JUDGMENT
+    kept = judgment.read_bytes() if judgment.exists() else None
     if target.exists():
         shutil.rmtree(target)
+    target.mkdir(parents=True)
+    if kept is not None:
+        # A reseal reshuffles the letters; the operator's words are theirs
+        # and are kept, with a note that the letters under them moved.
+        judgment.write_bytes(kept)
+        event(root, round=n, event="judgment-kept-across-reseal")
     key = {}
     for letter, name in zip(string.ascii_uppercase, shuffled):
         folder = target / letter
@@ -100,7 +108,7 @@ def seal(root, n=None, *, seed=None, force=False):
                                  "posts_sha256": {k: digest(target / k / "post.md") for k in key}})
     event(root, round=n, event="sealed", count=len(key))
     return {"round": n, "letters": sorted(key), "directory": str(target),
-            "judgment": str(target / JUDGMENT)}
+            "judgment": str(target / JUDGMENT), "judgment_kept": kept is not None}
 
 
 def unseal(root, n=None):

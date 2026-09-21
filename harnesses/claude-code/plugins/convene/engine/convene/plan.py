@@ -137,6 +137,10 @@ def _seat(item, defaults, project_root, plan_dir, environ=None):
         raise ValueError(f"seat {seat['id']!r}: {seat['harness']} is not on PATH")
     if seat["tools"] not in TOOL_SETS:
         raise ValueError(f"seat {seat['id']!r}: tools must be one of {', '.join(TOOL_SETS)}")
+    if seat["tools"] not in harness.tool_sets:
+        raise ValueError(f"seat {seat['id']!r}: {seat['harness']} cannot confine a seat to "
+                         f"tools = \"{seat['tools']}\"; it supports {', '.join(harness.tool_sets)} "
+                         "and its tool use is audited from the transcript instead")
     if seat["visibility"] not in VISIBILITY:
         raise ValueError(f"seat {seat['id']!r}: visibility must be one of {', '.join(VISIBILITY)}")
     if seat["workspace"] not in WORKSPACES:
@@ -149,12 +153,16 @@ def _seat(item, defaults, project_root, plan_dir, environ=None):
     seat.update(model=resolved["model"], effort=resolved["effort"],
                 context_window=resolved.get("context_window"),
                 model_evidence=resolved.get("model_evidence"))
-    if seat["compaction"] == "forbid" and not seat["context_window"]:
+    if not harness.capabilities.window_pinned:
+        # No flag prevents compaction here; it is detected afterwards and
+        # reported, and the frozen plan says so rather than claiming a pin.
+        seat["compaction"] = "detected"
+    elif seat["compaction"] == "forbid" and not seat["context_window"]:
         raise ValueError(f"seat {seat['id']!r}: no context ceiling is known for "
                          f"{seat['model']} ({resolved.get('catalog')}); set compaction = "
                          "\"allow\" to run without pinning the window")
     try:
-        seat["isolation"] = isolation.resolve(seat["isolation"])
+        seat["isolation"] = isolation.resolve(seat["isolation"], harness)
     except ValueError as exc:
         raise ValueError(f"seat {seat['id']!r}: {exc}") from exc
     seat["persona"] = personas.resolve(item.get("persona", defaults.get("persona")), project_root) \
@@ -297,6 +305,7 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
             raise ValueError(f"seat {seat['id']!r}: tools = \"none\" cannot read materials; "
                              "give the seat Read (tools = \"read\") or inline the brief")
     ids = [s["id"] for s in seats]
+    declared_by_plan = bool(supplied.get("phases"))
     if synthesizer:
         # One more round at the end, in which only the synthesizer acts and
         # writes synthesis.md; every other phase seats everyone else.
@@ -316,9 +325,11 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         rounds += 1
         supplied = {**supplied, "phases": declared}
     phases = _phases(supplied, rounds, ids, kind)
-    if kind == "fanout":
+    if kind == "fanout" and not declared_by_plan:
+        # The attempt phase the engine generated asks for a report; phases a
+        # plan declares keep exactly the deliverables they declare.
         for phase in phases:
-            if phase.get("seats") != [synthesizer] and not phase.get("deliverable"):
+            if phase.get("seats") != [synthesizer]:
                 phase["deliverable"] = "report.md"
     if any(s["workspace"] == "worktree" for s in seats):
         base = workspace.base_commit(project_root)

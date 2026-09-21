@@ -85,6 +85,14 @@ never enabled silently to make a run pass. Raw arguments and environment
 pass-through exist for what has no name yet, and they too appear in the
 receipt.
 
+Codex reaches the engine without the plugin: `tools/install.py` links
+`bin/convene` onto `PATH` as the `convene` command and links the plugin's
+`skills/convene/` as a Codex skill. The plugin's `SKILL.md` is the one
+authoritative operator procedure; `harnesses/codex/skills/convene/` holds
+symlinks into it, never a copy. Antigravity seats are audited, not
+confined: the adapter rejects tool sets it cannot enforce and checks the
+transcript instead, and it has no private-home tier.
+
 Tests drive the engine against the stub binaries in `tests/convene-stubs/`
 with an isolated home under `~/tmp`; a scenario is chosen by a
 `[[stub:NAME]]` token in the brief. The real bubblewrap jail test runs only

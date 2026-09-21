@@ -19,10 +19,23 @@ COMPONENTS = ("skills", "scripts", "hooks", "settings", "prompts", "instructions
 # move the digest baseline out from under that skill. The memory scripts are
 # absent because they resolve their library through "$0" and need their
 # siblings, including the library itself, in the same directory.
+# Each entry names the installed command and its source, relative to the
+# checkout. `convene` is the engine shipped inside the Claude Code plugin;
+# its shim resolves the engine through the link's real path, so one symlink
+# on PATH serves Claude Code, Codex and a shell alike.
 COMMANDS = {
-    "claude-code": ("claude-code-session-resume.py",),
-    "codex": ("codex-api-profile.sh", "codex-code-session-resume.py", "codex-tmux.py"),
+    "claude-code": {
+        "claude-code-session-resume": "harnesses/claude-code/scripts/claude-code-session-resume.py",
+        "convene": "harnesses/claude-code/plugins/convene/bin/convene",
+    },
+    "codex": {
+        "codex-api-profile": "harnesses/codex/scripts/codex-api-profile.sh",
+        "codex-code-session-resume": "harnesses/codex/scripts/codex-code-session-resume.py",
+        "codex-tmux": "harnesses/codex/scripts/codex-tmux.py",
+        "convene": "harnesses/claude-code/plugins/convene/bin/convene",
+    },
 }
+CONVENE_SKILL = REPO / "harnesses/claude-code/plugins/convene/skills/convene"
 
 
 def catalog(harness, components):
@@ -43,6 +56,13 @@ def catalog(harness, components):
                 result["skills/teach/agents/openai.yaml"] = REPO / "harnesses/codex/skills/teach/agents/openai.yaml"
                 result["skills/whats-new/SKILL.md"] = REPO / "harnesses/codex/skills/whats-new/SKILL.md"
                 result["skills/whats-new/references/workflow.md"] = REPO / "skills/whats-new/SKILL.md"
+                # The convene operator procedure is authored inside the plugin
+                # (an installed plugin may not reach outside its root) and
+                # linked from here, so Codex reads the same text.
+                result["skills/convene/SKILL.md"] = CONVENE_SKILL / "SKILL.md"
+                result["skills/convene/agents/openai.yaml"] = REPO / "harnesses/codex/skills/convene/agents/openai.yaml"
+                for reference in sorted((CONVENE_SKILL / "references").glob("*.md")):
+                    result[f"skills/convene/references/{reference.name}"] = reference
         elif component == "profiles":
             if harness != "codex":
                 raise ValueError(f"{component} is not available for {harness}")
@@ -50,8 +70,8 @@ def catalog(harness, components):
                 filename = f"{name}.config.toml"
                 result[filename] = REPO / "harnesses/codex/profiles" / filename
         elif component == "commands":
-            for name in COMMANDS[harness]:
-                result[Path(name).stem] = REPO / "harnesses" / harness / "scripts" / name
+            for name, source in COMMANDS[harness].items():
+                result[name] = REPO / source
         elif component in ("prompts", "instructions"):
             for source in (REPO / component).glob("*.md"):
                 if source.name != "README.md":

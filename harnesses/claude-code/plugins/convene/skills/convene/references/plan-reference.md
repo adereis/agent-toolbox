@@ -7,7 +7,7 @@ annotated template is `templates/panel.toml`.
 | Field | Default | Meaning |
 |---|---|---|
 | `schema` | 1 | plan format version |
-| `kind` | `panel` | `panel`, `room` or `fanout`; a fanout fixes `visibility = "blind"`, `workspace = "worktree"`, `tools = "write"` and asks every attempt for `report.md` |
+| `kind` | `panel` | `panel`, `room` or `fanout`; a fanout fixes `visibility = "blind"`, `workspace = "worktree"`, `tools = "write"`; when it declares no phases its one attempt phase asks for `report.md` |
 | `title` | required | shown in status and export |
 | `rounds` | 1 | rounds to play; phases must add up to it |
 | `post_length` | 400 | words per post; a phase may override with `length` |

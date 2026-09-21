@@ -86,6 +86,24 @@ class FanoutTests(unittest.TestCase):
         self.assertTrue((target / "sealed/r001/judgment.md").exists())
         self.assertTrue((target / "board.md").exists())
 
+    def test_declared_phases_keep_their_own_deliverables(self):
+        """Found by a live Antigravity seat reviewing the fanout commit."""
+        root, frozen = self.prepare(rounds=2, phases=[
+            {"name": "attempt", "rounds": 1, "deliverable": "notes.md"},
+            {"name": "wrap", "rounds": 1, "seats": ["one"]}])
+        self.assertEqual([p.get("deliverable") for p in frozen["phases"]], ["notes.md", None])
+
+    def test_reseal_keeps_the_judgment(self):
+        """Found by the same seat: --force used to delete judgment.md."""
+        root, _ = self.prepare()
+        round_.run(root)
+        seal.seal(root, seed=1)
+        (root / "sealed/r001/judgment.md").write_text("A wins.\n")
+        result = seal.seal(root, seed=2, force=True)
+        self.assertTrue(result["judgment_kept"])
+        self.assertEqual((root / "sealed/r001/judgment.md").read_text(), "A wins.\n")
+        self.assertTrue((root / "sealed/r001/A/post.md").exists())
+
     def test_seal_leaves_out_absent_seats(self):
         root, _ = self.prepare(seats=[{"id": "one", "persona": "connie-tinuity"},
                                       {"id": "two", "persona": "archie-tecture"}],

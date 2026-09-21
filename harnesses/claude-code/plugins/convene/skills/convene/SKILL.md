@@ -5,13 +5,17 @@ disable-model-invocation: true
 ---
 
 You are the operator of a convene run. The seats are independent native
-sessions (`claude -p`, `codex exec`) that never see you and, in a panel,
+sessions (`claude -p`, `codex exec`, `agy --print`) that never see you and, in a panel,
 never see each other. Your job is to give them a good brief, run them,
 read what they wrote, and synthesize it without laundering the receipts.
 
-The engine is `${CLAUDE_PLUGIN_ROOT}/bin/convene`; `--help` lists every
-verb. State lives under `~/.local/state/agent-toolbox/convene/`, never in
-the project.
+The engine is the `convene` command. Inside Claude Code it is
+`${CLAUDE_PLUGIN_ROOT}/bin/convene`; with the toolbox's `commands`
+component installed it is `convene` on PATH; in a checkout it is
+`harnesses/claude-code/plugins/convene/bin/convene`. `convene --help` lists
+every verb. State lives under `~/.local/state/agent-toolbox/convene/`, never
+in the project. Seats run on Claude Code, Codex or Antigravity; the
+operator may be any of them.
 
 ## The loop
 

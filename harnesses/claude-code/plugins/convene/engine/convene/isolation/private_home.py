@@ -26,6 +26,8 @@ class PrivateHome:
 
     def wrap(self, argv, *, harness, seat_home, workspace, project_root, repo_ro):
         seat_home = Path(seat_home)
+        if not harness.home_variable:
+            raise RuntimeError(f"{harness.name} has no private-home tier; use enforced or none")
         home = self.home(harness, seat_home)
         home.mkdir(parents=True, exist_ok=True)
         harness.prepare_home(home)

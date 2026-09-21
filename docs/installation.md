@@ -34,14 +34,14 @@ project-specific skill installation. This installer does not change
 
 | Component | Claude Code | Codex | Installation behavior |
 |-----------|-------------|-------|-----------------------|
-| `skills` | Yes | Yes | Installs `teach` and `adopt-baseline` with native explicit-invocation metadata and the configuration-aware `whats-new` release digest |
+| `skills` | Yes | Yes | Installs `teach` and `adopt-baseline` with native explicit-invocation metadata and the configuration-aware `whats-new` release digest; for Codex also the `convene` operator procedure, linked from the plugin |
 | `scripts` | Yes | Yes | Links harness utilities under `<root>/scripts/` |
 | `hooks` | Yes | Unavailable | Links the remaining hook scripts; registration is manual |
 | `settings` | Yes | Unavailable | Links statusline scripts at the Claude configuration root |
 | `prompts` | Yes | Yes | Links plain text under `<root>/prompts/`; no automatic invocation |
 | `instructions` | Yes | Yes | Links opt-in modules under `<root>/instructions/`; no policy files overwritten |
 | `profiles` | Unavailable | User scope only | Links `subscription.config.toml` and `api.config.toml` directly into the Codex configuration directory |
-| `commands` | Yes | Yes | User scope only; links the utilities you run yourself into `~/.local/bin`, without their file extension |
+| `commands` | Yes | Yes | User scope only; links the utilities you run yourself into `~/.local/bin`, without their file extension, `convene` included |
 
 Install the Codex [authentication profiles](../harnesses/codex/README.md#authentication-profiles)
 with:
@@ -93,6 +93,7 @@ python3 tools/install.py --harness codex --scope user \
 
 codex-code-session-resume --all
 codex-tmux
+convene doctor
 ```
 
 `commands` withholds two groups on purpose. A skill invokes each `whats-new`
@@ -120,6 +121,11 @@ claude plugin install convene@agent-toolbox
 # Development: load the checkout in place, without installing
 claude --plugin-dir /path/to/agent-toolbox/harnesses/claude-code/plugins/convene
 ```
+
+Codex does not load Claude Code plugins. It reaches the same engine
+directly: the `commands` component puts `convene` on `PATH`, and the Codex
+`skills` component links the plugin's operator procedure as the `convene`
+skill, so a Codex session drives the engine the way `/convene:panel` does.
 
 `tools/install.py` does not manage plugins and has no `plugin` component.
 Claude Code discovers plugins only through its own registry

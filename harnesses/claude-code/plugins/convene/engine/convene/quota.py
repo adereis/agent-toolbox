@@ -51,6 +51,8 @@ def session_id(harness, stream):
         ids = [r["thread_id"] for r in stream if r.get("type") == "thread.started"]
     elif harness == "claude":
         ids = [r["session_id"] for r in stream if r.get("session_id")]
+    elif harness == "agy":
+        ids = [r["conversation_id"] for r in stream if r.get("conversation_id")]
     else:
         raise ValueError(f"unknown harness: {harness}")
     unique = list(dict.fromkeys(ids))
@@ -98,7 +100,22 @@ def _codex(stream):
                 detail=str(error.get("message", ""))[:200], output_tokens=None)
 
 
-CLASSIFIERS = {"claude": _claude, "codex": _codex}
+def _agy(stream):
+    results = [r["result"] for r in stream if r.get("event") == "result"]
+    if len(results) != 1 or results[0].get("status") != "ERROR":
+        return None
+    result = results[0]
+    said = str(result.get("error") or result.get("response") or "")
+    if not LIMIT_TEXT.search(said):
+        return None
+    produced = (bool(result.get("response"))
+                or bool((result.get("usage") or {}).get("output_tokens"))
+                or any((r.get("step_update") or {}).get("step_type") == "tool" for r in stream))
+    return dict(phase="interrupted" if produced else "refused", scope="quota", resets_at=None,
+                detail=said[:200], output_tokens=(result.get("usage") or {}).get("output_tokens"))
+
+
+CLASSIFIERS = {"claude": _claude, "codex": _codex, "agy": _agy}
 
 
 def classify(harness, record):

@@ -255,6 +255,27 @@ and [custom provider authentication](https://learn.chatgpt.com/docs/auth#alterna
 Live checks requiring your accounts are described in
 [interactive validation](../../tests/INTERACTIVE.md#it-07-codex-authentication-profiles).
 
+## Convene from Codex
+
+[Convene](../claude-code/plugins/convene/README.md) runs panels, rooms and
+fanouts of independent seats on Claude Code, Codex or Antigravity. Codex
+does not load Claude Code plugins, so it reaches the engine directly:
+
+```bash
+python3 tools/install.py --harness codex --scope user \
+  --component skills --component commands --apply
+convene doctor
+```
+
+`commands` puts `convene` on `PATH` (a symlink to the plugin's `bin/convene`,
+whose shim resolves the engine through the link). `skills` links the
+plugin's operator procedure as the `convene` skill, explicit invocation
+only, with its references beside it, so a Codex session follows the same
+text a Claude Code session does. Ask Codex to "use the convene skill to
+review HEAD~3..HEAD"; the procedure names the command, the plan template
+and the receipts to report. Seats keep their own isolation regardless of
+which harness operates them.
+
 ## Tmux status display
 
 `codex-tmux.py` opens Codex with an explicit billing backend and a two-row

@@ -12,8 +12,9 @@
 #   convene export <name> DIR; convene prune <name>
 #
 # A fanout fixes visibility = "blind", workspace = "worktree" and
-# tools = "write". Every attempt phase asks for report.md beside the post;
-# changes.patch is captured from each worktree.
+# tools = "write". With no phases declared, its one attempt phase asks for
+# report.md beside the post; declared phases keep the deliverables they
+# name. changes.patch is captured from each worktree either way.
 
 schema = 1
 kind = "fanout"

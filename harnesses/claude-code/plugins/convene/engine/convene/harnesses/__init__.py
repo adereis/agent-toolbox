@@ -105,6 +105,7 @@ class Harness:
     # with the last one winning, and a door flag would open the door without
     # the grant that makes it visible in the receipt.
     reserved: dict = {}  # flag -> (grant that unlocks it, or None) and a hint
+    tool_sets: tuple = TOOL_SETS  # the tool policies this harness can enforce
 
     def check_args(self, seat):
         for arg in seat.get("args") or []:
@@ -158,8 +159,8 @@ class Harness:
 
 
 def registry():
-    from convene.harnesses import claude, codex
-    return {"claude": claude.Claude(), "codex": codex.Codex()}
+    from convene.harnesses import agy, claude, codex
+    return {"claude": claude.Claude(), "codex": codex.Codex(), "agy": agy.Antigravity()}
 
 
 def get(name):

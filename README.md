@@ -20,7 +20,9 @@ that writes the brief, reads the board and synthesizes.
 That convenes a security reviewer on Codex and a skeptic on Claude over the
 last three commits, each in its own process with no MCP servers, no project
 instruction files and no operator memory, then reports the findings with the
-served model, the isolation tier and every red flag per seat. On Linux with
+served model, the isolation tier and every red flag per seat. Seats run on
+Claude Code, Codex or Antigravity, and the operator can be Claude Code or
+Codex. On Linux with
 bubblewrap the seats are jailed at the OS level; elsewhere they get a private
 home and the receipt says so. It installs through Claude Code's own plugin
 commands, not through `tools/install.py`:
@@ -28,6 +30,8 @@ commands, not through `tools/install.py`:
 ```bash
 claude plugin marketplace add /path/to/agent-toolbox
 claude plugin install convene@agent-toolbox
+# Codex reaches the same engine through the installer instead:
+python3 tools/install.py --harness codex --scope user --component skills --component commands --apply
 ```
 
 Three kinds ship: the one-round **panel**; the **room**, where seats
@@ -41,7 +45,7 @@ learning who wrote what.
 
 | Component | Harness | Documentation |
 |-----------|---------|---------------|
-| Convene: multi-seat review panels, design rooms and blind fanouts with isolation tiers and receipts | Claude Code plugin; seats on Claude Code and Codex | [Convene](harnesses/claude-code/plugins/convene/README.md) |
+| Convene: multi-seat review panels, design rooms and blind fanouts with isolation tiers and receipts | Claude Code plugin; Codex skill and command; seats on Claude Code, Codex and Antigravity | [Convene](harnesses/claude-code/plugins/convene/README.md), [from Codex](harnesses/codex/README.md#convene-from-codex) |
 | Session history and resume | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md) |
 | Session history and resume | Codex | [Codex integration](harnesses/codex/README.md) |
 | Subscription and API authentication profiles | Codex | [Authentication profiles](harnesses/codex/README.md#authentication-profiles) |

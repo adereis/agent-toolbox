@@ -1,0 +1,1 @@
+../../../claude-code/plugins/convene/skills/convene/SKILL.md
