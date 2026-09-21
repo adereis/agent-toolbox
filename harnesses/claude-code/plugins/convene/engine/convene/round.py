@@ -10,6 +10,7 @@ absence: a published board is never rewritten.
 from __future__ import annotations
 
 import os
+import shutil
 import signal
 import subprocess
 import time
@@ -17,7 +18,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from convene import board, harnesses, isolation, observe, platform, runs, sessions
+from convene import board, harnesses, isolation, observe, platform, quota, runs, sessions, workspace
 from convene.storage import digest, event, hashes, lock, read, trail, write, write_text
 
 
@@ -32,10 +33,77 @@ def seat_named(plan, value):
     raise ValueError(f"no seat {value!r}; seats: {', '.join(s['id'] for s in plan['seats'])}")
 
 
-def turn_prompt(root, plan, seat, n):
-    """The standing assignment, delivered whole on the first turn."""
-    start = (Path(root) / "work" / seat["id"] / "START.md").read_text(encoding="utf-8")
-    return start + "\nNobody has posted yet. Post now.\n"
+def turn_prompt(root, plan, seat, n, *, cold=False):
+    """What a seat is told when the run moves.
+
+    Round one delivers the standing assignment whole. Later rounds send one
+    line: everything standing is already in the session, so repeating it
+    would buy nothing and cost tokens on every seat. A cold seat (no
+    session at round > 1) gets the assignment again and is told to read the
+    boards it missed.
+    """
+    name = seat["id"]
+    phase = board.phase_for(plan, n)
+    start = (Path(root) / "work" / name / "START.md").read_text(encoding="utf-8")
+    if n == 1:
+        text = start + "\nNobody has posted yet. Post now."
+    elif cold:
+        text = (start + "\nYou are joining a room already in progress. Read the boards under "
+                f"board/, beginning with board/round-{n - 1:03d}/digest.md, then post as the "
+                "others do. Answer your colleagues by name. You were expected earlier and could "
+                "not be reached, so nothing the room has said is a reply to you.")
+    elif seat["visibility"] != "board":
+        text = "Post again. You do not see the others' posts; continue from your own."
+    elif board.others_spoke(root, plan, name, n - 1):
+        text = (f"The board has moved: board/round-{n - 1:03d}/digest.md. Read it and post "
+                "again. Answer your colleagues by name.")
+    else:
+        heard = board.last_heard(root, plan, name, n - 1)
+        text = ("Nobody else has posted since"
+                + (f" round {heard}: board/round-{heard:03d}/digest.md." if heard
+                   else " the room opened.")
+                + " Post again. Anything you asked them is still outstanding, not declined.")
+    missed = [r for r in range(1, n) if name not in board.acting(plan, r)]
+    if missed and n > 1 and not cold and seat["visibility"] == "board":
+        text += (f" You did not post in round{'s' if len(missed) > 1 else ''} "
+                 f"{', '.join(str(r) for r in missed)}; those boards are under board/ and are "
+                 "worth reading first.")
+    made = board.deliverable(plan, n)
+    words = phase.get("length", plan["post_length"])
+    if made:
+        text += (f" Write the work itself to outbox/{made}, as finished text and nothing else, "
+                 f"about {words} words. Your post is your note to the room about it, about "
+                 f"{plan['post_length']} words.")
+    elif words != plan["post_length"]:
+        text += f" About {words} words this time."
+    instruction = (phase.get("instruction") or "").strip()
+    if instruction:
+        text += " " + instruction
+    note = board.chair_note(root, n)
+    if note:
+        text += f"\n\nFrom the chair, to everyone acting this round:\n\n{note}"
+    return text + "\n"
+
+
+def open_round(root, plan, n):
+    """Put the previous digest inside every board seat's workspace, read-only.
+
+    Blind seats are never shown a board; a seat that rests this round still
+    receives it, because it will read it when it next acts.
+    """
+    if n == 1:
+        return None
+    source = Path(root) / "board" / "rounds" / f"r{n - 1:03d}" / "digest.md"
+    if not source.exists():
+        raise RuntimeError(f"round {n - 1} has not been promoted; nothing to show")
+    for seat in plan["seats"]:
+        if seat["visibility"] != "board":
+            continue
+        target = Path(root) / "work" / seat["id"] / "board" / f"round-{n - 1:03d}"
+        target.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target / "digest.md")
+    event(root, round=n, event="board-published", digest_sha256=digest(source))
+    return source
 
 
 def _terminate(proc):
@@ -62,8 +130,14 @@ def run_seat(root, plan, seat, n, *, timeout=None):
     if digest(work / "START.md") != seat["start_sha256"]:
         raise RuntimeError(f"standing assignment changed since prepare: {name}")
     resume = state.get("session_id")
+    # A seat with no session at round > 1 had an earlier turn that produced
+    # nothing at all. Refusing it for the rest of the run costs the seat;
+    # so it opens a session now and joins in progress, and `status` reports
+    # the round it joined so no reading mistakes a late arrival for an
+    # independent opening position.
+    cold = n > 1 and not resume
     mode = "resume" if resume else "start"
-    return launch(root, plan, seat, n, turn_prompt(root, plan, seat, n), mode, resume,
+    return launch(root, plan, seat, n, turn_prompt(root, plan, seat, n, cold=cold), mode, resume,
                   timeout=timeout)
 
 
@@ -168,16 +242,77 @@ def launch(root, plan, seat, n, prompt, mode, session_id, *, timeout=None):
     return status
 
 
+ATTEMPT_FILES = ("events.jsonl", "stderr.log", "prompt.md", "launch.json", "receipt.json")
+
+
+def continue_seat(root, n, name, *, timeout=None):
+    """Take one seat's turn again after a provider limit stopped it.
+
+    Refused: nothing ran, so the native session is rewound to the mark taken
+    before submission and the identical prompt is delivered again. With no
+    session yet, it is simply launched again. Interrupted: the session holds
+    the reasoning, so it is resumed with a task-free continuation note. Any
+    other failure is refused here: a crash or a timeout looks identical at
+    the command line, and re-running one can duplicate work that happened.
+    """
+    root, plan = runs.load(root)
+    seat = seat_named(plan, name)
+    record = root / "records" / name / f"r{n:03d}"
+    state = read(state_path(root, name))
+    attempt = state.get("rounds", {}).get(str(n))
+    if not attempt:
+        raise ValueError(f"{name} has no round {n} to continue")
+    if attempt["status"] == "answered":
+        raise ValueError(f"{name} already answered round {n}")
+    if board.post_path(root, name, n).exists():
+        raise RuntimeError(f"round {n} is already published for {name}")
+    harness = harnesses.get(seat["harness"])
+    stop = harness.classify_stop(record)
+    if not stop:
+        raise RuntimeError(f"{name} does not carry a provider quota stop in round {n}; "
+                           "diagnose the failure rather than taking the turn again")
+    launch_record = read(record / "launch.json")
+    resume = quota.resumable_session(stop)
+    if resume:
+        prompt, mode, session = quota.continuation(), "resume", resume
+    else:
+        sessions.rewind(launch_record.get("session_marks") or [])
+        prompt = (record / "prompt.md").read_text(encoding="utf-8")
+        session = state.get("session_id")
+        mode = "resume" if session else "start"
+    number = len(list((record / "attempts").glob("[0-9][0-9]"))) + 1
+    folder = record / "attempts" / f"{number:02d}"
+    folder.mkdir(parents=True)
+    for item in ATTEMPT_FILES:
+        if (record / item).exists():
+            shutil.move(str(record / item), str(folder / item))
+    del state["rounds"][str(n)]
+    state.setdefault("attempts", []).append({"round": n, "attempt": number,
+                                             "quota_stop": stop["phase"],
+                                             "quota_scope": stop.get("scope"), "resumed": resume})
+    write(state_path(root, name), state)
+    event(root, round=n, seat=name, event="continuing", quota_stop=stop["phase"],
+          resumed=resume, attempt=number)
+    return launch(root, plan, seat, n, prompt, mode, session, timeout=timeout)
+
+
 def run_round(root, n, *, jobs=None, timeout=None):
     root, plan = runs.load(root)
     with lock(root / "run.lock"):
-        if n < 1 or n > plan["rounds"]:
-            raise ValueError(f"round must be 1..{plan['rounds']}")
+        allowed = board.budget(root, plan)
+        if n < 1 or n > allowed:
+            raise ValueError(f"round must be 1..{allowed}; `convene extend` raises the budget")
         if n in board.published_rounds(root):
             raise ValueError(f"round {n} is already published")
+        if n > 1 and (n - 1) not in board.published_rounds(root):
+            raise ValueError(f"round {n - 1} is not published yet")
         jobs = jobs or plan.get("jobs", 1)
         event(root, round=n, event="round-opened", jobs=jobs)
+        open_round(root, plan, n)
         speaking = board.acting(plan, n)
+        for seat in plan["seats"]:
+            if seat["id"] not in speaking:
+                event(root, round=n, seat=seat["id"], event="resting")
         results = {}
 
         def task(seat):
@@ -202,17 +337,59 @@ def run_round(root, n, *, jobs=None, timeout=None):
 
 
 def run(root, *, rounds=None, jobs=None, timeout=None):
+    """Play rounds until the budget runs out, the room converges, or a hold.
+
+    A run that declared phases is not asked whether it has converged: its
+    schedule says how long it runs, and the stop rule cannot tell a room
+    that has exhausted the question from a critique phase whose revision
+    comes next. The signal is still measured and recorded every round.
+    """
     root, plan = runs.load(root)
     played = []
-    ceiling = plan["rounds"] if rounds is None else min(rounds, plan["rounds"])
     while True:
+        allowed = board.budget(root, plan)
+        ceiling = allowed if rounds is None else min(rounds, allowed)
         number = len(board.published_rounds(root)) + 1
         if number > ceiling:
-            return played, "done"
+            return played, "done" if number > allowed else "round limit reached"
         outcome = run_round(root, number, jobs=jobs, timeout=timeout)
         played.append((number, outcome))
         if outcome["_board"].get("held"):
             return played, "held on " + ", ".join(outcome["_board"]["held"])
+        signal = outcome["_board"]["convergence"]
+        if signal["converged"] and len(plan["phases"]) == 1 and not plan["phases"][0].get("seats"):
+            return played, f"converged on {signal['reason']}"
+
+
+def promote_held(root, n):
+    """Close a round every seat has now answered or been given up on."""
+    root, plan = runs.load(root)
+    with lock(root / "run.lock"):
+        if n in board.published_rounds(root):
+            raise ValueError(f"round {n} is already published")
+        waiting = [s["id"] for s in plan["seats"] if s["id"] in board.acting(plan, n)
+                   and read(state_path(root, s["id"])).get("rounds", {}).get(str(n), {}).get("status") == "quota"]
+        if waiting:
+            raise RuntimeError(f"round {n} is still held on {', '.join(waiting)}; continue them "
+                               "first, or accept their absence with --absent")
+        return board.promote(root, n)
+
+
+def promote_absent(root, n):
+    """Publish a held round with the stopped seats recorded as absent."""
+    root, plan = runs.load(root)
+    with lock(root / "run.lock"):
+        if n in board.published_rounds(root):
+            raise ValueError(f"round {n} is already published")
+        for seat in plan["seats"]:
+            state = read(state_path(root, seat["id"]))
+            turn = state.get("rounds", {}).get(str(n))
+            if turn and turn["status"] == "quota":
+                turn["status"] = "given-up"
+                state["status"] = "given-up"
+                write(state_path(root, seat["id"]), state)
+                event(root, round=n, seat=seat["id"], event="given-up")
+        return board.promote(root, n)
 
 
 def status(root):
@@ -229,29 +406,59 @@ def status(root):
                                         "tool_calls", "red_flags", "error", "quota_stop",
                                         "quota_resets_at", "compaction_observed")}
             receipts[int(path.parent.name[1:])]["tier"] = (got.get("isolation") or {}).get("tier")
+        answered = sorted(int(r) for r, v in state.get("rounds", {}).items()
+                          if v.get("status") == "answered")
         seats[seat["id"]] = {
             "label": board.label(seat), "harness": seat["harness"], "model": seat["model"],
             "effort": seat["effort"], "tools": seat["tools"], "isolation": seat["isolation"],
-            "status": state.get("status"), "session_id": state.get("session_id"),
-            "receipts": receipts,
+            "workspace": seat["workspace"], "status": state.get("status"),
+            "session_id": state.get("session_id"), "receipts": receipts,
+            "attempts": state.get("attempts", []),
+            # A seat whose first answered round is not the first round it was
+            # expected in heard the room before it spoke.
+            "joined_late": answered[0] if answered and answered[0] != next(
+                (r for r in range(1, plan["rounds"] + 1) if seat["id"] in board.acting(plan, r)), 1)
+            else None,
         }
     rows = trail(root)
+    published = board.published_rounds(root)
+    convergence = [read(root / "board" / "rounds" / f"r{n:03d}" / "convergence.json")
+                   for n in published if (root / "board" / "rounds" / f"r{n:03d}" / "convergence.json").exists()]
+    spoken = sorted(int(p.stem[1:]) for p in (root / "chair").glob("r[0-9][0-9][0-9].md"))
+    held = [r for r in rows if r.get("event") == "round-held"]
+    still_held = held[-1:] if held and held[-1].get("round") not in published else []
     return {"run": str(root), "name": plan["name"], "title": plan["title"], "kind": plan["kind"],
-            "rounds": plan["rounds"], "published_rounds": board.published_rounds(root),
-            "held": [r for r in rows if r.get("event") == "round-held"][-1:],
+            "rounds": board.budget(root, plan), "declared_rounds": plan["rounds"],
+            "phases": plan["phases"], "published_rounds": published, "held": still_held,
+            "convergence": [{k: c[k] for k in ("round", "novelty", "closing", "converged", "reason")}
+                            for c in convergence],
+            "chair": {"delivered": [r for r in spoken if r in published],
+                      "queued": [r for r in spoken if r not in published]},
             "seats": seats, "last_events": rows[-8:]}
 
 
 def render_status(data):
     lines = [f"{data['title']}  [{data['kind']}, {data['name']}]", f"  {data['run']}",
-             f"  rounds published: {data['published_rounds'] or 'none'} of {data['rounds']}"]
+             f"  rounds published: {data['published_rounds'] or 'none'} of {data['rounds']}"
+             + (f" (declared {data['declared_rounds']})" if data['rounds'] != data['declared_rounds'] else "")]
+    if len(data["phases"]) > 1 or data["phases"][0].get("seats"):
+        lines.append("  phases: " + ", ".join(f"{p['name']} x{p['rounds']}"
+                                              + (f" [{', '.join(p['seats'])}]" if p.get("seats") else "")
+                                              for p in data["phases"]))
+    for signal in data["convergence"]:
+        if signal["converged"]:
+            lines.append(f"  converged at round {signal['round']} on {signal['reason']}")
     if data["held"]:
-        lines.append(f"  HELD: waiting on {', '.join(data['held'][0].get('waiting_on', []))} "
-                     "(provider quota); continue them when the window resets")
+        lines.append(f"  HELD: round {data['held'][0].get('round')} waiting on "
+                     f"{', '.join(data['held'][0].get('waiting_on', []))} (provider quota); "
+                     "`convene continue` them when the window resets")
+    if data["chair"]["queued"]:
+        lines.append("  chair note queued for round " + ", ".join(str(r) for r in data["chair"]["queued"]))
     for name, seat in data["seats"].items():
         lines.append(f"- {name} ({seat['label']}): {seat['harness']}/{seat['model']} "
                      f"effort={seat['effort']} tools={seat['tools']} isolation={seat['isolation']} "
-                     f"status={seat['status']}")
+                     f"status={seat['status']}"
+                     + (f" JOINED LATE in round {seat['joined_late']}" if seat.get("joined_late") else ""))
         for n, got in seat["receipts"].items():
             served = got.get("model") or "?"
             lines.append(f"    r{n:03d}: {got['status']}, served {served}, "
@@ -283,3 +490,41 @@ def usage(root):
         out.append({"seat": seat["id"], "harness": seat["harness"], "model": seat["model"],
                     "turns": turns, **totals, "cost_usd": cost if priced else None})
     return out
+
+
+def prune(root, *, force=False):
+    """Remove the run's worktrees and private harness homes, keeping every record.
+
+    A private home is the harness's own state, bound over the real one so a
+    seat cannot reach the operator's; it is large and nothing else collects
+    it. A worktree is a registration in the operator's repository. Neither
+    is evidence: the receipts beside them already hold what was read from
+    them. A seat still running is never pruned; a machine that cannot say
+    whether one is running keeps everything unless forced.
+    """
+    root, plan = runs.load(root)
+    live = []
+    for row in trail(root):
+        if row.get("event") == "running" and row.get("pid"):
+            try:
+                identity = platform.process_identity(row["pid"])
+            except RuntimeError as exc:
+                if not force:
+                    raise RuntimeError(f"{exc}; pass --force after checking by hand") from exc
+                identity = None
+            if identity is not None and identity == row.get("process_identity"):
+                live.append((row.get("seat"), row["pid"]))
+    if live:
+        raise RuntimeError("seats still running: " + ", ".join(f"{s} (pid {p})" for s, p in live))
+    removed = []
+    for seat in plan["seats"]:
+        tree = root / "work" / seat["id"] / workspace.REPO
+        if seat["workspace"] == "worktree" and tree.exists():
+            workspace.remove(plan["project_root"], tree)
+            removed.append(str(tree))
+        home = root / "homes" / seat["id"]
+        if home.exists():
+            shutil.rmtree(home)
+            removed.append(str(home))
+    event(root, event="pruned", removed=removed)
+    return removed

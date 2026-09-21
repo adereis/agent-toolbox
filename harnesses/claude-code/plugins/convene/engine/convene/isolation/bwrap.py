@@ -17,42 +17,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+from convene import workspace as worktrees
 from convene.harnesses import base_environment
 from convene.isolation import Launch
 
 BWRAP = "bwrap"
 BLANKED = ("$HOME", "/tmp", "/var/tmp")
 WORKSPACE_NAME = "workspace"
-
-
-def launcher_paths(link, hops=10):
-    """Every directory needed to follow a launcher's symlink chain.
-
-    One hop at a time rather than `resolve()`, collecting each element's
-    parent, so an intermediate link like codex's `current` still has
-    somewhere to point inside the jail.
-    """
-    out, seen, current = [], set(), Path(link)
-    for _ in range(hops):
-        if current in seen:
-            break
-        seen.add(current)
-        out.append(current.parent)
-        if not current.is_symlink():
-            break
-        current = Path(os.path.normpath(os.path.join(current.parent, os.readlink(current))))
-    out.append(current if current.is_dir() else current.parent)
-    return list(dict.fromkeys(out))
-
-
-def version():
-    try:
-        result = subprocess.run([BWRAP, "--version"], capture_output=True, text=True, timeout=30)
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-    return result.stdout.strip() or None
-
-
 class Enforced:
     name = "enforced"
 
@@ -110,6 +81,17 @@ class Enforced:
             item = workspace / name
             if item.exists():
                 jail += ["--ro-bind", str(item), str(virtual_workspace / name)]
+        # A worktree's `.git` file names the main repository's git directory
+        # by absolute path, and git writes this worktree's index there. The
+        # common directory is bound read-only at its real path and only the
+        # worktree's own entry inside it is writable.
+        tree = workspace / worktrees.REPO
+        worktree_binds = []
+        if tree.is_dir():
+            common = worktrees.common_dir(tree)
+            own = worktrees.gitdir(tree)
+            jail += ["--ro-bind", str(common), str(common), "--bind", str(own), str(own)]
+            worktree_binds = [str(common), str(own)]
         jail += ["--chdir", str(virtual_workspace), "--setenv", "PWD", str(virtual_workspace),
                  "--unsetenv", "OLDPWD"]
         env = base_environment()
@@ -123,7 +105,7 @@ class Enforced:
             "writable": [str(virtual_workspace)], "read_only_in_workspace":
             [str(virtual_workspace / n) for n in ("materials", "START.md", "board")],
             "harness_home": str(virtual_harness_home), "harness_home_source": str(private),
-            "chdir": str(virtual_workspace),
+            "chdir": str(virtual_workspace), "worktree_git": worktree_binds,
             "repository_read_only": str(project_root) if repo_ro else None,
             "note": "the home is a tmpfs; only the private harness home, the launcher, "
                     "credentials and the declared workspace are bound back"})

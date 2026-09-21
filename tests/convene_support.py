@@ -88,6 +88,8 @@ class Sandbox:
         """Write a plan file; `seats` is a list of dicts, everything else top-level."""
         seats = fields.pop("seats", [{"id": "skeptic", "persona": "quinn-t-shun"}])
         materials = fields.pop("materials", [])
+        tables = {k: fields.pop(k) for k in list(fields) if isinstance(fields[k], list)
+                  and fields[k] and isinstance(fields[k][0], dict)}
         base = {"schema": 1, "kind": "panel", "title": "Test panel", "isolation": "private-home",
                 "brief": {"text": "Review this change carefully."}, "harness": "claude",
                 "model": "opus", "effort": "high"}
@@ -106,6 +108,10 @@ class Sandbox:
         for item in materials:
             lines.append("[[materials]]")
             lines += [f"{k} = {json.dumps(v)}" for k, v in item.items()]
+        for key, items in tables.items():
+            for item in items:
+                lines.append(f"[[{key}]]")
+                lines += [f"{k} = {json.dumps(v)}" for k, v in item.items()]
         for seat in seats:
             lines.append("[[seats]]")
             private = seat.pop("materials", [])

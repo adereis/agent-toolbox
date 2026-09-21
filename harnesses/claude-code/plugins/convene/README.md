@@ -7,10 +7,12 @@ persona, model, tool set and isolation tier. The foreground Claude Code
 session is the operator: it writes the brief, runs the seats, reads the
 board and synthesizes.
 
-This version ships the **panel**: a one-round review of a commit range by
-independent reviewers who do not see each other. Rooms (seats that discuss
-over rounds on a shared board) and fanouts (blind parallel implementations,
-sealed before reading) follow the same engine and arrive in later versions.
+Two kinds ship: the **panel**, a one-round review of a commit range by
+independent reviewers who do not see each other, and the **room**, where
+seats discuss a brief over rounds on a shared board, one seat drafts the
+change in its own git worktree, and the room critiques and revises it.
+Fanouts (blind parallel implementations, sealed before reading) follow on
+the same engine.
 
 ## Why a panel rather than a subagent
 
@@ -50,6 +52,7 @@ In Claude Code:
 ```
 /convene:panel HEAD~3..HEAD
 /convene:panel HEAD seat=codex/gpt-5.5 seat=claude/opus --persona sec-urity --persona quinn-t-shun
+/convene:room Add a --json flag to the session browser that prints what --list prints
 /convene:status
 ```
 
@@ -66,6 +69,22 @@ $convene status
 $convene board
 $convene export 2026-09-21-panel-review-the-change ~/tmp/panel-export
 ```
+
+A room plays rounds until its phases are done, until an unphased room
+converges (two consecutive rounds of low novelty or closing language), or
+until a provider quota stop holds a round open. Then:
+
+```bash
+$convene status NAME                 # HELD: round 2 waiting on skeptic
+$convene continue NAME skeptic       # once the window resets
+$convene promote NAME 2              # or: promote NAME 2 --absent
+$convene run NAME                    # the remaining rounds
+$convene extend NAME 6               # more rounds than the plan declared
+$convene prune NAME                  # remove worktrees and private homes; records stay
+```
+
+An operator note for the next round goes in `chair/rNNN.md` inside the run
+directory; every acting seat reads it that round and the digest records it.
 
 `convene --help` lists every verb. Runs live under
 `$XDG_STATE_HOME/agent-toolbox/convene/<project-key>/<run>/` (default
@@ -146,7 +165,31 @@ skill requires them to be repeated to the user verbatim.
 
 A provider quota stop holds the round open instead of publishing an absence:
 the seat's turn is recorded as `quota` with the reset time, and the board is
-not written. Continuing a held round arrives with the multi-round version.
+not written. `continue` retakes the turn: a refused stop (nothing ran)
+rewinds the native session to its pre-submission mark and delivers the same
+prompt again; an interrupted stop (the model ran) resumes the session with a
+task-free continuation note. The stopped attempt is archived beside the new
+one, so the round reads as two submissions rather than one that changed its
+mind.
+
+## Rounds, phases and worktrees
+
+From round two a `board` seat finds the previous round's digest under
+`board/round-NNN/digest.md` in its working directory and is told the board
+has moved; a `blind` seat never sees one. Sessions are resumed, so a turn
+costs one line of prompt on top of the seat's own context. A seat whose
+earlier turn produced nothing joins cold, is told it missed the opening, and
+is marked `JOINED LATE` in `status`.
+
+Phases divide the rounds: each may seat a subset (the rest listen), ask for
+a `deliverable` file written to `outbox/NAME` beside the post, add an
+`instruction`, or set a post `length`. Promotion moves deliverables to
+`board/made/<seat>/rNNN/` and prints them under the post on the digest. A
+`worktree` seat (`tools = "write"`) gets a detached checkout of the
+repository at `repo/`; whatever it changes is captured as `changes.patch` on
+every round it acts, untracked files included, and the operator's checkout
+is never touched. In the `enforced` tier the main repository's git directory
+is bound read-only and only the worktree's own entry is writable.
 
 ## Personas and instruments
 

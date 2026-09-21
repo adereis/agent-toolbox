@@ -72,9 +72,10 @@ class PlanTests(unittest.TestCase):
 
     def test_later_phase_features_are_refused_by_name(self):
         for fields, message in (
-            ({"rounds": 2}, "more than one round"),
-            ({"workspace": "worktree"}, "worktree"),
             ({"synthesis": {"by": "skeptic"}}, "synthesis by a seat"),
+            ({"workspace": "worktree"}, "needs tools"),
+            ({"phases": [{"name": "a", "rounds": 1, "deliverable": "changes.patch"}]},
+             "captured from a worktree"),
         ):
             with self.subTest(fields=fields), self.assertRaisesRegex(ValueError, message):
                 self.prepare(self.box.plan(**fields))

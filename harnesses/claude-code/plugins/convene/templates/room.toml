@@ -1,0 +1,77 @@
+# A room: seats discuss a brief over rounds on a shared board, then one
+# seat drafts the change in its own worktree and the room critiques it.
+#
+#   convene prepare room.toml
+#   convene run <name>            # plays every round; stops on a quota hold
+#   convene board <name>          # every round's digest, attributed
+#   convene prune <name>          # removes worktrees and private homes after export
+#
+# Phases add up to `rounds`. A phase may seat a subset (the rest listen),
+# ask for a deliverable file (written to outbox/NAME beside the post), add
+# an instruction, or set a post length. A worktree seat's changes are
+# captured automatically as changes.patch on every round it acts.
+
+schema = 1
+kind = "room"
+title = "Design and draft the change"
+rounds = 4
+jobs = 1
+post_length = 400             # words per post; a phase may override with `length`
+
+harness = "claude"
+model = "opus"
+effort = "high"
+tools = "read"
+isolation = "strongest"
+workspace = "none"
+instrument = "design"
+
+[brief]
+text = """
+The feature to design and draft is described below. Discuss what it
+should do and refuse to do, agree on the shape, then the drafter writes
+it and the room reviews the draft.
+
+<describe the feature here>
+"""
+
+[[seats]]
+id = "architect"
+persona = "archie-tecture"
+
+[[seats]]
+id = "skeptic"
+persona = "quinn-t-shun"
+harness = "codex"
+model = "gpt-5.5"
+
+[[seats]]
+id = "drafter"
+persona = "connie-tinuity"
+tools = "write"
+workspace = "worktree"        # its own detached checkout under work/drafter/repo
+
+[[phases]]
+name = "discuss"
+rounds = 1
+
+[[phases]]
+name = "draft"
+rounds = 1
+seats = ["drafter"]
+instruction = "Implement the design the room agreed on in repo/, with tests. Your post explains the choices."
+
+[[phases]]
+name = "critique"
+rounds = 1
+seats = ["architect", "skeptic"]
+instruction = "Review the patch on the board as you would a pull request: what would you change before merging?"
+
+[[phases]]
+name = "revise"
+rounds = 1
+seats = ["drafter"]
+instruction = "Revise the change in repo/ to answer the critique. Say what you changed and what you declined to change."
+
+[synthesis]
+by = "operator"

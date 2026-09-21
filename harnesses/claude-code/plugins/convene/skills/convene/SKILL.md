@@ -27,13 +27,18 @@ the project.
    matters, at least one seat runs on a different harness than you do.
 4. **Prepare and run.** `convene prepare PLAN --range A..B` freezes the
    plan and stages every seat's materials; it prints the resolved
-   isolation tier per seat. `convene run NAME` runs the round and
-   promotes the board. Seats run sequentially by default because seats
-   sharing one account hit the same quota wall at once.
+   isolation tier per seat. `convene run NAME` plays rounds and promotes
+   the board after each, stopping when the phases are done, when an
+   unphased room converges, or when a quota stop holds a round. Seats
+   run sequentially by default because seats sharing one account hit
+   the same quota wall at once. `convene round NAME N` plays one round.
 5. **Read status.** `convene status NAME`. A **held** round is a quota
    stop: the round stays open rather than publishing a false absence.
-   Tell the user which seat and the reset time; a later version adds
-   `continue`.
+   Tell the user which seat and the reset time. When it resets,
+   `convene continue NAME SEAT`, then `convene promote NAME N`, then
+   `convene run NAME` for the rest. `promote NAME N --absent` gives up
+   on the stopped seat instead, and says so on the board. A note the
+   room should read before round N goes in `chair/rNNN.md`.
 6. **Read the board.** `convene board NAME`, then follow
    [reading a board](references/reading-a-board.md). Read every post
    whole. The engine never summarizes.
@@ -41,7 +46,9 @@ the project.
    `synthesis.md` into the export directory and cite seats by id.
 8. **Export and report.** `convene export NAME DIR`. Report to the user:
    the synthesis, then the receipts (served model per seat, isolation
-   tier, tool calls, usage) and every red flag verbatim.
+   tier, tool calls, usage) and every red flag verbatim. Offer
+   `convene prune NAME` once the export is in hand: it removes the
+   worktrees and private homes and keeps every record.
 
 ## Red flags you must repeat, never soften
 
@@ -53,6 +60,8 @@ the project.
 - `granted on purpose: …`, `extra harness arguments: …`, `environment
   passed through: …`: a door the plan opened; name it beside the seat's
   findings.
+- `JOINED LATE in round N`: the seat heard the room before it first
+  spoke, so its first post is a reply, not an independent position.
 - a `failed` seat with its error text; a `quota` seat with its scope.
 
 ## Opening doors

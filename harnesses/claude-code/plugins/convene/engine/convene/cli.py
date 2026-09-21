@@ -15,7 +15,12 @@ convene: multi-seat panels over native coding-agent CLIs.
 
   prepare PLAN [--range A..B] [--name NAME]   freeze a plan into a run
           [--grant DOOR]... [--tools SET]       open doors for every seat
-  run RUN [--jobs N] [--timeout S]            run the rounds, promote the board
+  run RUN [--jobs N] [--timeout S]            run rounds until done, converged or held
+  round RUN N                                 run one round
+  continue RUN SEAT [--round N]               retake a quota-stopped turn
+  promote RUN N [--absent]                    close a round by hand
+  extend RUN ROUNDS                           raise the round budget
+  prune RUN [--force]                         remove worktrees and private homes
   status RUN                                  what each seat did, with red flags
   board RUN [--round N] [--raw]               the published posts, attributed
   export RUN DIR                              copy board and receipts out
@@ -53,6 +58,33 @@ def main(argv=None):
     p.add_argument("--rounds", type=int, default=None)
     p.add_argument("--jobs", type=int, default=None, help="seats in parallel (default: the plan's)")
     p.add_argument("--timeout", type=float, default=None, help="seconds per seat turn")
+
+    p = sub.add_parser("round", help="run one round")
+    p.add_argument("run")
+    p.add_argument("number", type=int)
+    p.add_argument("--jobs", type=int, default=None)
+    p.add_argument("--timeout", type=float, default=None)
+
+    p = sub.add_parser("continue", help="retake a seat's turn after a provider quota stop")
+    p.add_argument("run")
+    p.add_argument("seat")
+    p.add_argument("--round", dest="round_number", type=int, default=None,
+                   help="default: the held round")
+    p.add_argument("--timeout", type=float, default=None)
+
+    p = sub.add_parser("promote", help="publish a round's board")
+    p.add_argument("run")
+    p.add_argument("number", type=int)
+    p.add_argument("--absent", action="store_true",
+                   help="record quota-stopped seats as absent instead of waiting")
+
+    p = sub.add_parser("extend", help="raise the round budget")
+    p.add_argument("run")
+    p.add_argument("rounds", type=int)
+
+    p = sub.add_parser("prune", help="remove worktrees and private homes; keep the records")
+    p.add_argument("run")
+    p.add_argument("--force", action="store_true")
 
     for name in ("status", "usage"):
         p = sub.add_parser(name)
@@ -128,7 +160,41 @@ def dispatch(args):
                                                   if k != "_board")
                   + (f"; held on {', '.join(held)}" if held else f"; posted {len(posted)}"))
         print(f"{why}; next: convene status {root.name}")
-        return 0 if why == "done" else 3
+        return 3 if why.startswith("held") else 0
+    if args.command == "round":
+        outcome = round_.run_round(runs.resolve(args.run, project), args.number, jobs=args.jobs,
+                                   timeout=args.timeout)
+        held = outcome["_board"].get("held", [])
+        print(f"round {args.number}: " + ", ".join(f"{k}={v}" for k, v in outcome.items() if k != "_board")
+              + (f"; held on {', '.join(held)}" if held else "; published"))
+        return 3 if held else 0
+    if args.command == "continue":
+        root = runs.resolve(args.run, project)
+        number = args.round_number
+        if number is None:
+            data = round_.status(root)
+            if not data["held"]:
+                raise ValueError("no round is held; pass --round N")
+            number = data["held"][0]["round"]
+        status = round_.continue_seat(root, number, args.seat, timeout=args.timeout)
+        print(f"{args.seat} round {number}: {status}")
+        if status == "answered":
+            print(f"next: convene promote {root.name} {number} once every held seat has answered")
+        return 0 if status == "answered" else 3
+    if args.command == "promote":
+        root = runs.resolve(args.run, project)
+        outcome = (round_.promote_absent if args.absent else round_.promote_held)(root, args.number)
+        print(f"round {args.number} published: posted {', '.join(outcome['posted']) or 'nobody'}"
+              + (f"; absent {', '.join(outcome['absent'])}" if outcome["absent"] else ""))
+        return 0
+    if args.command == "extend":
+        allowed = board_.extend(runs.resolve(args.run, project), args.rounds)
+        print(f"budget is now {allowed} rounds")
+        return 0
+    if args.command == "prune":
+        removed = round_.prune(runs.resolve(args.run, project), force=args.force)
+        print("removed:\n" + "\n".join(f"  {r}" for r in removed) if removed else "nothing to remove")
+        return 0
     if args.command == "status":
         data = round_.status(_run(args, project))
         print(json.dumps(data, indent=2) if args.json else round_.render_status(data))

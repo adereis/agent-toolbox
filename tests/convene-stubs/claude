@@ -32,6 +32,17 @@ os.makedirs(home, exist_ok=True)
 payload = json.loads(sys.stdin.readline() or "{}")
 prompt = "".join(b.get("text", "") for b in payload.get("message", {}).get("content", []))
 scenario = (re.search(r"\[\[stub:([a-z-]+)\]\]", prompt) or [None, "success"])[1]
+if scenario.endswith("-once"):
+    # Refuse or stop once, then succeed on the retaken turn: a marker in the
+    # private home survives between attempts, as the real session does.
+    marker = os.path.join(home, "stub-" + scenario)
+    if os.path.exists(marker):
+        scenario = "success"
+    else:
+        open(marker, "w").close()
+        scenario = scenario[: -len("-once")]
+if "Continue from where you were" in prompt:
+    scenario = "success"
 requested = args[args.index("--model") + 1] if "--model" in args else None
 sid = args[args.index("--session-id") + 1] if "--session-id" in args else None
 resumed = args[args.index("--resume") + 1] if "--resume" in args else None
@@ -93,8 +104,30 @@ if scenario == "canary":
             f"READ={'ok' if os.path.exists(probe) else 'fail'} "
             f"TOKEN={'yes' if os.environ.get('CLAUDE_CODE_OAUTH_TOKEN') else 'no'} "
             f"SECRET={'yes' if os.environ.get('SECRET_FROM_OPERATOR') else 'no'}")
+    if os.path.isdir("repo"):
+        import subprocess
+        with open(os.path.join("repo", "STUB-NOTE.md"), "w") as note:
+            note.write("written by the stub inside the jail\n")
+        status = subprocess.run(["git", "-C", "repo", "status", "--porcelain"],
+                                capture_output=True, text=True)
+        text += f" GIT={'ok' if status.returncode == 0 else 'fail'} BOARD={sorted(os.listdir('board'))}"
 else:
     text = "## F1 Stub finding\n\nseverity: minor\n\nThe stub found nothing real.\n"
+    boards = sorted(os.listdir("board")) if os.path.isdir("board") else []
+    if boards:
+        text += f"\nI read {boards[-1]}.\n"
+    if "You are joining a room already in progress" in prompt:
+        text += "\nJoining late.\n"
+asked = re.search(r"Write the work itself to outbox/(\S+),", prompt)
+if asked:
+    os.makedirs("outbox", exist_ok=True)
+    with open(os.path.join("outbox", asked.group(1)), "w") as made:
+        made.write(f"Deliverable {asked.group(1)} from {served}.\n")
+if scenario == "edit-repo" or (os.path.isdir("repo") and "edit repo" in prompt):
+    with open(os.path.join("repo", "app.py"), "a") as handle:
+        handle.write("# edited by the stub seat\n")
+    with open(os.path.join("repo", "NEW.md"), "w") as handle:
+        handle.write("a new file from the seat\n")
 content.append({"type": "text", "text": text})
 emit({"type": "assistant", "session_id": sid, "message": {"model": served, "content": content}})
 if scenario == "compaction":

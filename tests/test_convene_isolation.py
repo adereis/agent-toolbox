@@ -167,6 +167,31 @@ class RealJailTests(unittest.TestCase):
                                 "the seat's session landed in its private home")
 
 
+@unittest.skipUnless(sys.platform.startswith("linux") and shutil.which("/usr/bin/bwrap"),
+                     "needs the real bubblewrap")
+class RealJailWorktreeTests(unittest.TestCase):
+    def setUp(self):
+        self.box = Sandbox(self)
+
+    def test_worktree_seat_can_use_git_inside_the_jail(self):
+        root, _ = plan.prepare(self.box.plan(kind="room", workspace="none", seats=[
+            {"id": "d", "persona": "connie-tinuity", "isolation": "enforced", "tools": "write",
+             "workspace": "worktree"}],
+            brief={"text": "[[stub:canary]] Build."}), project_root=self.box.project)
+        played, why = round_.run(root)
+        got = read(root / "records/d/r001/receipt.json")
+        self.assertEqual(got["status"], "answered", (played, got.get("error"),
+                         (root / "records/d/r001/stderr.log").read_text()))
+        answer = (root / "records/d/r001/answer.md").read_text()
+        self.assertIn("GIT=ok", answer, answer)
+        self.assertIn("READ=fail", answer, "the operator's checkout stays out of reach")
+        patch = (root / "board/made/d/r001/changes.patch").read_text()
+        self.assertIn("STUB-NOTE.md", patch)
+        self.assertEqual(got["isolation"]["worktree_git"][0], str(self.box.project / ".git"))
+        round_.prune(root)
+        self.assertNotIn("work/d/repo", self.box.git("worktree", "list"))
+
+
 class PlatformTests(unittest.TestCase):
     def test_darwin_process_identity_uses_ps(self):
         done = subprocess.CompletedProcess([], 0, stdout="Mon Sep 21 10:00:00 2026\n", stderr="")

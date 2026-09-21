@@ -7,9 +7,10 @@ annotated template is `templates/panel.toml`.
 | Field | Default | Meaning |
 |---|---|---|
 | `schema` | 1 | plan format version |
-| `kind` | `panel` | `panel`, `room`, `fanout`; this version runs one round of any kind |
+| `kind` | `panel` | `panel` or `room` (`fanout` arrives later) |
 | `title` | required | shown in status and export |
-| `rounds` | 1 | this version accepts 1 |
+| `rounds` | 1 | rounds to play; phases must add up to it |
+| `post_length` | 400 | words per post; a phase may override with `length` |
 | `jobs` | 1 | seats run in parallel per round |
 | `harness` | `claude` | seat default: `claude` or `codex` |
 | `model` | `opus` | seat default; verified against the served model |
@@ -17,7 +18,7 @@ annotated template is `templates/panel.toml`.
 | `tools` | `read` | seat default: `none`, `read`, `write`, `research` |
 | `isolation` | `strongest` | seat default: `strongest`, `enforced`, `private-home`, `none` |
 | `visibility` | `board` | seat default: `board` or `blind`; matters from round 2 |
-| `workspace` | `none` (`repo-ro` for a panel) | seat default: `none`, `repo-ro` |
+| `workspace` | `none` (`repo-ro` for a panel) | seat default: `none`, `repo-ro`, `worktree` (needs `tools = "write"`) |
 | `compaction` | `forbid` | `forbid` pins the whole context window; `allow` lets the harness compact |
 | `persona` | none | seat default persona id |
 | `grants` | `[]` | doors opened for every seat: `web`, `mcp`, `settings`, `instructions`, `hooks` |
@@ -32,7 +33,8 @@ annotated template is `templates/panel.toml`.
 | `seats[].persona` | plan default | persona id, `id@revision`, or `{ inline = {...} }` |
 | `seats[].materials` | `[]` | private materials for this seat |
 | `seats[].grants`, `seats[].args`, `seats[].env` | plan default | this seat's doors; `args` are for its own harness |
-| `phases` | one phase | this version accepts one phase and no deliverables |
+| `phases` | one phase | list of `{ name, rounds, seats?, deliverable?, instruction?, length? }` |
+| `stop_novelty`, `stop_closing` | 55.0, 0.75 | convergence thresholds for an unphased room |
 | `synthesis.by` | `operator` | this version accepts `operator` |
 
 Defaults for every plan come from `$XDG_CONFIG_HOME/agent-toolbox/convene.toml`
@@ -48,13 +50,16 @@ seats are told about the file.
 ## Run directory
 
 ```
-plan.json  plan-digest.json  run.log  run.lock
-work/<seat>/{START.md, materials/, outbox/, board/}
-homes/<seat>/{claude,codex}/          private harness homes
-board/posts/<seat>/rNNN.md            promoted posts
-board/rounds/rNNN/{digest.md,digest.json}
+plan.json  plan-digest.json  budget.json  run.log  run.lock
+chair/rNNN.md                          operator notes, read before round NNN
+work/<seat>/{START.md, materials/, outbox/, board/, repo/}
+homes/<seat>/{claude,codex}/           private harness homes
+board/posts/<seat>/rNNN.md             promoted posts
+board/made/<seat>/rNNN/<file>          deliverables and changes.patch
+board/rounds/rNNN/{digest.md,digest.json,convergence.json}
 records/<seat>/state.json
 records/<seat>/rNNN/{prompt.md,launch.json,events.jsonl,stderr.log,receipt.json,answer.md}
+records/<seat>/rNNN/attempts/NN/       a quota-stopped attempt, archived whole
 ```
 
 `launch.json` records the harness argv, the isolation wrapper, the tier

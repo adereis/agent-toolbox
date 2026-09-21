@@ -170,3 +170,26 @@ the read succeeds, and the receipt's red flags say `isolation is advisory`.
 **Quota hold:** only when a quota window is genuinely exhausted, run a
 panel and confirm `status` reports the round as HELD with the seat and the
 reset time, and that `board` prints nothing for that round.
+
+## IT-10: Convene room with a worktree drafter
+
+**Prerequisites:** as IT-09. Two cheap seats over two rounds keep the cost
+to four short exchanges.
+
+**Room:** a plan from `templates/room.toml` with two seats (Claude `haiku`
+as the drafter with `tools = "write"` and `workspace = "worktree"`, a Codex
+seat as the other) and two phases, `discuss` (both) then `draft` (drafter
+only), on the enforced tier. Run it with `bin/convene run NAME`. Expected:
+round two resumes both sessions (`launch.json` shows `--resume` or
+`resume SID` and the receipt's `session_id` equals round one's); the
+drafter's `changes.patch` appears under `board/made/drafter/r002/` and on
+the round-two digest; `git -C <project> worktree list` shows the seat's
+worktree and the operator's checkout has no changes; the drafter's
+receipt shows `isolation.worktree_git` naming the project's `.git`.
+`bin/convene prune NAME` removes the worktree and the private homes, and
+`git worktree list` no longer shows it.
+
+**Hold and continue:** only when a quota window is genuinely exhausted:
+`status` reports HELD with the seat, `continue NAME SEAT` after the reset
+answers in the same session (interrupted) or with the same prompt
+(refused), `promote NAME N` publishes, and `run NAME` finishes the phases.

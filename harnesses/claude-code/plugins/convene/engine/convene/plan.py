@@ -12,7 +12,8 @@ import datetime
 import time
 from pathlib import Path
 
-from convene import SCHEMA, config, harnesses, instruments, isolation, personas, runs, staging
+from convene import (SCHEMA, config, harnesses, instruments, isolation, personas, runs,
+                     staging, workspace)
 from convene.harnesses import GRANTS, TOOL_SETS
 from convene.presets import panel
 from convene.storage import (digest, event, hashes, identifier, read, safe_name, write,
@@ -29,11 +30,12 @@ SEAT_FIELDS = ("harness", "model", "effort", "tools", "isolation", "visibility",
 ACCESS_FIELDS = ("grants", "claude_args", "codex_args", "env")
 DEFAULTS = {"harness": "claude", "model": "opus", "effort": "high", "tools": "read",
             "isolation": "strongest", "visibility": "board", "workspace": "none",
-            "compaction": "forbid", "rounds": 1, "jobs": 1,
+            "compaction": "forbid", "rounds": 1, "jobs": 1, "post_length": 400,
             "grants": [], "claude_args": [], "codex_args": [], "env": []}
 # What this version of the engine runs. Later phases lift these; until then
 # a plan asking for more is refused by name rather than run partially.
 LATER = "is not supported by this version of convene (a later phase adds it)"
+PHASE_FIELDS = {"name", "rounds", "seats", "deliverable", "instruction", "length"}
 
 
 def load(plan_path):
@@ -65,25 +67,34 @@ def _brief(supplied, plan_dir):
     return text
 
 
-def _phases(supplied, rounds, seat_ids):
+def _phases(supplied, rounds, seat_ids, kind):
     declared = supplied.get("phases") or []
     if not declared:
-        return [{"name": "findings", "rounds": rounds}]
+        return [{"name": "findings" if kind == "panel" else "discussion", "rounds": rounds}]
     total = 0
     for phase in declared:
         if not isinstance(phase, dict) or not isinstance(phase.get("rounds"), int) or phase["rounds"] < 1:
             raise ValueError("each phase needs a name and a positive round count")
+        unknown = set(phase) - PHASE_FIELDS
+        if unknown:
+            raise ValueError(f"phase {phase.get('name')!r}: unknown fields {sorted(unknown)}")
         identifier(str(phase.get("name", "")))
-        if set(phase.get("seats") or seat_ids) - set(seat_ids):
+        named = phase.get("seats")
+        if named is not None and (not isinstance(named, list) or not named):
+            raise ValueError(f"phase {phase.get('name')!r} must seat somebody")
+        if set(named or seat_ids) - set(seat_ids):
             raise ValueError(f"phase {phase.get('name')!r} names unknown seats")
         if "deliverable" in phase:
             safe_name(phase["deliverable"])
-            raise ValueError(f"phase deliverables: {LATER}")
+            if phase["deliverable"] == "changes.patch":
+                raise ValueError("changes.patch is captured from a worktree seat; do not declare it")
+        if "instruction" in phase and not isinstance(phase["instruction"], str):
+            raise ValueError(f"phase {phase.get('name')!r}: instruction must be text")
+        if "length" in phase and (not isinstance(phase["length"], int) or phase["length"] < 1):
+            raise ValueError(f"phase {phase.get('name')!r}: length must be a positive word count")
         total += phase["rounds"]
     if total != rounds:
         raise ValueError("phase rounds must add up to the plan's rounds")
-    if len(declared) > 1:
-        raise ValueError(f"more than one phase {LATER}")
     return declared
 
 
@@ -129,8 +140,8 @@ def _seat(item, defaults, project_root, plan_dir, environ=None):
         raise ValueError(f"seat {seat['id']!r}: visibility must be one of {', '.join(VISIBILITY)}")
     if seat["workspace"] not in WORKSPACES:
         raise ValueError(f"seat {seat['id']!r}: workspace must be one of {', '.join(WORKSPACES)}")
-    if seat["workspace"] == "worktree":
-        raise ValueError(f"seat {seat['id']!r}: workspace = \"worktree\" {LATER}")
+    if seat["workspace"] == "worktree" and seat["tools"] != "write":
+        raise ValueError(f"seat {seat['id']!r}: a worktree seat needs tools = \"write\"")
     if seat["compaction"] not in COMPACTION:
         raise ValueError(f"seat {seat['id']!r}: compaction must be one of {', '.join(COMPACTION)}")
     resolved = harness.resolve(seat["model"], seat["effort"], environ)
@@ -156,16 +167,20 @@ def _seat(item, defaults, project_root, plan_dir, environ=None):
 
 def _start_text(plan, seat, common, private):
     """The standing assignment: who they are, what they were given, what to
-    produce. Deliberately silent about rounds, promotion and the controller;
-    a seat told it is executing a procedure starts writing like one."""
+    produce. Deliberately silent about promotion and the controller; a seat
+    told it is executing a procedure starts writing like one."""
     others = len(plan["seats"]) - 1
     text = "{{persona}}\n\n"
     if plan["kind"] == "panel":
         text += (f"You are one of {others + 1} reviewers convened on the same change. Each "
                  "of you was given the same brief and works independently.\n\n")
+    elif seat["visibility"] == "board":
+        text += (f"You are one of {others + 1} people in a room working on the same brief. "
+                 "Between your turns, the board with everyone's posts appears under board/ "
+                 "in your working directory, one digest per round.\n\n")
     else:
-        text += (f"You are one of {others + 1} participants convened on the same material. "
-                 "Each of you was given the same brief.\n\n")
+        text += (f"You are one of {others + 1} people given the same brief. You work on your "
+                 "own; you will not see what the others write.\n\n")
     text += "# Brief\n\n" + plan["brief"]["text"].strip() + "\n\n"
     reads = staging.listing(common + private)
     if reads:
@@ -173,11 +188,16 @@ def _start_text(plan, seat, common, private):
     if seat["workspace"] == "repo-ro":
         text += (f"The repository is at {plan['project_root']}, read-only. Cite files by "
                  "their path there.\n\n")
+    elif seat["workspace"] == "worktree":
+        text += ("A checkout of the repository is at repo/ in your working directory. It is "
+                 "yours to edit, build and test; whatever you change there is collected "
+                 "with your post as a patch.\n\n")
     if plan.get("instrument"):
         text += "# What to produce\n\n" + plan["instrument"]["profile"]["prompt"].strip() + "\n\n"
-    text += ("Your final message is your post. It is what the operator reads under your "
-             "name, as finished text: no preamble about what you are going to do, and "
-             "no summary of these instructions.\n")
+    text += ("Your final message each turn is your post. It is what the others and the "
+             f"operator read under your name, about {plan['post_length']} words, as finished "
+             "text: no preamble about what you are going to do, and no summary of these "
+             "instructions.\n")
     if seat["visibility"] == "board" and others:
         roster = "".join(f"- {s['persona']['profile']['label']} ({s['id']})\n"
                          for s in plan["seats"] if s["id"] != seat["id"])
@@ -207,8 +227,6 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
     rounds = supplied.get("rounds", DEFAULTS["rounds"])
     if not isinstance(rounds, int) or rounds < 1:
         raise ValueError("rounds must be a positive integer")
-    if rounds > 1:
-        raise ValueError(f"more than one round {LATER}")
     synthesis = supplied.get("synthesis", {"by": "operator"})
     if not isinstance(synthesis, dict) or synthesis.get("by") != "operator":
         raise ValueError(f"synthesis by a seat {LATER}; use by = \"operator\"")
@@ -226,6 +244,9 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
     jobs = supplied.get("jobs", defaults.get("jobs", DEFAULTS["jobs"]))
     if not isinstance(jobs, int) or jobs < 1:
         raise ValueError("jobs must be a positive integer")
+    post_length = supplied.get("post_length", defaults.get("post_length", DEFAULTS["post_length"]))
+    if not isinstance(post_length, int) or post_length < 1:
+        raise ValueError("post_length must be a positive word count")
     if kind == "panel" and "workspace" not in supplied:
         defaults["workspace"] = "repo-ro"
 
@@ -252,7 +273,11 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         if seat["tools"] == "none" and (common or seat["_private"]):
             raise ValueError(f"seat {seat['id']!r}: tools = \"none\" cannot read materials; "
                              "give the seat Read (tools = \"read\") or inline the brief")
-    phases = _phases(supplied, rounds, [s["id"] for s in seats])
+    phases = _phases(supplied, rounds, [s["id"] for s in seats], kind)
+    if any(s["workspace"] == "worktree" for s in seats):
+        base = workspace.base_commit(project_root)
+    else:
+        base = None
 
     directory = runs.register(project_root, environ)
     if name:
@@ -270,6 +295,7 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         "schema": SCHEMA, "kind": kind, "title": title.strip(), "name": root.name,
         "project_root": str(project_root), "plan_source": str(plan_path),
         "rounds": rounds, "jobs": jobs, "phases": phases, "synthesis": synthesis,
+        "post_length": post_length, "base_commit": base,
         "brief": {"text": brief, "sha256": digest_text(brief)},
         "instrument": instrument, "delta": delta,
         "materials": [{k: v for k, v in m.items() if k != "content"} for m in common],
@@ -280,11 +306,15 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
     root.mkdir(parents=True, mode=0o700)
     (root / "board" / "posts").mkdir(parents=True)
     (root / "board" / "rounds").mkdir(parents=True)
+    (root / "board" / "made").mkdir(parents=True)
+    (root / "chair").mkdir()
     for seat in seats:
         private = seat.pop("_private")
         work = root / "work" / seat["id"]
         for sub in ("outbox", "board"):
             (work / sub).mkdir(parents=True)
+        if seat["workspace"] == "worktree":
+            workspace.create(project_root, work, base)
         staged = staging.stage(common + private, work / "materials")
         seat["materials"] = [m for m in staged if m["path"] not in {c["path"] for c in common}]
         seat["reads"] = [m["path"] for m in staged]

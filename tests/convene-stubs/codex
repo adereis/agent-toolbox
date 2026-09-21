@@ -22,6 +22,15 @@ home = os.environ.get("CODEX_HOME") or os.path.join(os.path.expanduser("~"), ".c
 os.makedirs(home, exist_ok=True)
 prompt = sys.stdin.read()
 scenario = (re.search(r"\[\[stub:([a-z-]+)\]\]", prompt) or [None, "success"])[1]
+if scenario.endswith("-once"):
+    marker = os.path.join(home, "stub-" + scenario)
+    if os.path.exists(marker):
+        scenario = "success"
+    else:
+        open(marker, "w").close()
+        scenario = scenario[: -len("-once")]
+if "Continue from where you were" in prompt:
+    scenario = "success"
 model = args[args.index("-m") + 1]
 effort = next((a.split("=", 1)[1].strip('"') for a in args if a.startswith("model_reasoning_effort=")), None)
 sandbox = args[args.index("-s") + 1] if "-s" in args else next(
@@ -63,6 +72,14 @@ if scenario == "tools":
 if scenario == "web":
     emit({"type": "item.completed", "item": {"type": "web_search", "query": "x"}})
 text = "## F1 Stub finding\n\nseverity: note\n\nCodex stub finding.\n"
+boards = sorted(os.listdir("board")) if os.path.isdir("board") else []
+if boards:
+    text += f"\nI read {boards[-1]}.\n"
+asked = re.search(r"Write the work itself to outbox/(\S+),", prompt)
+if asked:
+    os.makedirs("outbox", exist_ok=True)
+    with open(os.path.join("outbox", asked.group(1)), "w") as made:
+        made.write(f"Deliverable {asked.group(1)} from codex.\n")
 if scenario == "canary":
     text = f"HOME={os.environ.get('HOME')} CWD={os.getcwd()} SANDBOX={sandbox}"
 emit({"type": "item.completed", "item": {"type": "agent_message", "text": text}})
