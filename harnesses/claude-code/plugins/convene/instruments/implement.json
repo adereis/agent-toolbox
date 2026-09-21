@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "id": "implement",
+  "revision": 1,
+  "label": "Implementation report",
+  "description": "A report of an implementation attempt, beside the patch it produced.",
+  "prompt": "Report what you built and why it is correct. Give: the approach and the alternatives you rejected; the files you changed and what each change does; how you verified it, with the exact commands and their outcome; what you did not do, and why; and the risks a reviewer should look at first. Do not claim a test ran unless you ran it."
+}

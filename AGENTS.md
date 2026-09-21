@@ -61,6 +61,36 @@ serialize baseline writes and never regress a recorded release. Only complete
 public release archives may replace the cache. Shared release-window, terminal,
 and baseline primitives stay in `tools/_whats_new.py`.
 
+## Convene plugin
+
+`harnesses/claude-code/plugins/convene/` is a Claude Code plugin and the
+plugin root is its own world: an installed plugin is a copy of that
+directory, so nothing inside it may import or link outside it. The engine
+under `engine/convene/` is stdlib-only Python 3.11+, entered through
+`bin/convene`, and commands reach it through `${CLAUDE_PLUGIN_ROOT}`.
+
+One harness protocol (`harnesses/__init__.py`) owns every argv, private
+home, session lookup and receipt; do not add a second argv builder for a
+CLI that already has one. Isolation tiers must attest what they enforced
+and the receipt carries the attestation; `strongest` resolves at prepare
+time and the resolved tier is frozen. A run never claims more than it
+enforced. Run state lives under `$XDG_STATE_HOME/agent-toolbox/convene`,
+never inside the project, and credentials never enter a record.
+
+Seats are closed by default and opened only on purpose. A new capability
+(a tool, a server, a setting source) is a named grant in
+`harnesses.GRANTS`, mapped per harness, accepted by that harness's receipt
+checks and reported as a red flag; it is never enabled by default and
+never enabled silently to make a run pass. Raw arguments and environment
+pass-through exist for what has no name yet, and they too appear in the
+receipt.
+
+Tests drive the engine against the stub binaries in `tests/convene-stubs/`
+with an isolated home under `~/tmp`; a scenario is chosen by a
+`[[stub:NAME]]` token in the brief. The real bubblewrap jail test runs only
+where `bwrap` exists. macOS paths are implemented as breadcrumbs and
+unit-tested by patching the platform until someone runs them there.
+
 ## Portability
 
 Consumers run Linux and macOS. Implement the platform you can test, and make

@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""Entry point for the convene engine shipped inside the plugin.
+
+Resolves the engine relative to this file's real location, so the same
+shim works from a checkout, from a plugin cache copy, and through a
+symlink on PATH.
+"""
+import os
+import sys
+
+if sys.version_info < (3, 11):
+    sys.stderr.write("convene needs Python 3.11 or newer (tomllib); found %s\n"
+                     % sys.version.split()[0])
+    sys.exit(2)
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "engine"))
+
+from convene.cli import main  # noqa: E402
+
+sys.exit(main())

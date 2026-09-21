@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "review",
+  "revision": 1,
+  "label": "Review findings",
+  "description": "Findings with severity, location and a failure scenario; for a panel over a change.",
+  "prompt": "Report findings, most severe first. For each finding give:\n\n- a one-line summary;\n- severity: critical, major, minor or note;\n- the location as file:line in the repository (or in materials/diff.patch when you cannot reach the file);\n- the failure scenario: concrete inputs or state, then the wrong output, crash or exposure;\n- what would settle it: the smallest change, or the measurement or test that would decide.\n\nNumber the findings F1, F2, ... as headings. After the findings, add a short section titled `What I checked and found sound`, so an empty findings list is evidence rather than silence. Do not restate the change's description. Do not praise. Say when something is a matter of taste.",
+  "json_schema": {
+    "type": "object",
+    "properties": {
+      "findings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "summary": {
+              "type": "string"
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "critical",
+                "major",
+                "minor",
+                "note"
+              ]
+            },
+            "location": {
+              "type": "string"
+            },
+            "failure_scenario": {
+              "type": "string"
+            },
+            "settles_it": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "summary",
+            "severity",
+            "location",
+            "failure_scenario"
+          ]
+        }
+      },
+      "checked": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "findings",
+      "checked"
+    ]
+  }
+}

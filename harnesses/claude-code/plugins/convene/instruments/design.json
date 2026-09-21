@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "id": "design",
+  "revision": 1,
+  "label": "Design positions",
+  "description": "Positions and trade-offs for a design discussion; for a room over a feature brief.",
+  "prompt": "Take a position on the brief and defend it. State what the change should do, what it should refuse to do, and the two or three trade-offs that decide between the plausible designs. Say what the change owes its reader: the invariant a future maintainer must not break, the failure they will hit first, the documentation that must exist on the day it lands. Name what you are uncertain about and what evidence would move you. Answer colleagues by name when you have heard them."
+}

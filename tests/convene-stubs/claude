@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""A stand-in `claude` for the convene tests.
+
+Emits the stream-json rows the engine reads and writes the native session
+file a receipt looks for, under $CLAUDE_CONFIG_DIR. The scenario is chosen
+by a `[[stub:NAME]]` token in the prompt; the default is success. Every
+call is recorded in $CLAUDE_CONFIG_DIR/stub-calls.jsonl so a test can see
+the argv, cwd and the names of interesting environment variables.
+"""
+import json
+import os
+import re
+import sys
+import time
+
+args = sys.argv[1:]
+if args == ["--version"]:
+    print("2.1.278 (Claude Code)")
+    sys.exit(0)
+if "--help" in args:
+    print("Usage: claude [options]\n  --tools <tools...>  Specify the list of available tools")
+    sys.exit(0)
+if "--setting-sources" in args and args[args.index("--setting-sources") + 1] == "bogus":
+    print("Invalid setting source: bogus. Valid sources: user, project, local")
+    sys.exit(0)
+if "--settings" in args and args[args.index("--settings") + 1] == "NOTJSONNOTAPATH":
+    print("Error: Settings file not found: NOTJSONNOTAPATH", file=sys.stderr)
+    sys.exit(1)
+
+home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+os.makedirs(home, exist_ok=True)
+payload = json.loads(sys.stdin.readline() or "{}")
+prompt = "".join(b.get("text", "") for b in payload.get("message", {}).get("content", []))
+scenario = (re.search(r"\[\[stub:([a-z-]+)\]\]", prompt) or [None, "success"])[1]
+requested = args[args.index("--model") + 1] if "--model" in args else None
+sid = args[args.index("--session-id") + 1] if "--session-id" in args else None
+resumed = args[args.index("--resume") + 1] if "--resume" in args else None
+sid = sid or resumed or "00000000-0000-4000-8000-000000000000"
+with open(os.path.join(home, "stub-calls.jsonl"), "a") as log:
+    log.write(json.dumps({"argv": args, "cwd": os.getcwd(), "scenario": scenario,
+                          "env": {k: os.environ.get(k) for k in
+                                  ("HOME", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_OAUTH_TOKEN",
+                                   "ANTHROPIC_API_KEY", "PWD", "SECRET_FROM_OPERATOR")},
+                          "prompt": prompt}) + "\n")
+
+if requested in ("opus", None):
+    served = "claude-opus-5-20260601"
+elif requested.startswith("claude-"):
+    served = requested
+else:
+    served = f"claude-{requested}-5-20260601"
+if scenario == "mismatch":
+    served = "claude-sonnet-4-20250514"
+
+def emit(row):
+    sys.stdout.write(json.dumps(row) + "\n")
+    sys.stdout.flush()
+
+def native(rows):
+    directory = os.path.join(home, "projects", "-workspace")
+    os.makedirs(directory, exist_ok=True)
+    with open(os.path.join(directory, f"{sid}.jsonl"), "a") as handle:
+        for row in rows:
+            handle.write(json.dumps(row) + "\n")
+
+emit({"type": "system", "subtype": "init", "session_id": sid, "mcp_servers": [],
+      "output_style": "default", "model": served, "cwd": os.getcwd()})
+if scenario == "quota-refused":
+    emit({"type": "rate_limit_event", "rate_limit_info": {"status": "rejected",
+          "rateLimitType": "five_hour", "resetsAt": int(time.time()) + 3600}})
+    emit({"type": "assistant", "session_id": sid, "message": {"model": "<synthetic>",
+          "content": [{"type": "text", "text": "Claude AI usage limit reached|1900000000"}]}})
+    emit({"type": "result", "subtype": "error_during_execution", "is_error": True,
+          "session_id": sid, "result": "Claude AI usage limit reached|1900000000",
+          "modelUsage": {}})
+    native([{"type": "user", "sessionId": sid, "message": {"content": prompt}}])
+    sys.exit(1)
+if scenario == "killed":
+    sys.stdout.write('{"type": "assistant", "session_id": "' + sid + '", "message": {"mo')
+    sys.stdout.flush()
+    native([{"type": "user", "sessionId": sid}])
+    sys.exit(137)
+
+content = []
+if scenario in ("tools", "mcp", "web"):
+    name = {"tools": "Read", "mcp": "mcp__gmail__send_message", "web": "WebFetch"}[scenario]
+    content.append({"type": "tool_use", "id": "toolu_1", "name": name,
+                    "input": {"file_path": "materials/diff.patch"}})
+if scenario == "canary":
+    project = re.search(r"repository is at (\S+),", prompt)
+    probe = os.path.join(project.group(1), "AGENTS.md") if project else "/nonexistent"
+    text = (f"HOME={os.environ.get('HOME')} CWD={os.getcwd()} "
+            f"READ={'ok' if os.path.exists(probe) else 'fail'} "
+            f"TOKEN={'yes' if os.environ.get('CLAUDE_CODE_OAUTH_TOKEN') else 'no'} "
+            f"SECRET={'yes' if os.environ.get('SECRET_FROM_OPERATOR') else 'no'}")
+else:
+    text = "## F1 Stub finding\n\nseverity: minor\n\nThe stub found nothing real.\n"
+content.append({"type": "text", "text": text})
+emit({"type": "assistant", "session_id": sid, "message": {"model": served, "content": content}})
+if scenario == "compaction":
+    emit({"type": "system", "subtype": "compact_boundary", "session_id": sid})
+usage = {served: {"inputTokens": 1200, "outputTokens": 340, "thinkingTokens": 0,
+                  "cacheReadInputTokens": 800, "costUSD": 0.0123}}
+if scenario == "quota-interrupted":
+    emit({"type": "result", "subtype": "error_during_execution", "is_error": True,
+          "session_id": sid, "result": "You've hit your session limit", "modelUsage": usage})
+    native([{"type": "user", "sessionId": sid}, {"type": "assistant", "sessionId": sid}])
+    sys.exit(1)
+emit({"type": "result", "subtype": "success", "is_error": False, "session_id": sid,
+      "result": text, "modelUsage": usage})
+native([{"type": "user", "sessionId": sid, "message": {"content": prompt}},
+        {"type": "assistant", "sessionId": sid, "message": {"model": served}},
+        *([{"type": "system", "subtype": "compact_boundary"}] if scenario == "compaction-native" else [])])
