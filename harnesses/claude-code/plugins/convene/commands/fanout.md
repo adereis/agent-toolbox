@@ -1,6 +1,6 @@
 ---
 description: Fan a brief out to N blind seats that each implement it in their own worktree; read the attempts sealed, judge, then unseal
-argument-hint: "[seats=N] [seat=harness/model ...] [--persona ID ...] [synthesizer=ID] [grant=...] brief text"
+argument-hint: "discuss | [seats=N] [seat=harness/model ...] [--persona ID ...] [synthesizer=ID] [grant=...] brief text"
 disable-model-invocation: true
 ---
 
@@ -8,10 +8,20 @@ Run a fanout with the convene engine at `${CLAUDE_PLUGIN_ROOT}/bin/convene`.
 Read the operator procedure first: `${CLAUDE_PLUGIN_ROOT}/skills/convene/SKILL.md`,
 especially its section on reading a sealed round.
 
+Do not start a run on your own reading of a partial invocation. Follow the
+operator procedure's step 4: state the plan — range or brief, every seat as
+`harness/model` with its persona, the isolation tier each resolves to, the
+tool set, any grants, the round budget — then ask and wait. Run
+immediately only when the invocation already names both the work and the
+seats. A bare invocation, or one that opens with `discuss`, is a request to
+design the run together: propose, take corrections, run once accepted.
+
 Arguments: `$ARGUMENTS`
 
 Interpret them as:
 
+- a leading `discuss` is not part of the brief: it asks for the plan in
+  conversation, so propose one and run nothing until accepted;
 - `seats=N` or `seat=harness/model` (repeatable) declares the attempts;
   with neither, use the template's three, on two harnesses when both are
   installed;

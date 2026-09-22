@@ -1,18 +1,29 @@
 ---
 description: Convene a multi-seat review panel over a commit range, on independent native CLI sessions, and synthesize the board
-argument-hint: "<A..B | HEAD> [seat=harness/model ...] [--persona ID ...] [grant=web,mcp] [tools=read|write|research] [brief text]"
+argument-hint: "discuss | <A..B | HEAD> [seat=harness/model ...] [--persona ID ...] [grant=web,mcp] [tools=read|write|research] [brief text]"
 disable-model-invocation: true
 ---
 
 Run a review panel with the convene engine at `${CLAUDE_PLUGIN_ROOT}/bin/convene`.
 Read the operator procedure first: `${CLAUDE_PLUGIN_ROOT}/skills/convene/SKILL.md`.
 
+Do not start a run on your own reading of a partial invocation. Follow the
+operator procedure's step 4: state the plan — range or brief, every seat as
+`harness/model` with its persona, the isolation tier each resolves to, the
+tool set, any grants, the round budget — then ask and wait. Run
+immediately only when the invocation already names both the work and the
+seats. A bare invocation, or one that opens with `discuss`, is a request to
+design the run together: propose, take corrections, run once accepted.
+
 Arguments: `$ARGUMENTS`
 
 Interpret them as:
 
-- the first token is the range: `A..B`, or `HEAD` for the uncommitted
-  working tree; with no range, use `HEAD~1..HEAD` and say so;
+- a leading `discuss` is not a range and not a brief: it asks for the
+  plan in conversation, so propose one and run nothing until accepted;
+- the first token is otherwise the range: `A..B`, or `HEAD` for the
+  uncommitted working tree; with no range, propose `HEAD~1..HEAD` rather
+  than assuming it;
 - `seat=harness/model` (repeatable) declares seats in order; with none,
   use the template's three seats and put at least one on a harness other
   than the one you run on when both are installed (`convene doctor`

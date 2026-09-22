@@ -1,16 +1,26 @@
 ---
 description: Convene a room of seats to discuss a feature over rounds on a shared board, draft it in a worktree, critique and revise it
-argument-hint: "[seat=harness/model ...] [--persona ID ...] [rounds=N] [grant=web,mcp] brief text"
+argument-hint: "discuss | [seat=harness/model ...] [--persona ID ...] [rounds=N] [grant=web,mcp] brief text"
 disable-model-invocation: true
 ---
 
 Run a room with the convene engine at `${CLAUDE_PLUGIN_ROOT}/bin/convene`.
 Read the operator procedure first: `${CLAUDE_PLUGIN_ROOT}/skills/convene/SKILL.md`.
 
+Do not start a run on your own reading of a partial invocation. Follow the
+operator procedure's step 4: state the plan — range or brief, every seat as
+`harness/model` with its persona, the isolation tier each resolves to, the
+tool set, any grants, the round budget — then ask and wait. Run
+immediately only when the invocation already names both the work and the
+seats. A bare invocation, or one that opens with `discuss`, is a request to
+design the run together: propose, take corrections, run once accepted.
+
 Arguments: `$ARGUMENTS`
 
 Interpret them as:
 
+- a leading `discuss` is not part of the brief: it asks for the plan in
+  conversation, so propose one and run nothing until accepted;
 - `seat=harness/model` (repeatable) declares seats in order; the last
   seat declared is the drafter unless a seat is named `drafter`. With no
   seats, use the template's three (architect, skeptic on the other

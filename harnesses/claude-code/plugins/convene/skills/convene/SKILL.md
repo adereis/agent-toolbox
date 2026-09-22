@@ -29,27 +29,48 @@ operator may be any of them.
 3. **Choose seats.** Follow [choosing seats](references/choosing-seats.md).
    Persona × harness × model. When independence from your own judgment
    matters, at least one seat runs on a different harness than you do.
-4. **Prepare and run.** `convene prepare PLAN --range A..B` freezes the
+   Resolve what the user called a model into what its CLI accepts before
+   you put it anywhere: `opus-5` is a name for `claude-opus-5`, and
+   `convene prepare` refuses a string no catalog recognizes rather than
+   letting the seat die at launch. Never pass a user's shorthand to a CLI
+   unresolved, including in a quick check of your own.
+4. **Agree the plan, unless the invocation already settled it.** A convene
+   run spends real provider quota on several sessions, so the user sees
+   the plan before it runs. State the range or brief, every seat as
+   `harness/model` with its persona, the isolation tier each will resolve
+   to, the tool set and any grants, the round budget, and how many seats
+   run at once. Then ask, and wait. Anything you chose rather than read from the invocation is a
+   proposal, including a default you took from the template.
+
+   Run without asking only when the invocation already names the work and
+   the seats, because then there is nothing left to propose. Treat an
+   invocation that names neither, or that opens with `discuss`, as a
+   request to design the run in conversation: propose a plan, take the
+   user's corrections, and run once they accept it. Never expand a
+   half-specified invocation into a full run by filling the rest with
+   defaults.
+
+5. **Prepare and run.** `convene prepare PLAN --range A..B` freezes the
    plan and stages every seat's materials; it prints the resolved
    isolation tier per seat. `convene run NAME` plays rounds and promotes
    the board after each, stopping when the phases are done, when an
    unphased room converges, or when a quota stop holds a round. Seats
    run sequentially by default because seats sharing one account hit
    the same quota wall at once. `convene round NAME N` plays one round.
-5. **Read status.** `convene status NAME`. A **held** round is a quota
+6. **Read status.** `convene status NAME`. A **held** round is a quota
    stop: the round stays open rather than publishing a false absence.
    Tell the user which seat and the reset time. When it resets,
    `convene continue NAME SEAT`, then `convene promote NAME N`, then
    `convene run NAME` for the rest. `promote NAME N --absent` gives up
    on the stopped seat instead, and says so on the board. A note the
    room should read before round N goes in `chair/rNNN.md`.
-6. **Read the board.** `convene board NAME`, then follow
+7. **Read the board.** `convene board NAME`, then follow
    [reading a board](references/reading-a-board.md). Read every post
    whole. The engine never summarizes.
-7. **Export and synthesize.** `convene export NAME DIR` creates the export;
+8. **Export and synthesize.** `convene export NAME DIR` creates the export;
    DIR must be absent or empty. Then follow [synthesis](references/synthesis.md).
    Write `synthesis.md` into that directory and cite seats by id.
-8. **Report.** Report to the user:
+9. **Report.** Report to the user:
    the synthesis, then the receipts (served model per seat, isolation
    tier, tool calls, usage) and every red flag verbatim. Offer
    `convene prune NAME` once the export is in hand: it removes the
