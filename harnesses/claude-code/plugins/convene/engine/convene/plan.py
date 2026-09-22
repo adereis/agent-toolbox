@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime
 import time
+from collections import Counter
 from pathlib import Path
 
 from convene import (SCHEMA, config, harnesses, instruments, isolation, personas, runs,
@@ -27,11 +28,13 @@ SEAT_FIELDS = ("harness", "model", "effort", "tools", "isolation", "visibility",
                "compaction")
 # Doors, opened explicitly: named grants, raw harness arguments and
 # environment names passed through. Closed by default at every level.
-ACCESS_FIELDS = ("grants", "claude_args", "codex_args", "env")
+ACCESS_FIELDS = ("grants", "claude_args", "codex_args", "agy_args", "env")
 DEFAULTS = {"harness": "claude", "model": "opus", "effort": "high", "tools": "read",
             "isolation": "strongest", "visibility": "board", "workspace": "none",
-            "compaction": "forbid", "rounds": 1, "jobs": 1, "post_length": 400,
-            "grants": [], "claude_args": [], "codex_args": [], "env": []}
+            "compaction": "forbid", "rounds": 1, "jobs": None, "per_harness": 2,
+            "post_length": 400,
+            "grants": [], "claude_args": [], "codex_args": [], "agy_args": [],
+            "env": []}
 # What this version of the engine runs. Later phases lift these; until then
 # a plan asking for more is refused by name rather than run partially.
 LATER = "is not supported by this version of convene (a later phase adds it)"
@@ -244,16 +247,20 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
     defaults = dict(DEFAULTS)
     configured, config_sources = config.load(project_root, environ)
     defaults.update({k: v for k, v in configured.items() if k in SEAT_FIELDS + ACCESS_FIELDS
-                     or k in ("persona", "jobs")})
+                     or k in ("persona", "jobs", "per_harness")})
     defaults.update({k: supplied[k] for k in SEAT_FIELDS + ACCESS_FIELDS if k in supplied})
     defaults["persona"] = supplied.get("persona", defaults.get("persona"))
     for key in ("grants", "env"):
         defaults[key] = _names(defaults[key], key)
     if overrides:
         defaults.update(overrides)
-    jobs = supplied.get("jobs", defaults.get("jobs", DEFAULTS["jobs"]))
-    if not isinstance(jobs, int) or jobs < 1:
+    jobs = supplied.get("jobs", defaults.get("jobs"))
+    if jobs is not None and (not isinstance(jobs, int) or jobs < 1):
         raise ValueError("jobs must be a positive integer")
+    per_harness = supplied.get("per_harness", defaults.get("per_harness",
+                                                          DEFAULTS["per_harness"]))
+    if not isinstance(per_harness, int) or per_harness < 1:
+        raise ValueError("per_harness must be a positive integer")
     post_length = supplied.get("post_length", defaults.get("post_length", DEFAULTS["post_length"]))
     if not isinstance(post_length, int) or post_length < 1:
         raise ValueError("post_length must be a positive word count")
@@ -296,6 +303,12 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
                                       "tools": "read"}, project_root, plan_dir, environ))
         else:
             seats.append(_seat(item, defaults, project_root, plan_dir, environ))
+    if jobs is None:
+        # Seats sharing one account hit the same quota wall together, so the
+        # cap that matters is per harness, not overall. Two seats on Claude
+        # and one on Codex run three at once: the Codex seat waits on nobody.
+        counts = Counter(s["harness"] for s in seats)
+        jobs = sum(min(n, per_harness) for n in counts.values()) or 1
     if len({s["id"] for s in seats}) != len(seats):
         raise ValueError("duplicate seat id")
     if synthesizer and synthesizer not in {s["id"] for s in seats}:
@@ -351,7 +364,8 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
     frozen = {
         "schema": SCHEMA, "kind": kind, "title": title.strip(), "name": root.name,
         "project_root": str(project_root), "plan_source": str(plan_path),
-        "rounds": rounds, "jobs": jobs, "phases": phases, "synthesis": synthesis,
+        "rounds": rounds, "jobs": jobs, "per_harness": per_harness,
+        "phases": phases, "synthesis": synthesis,
         "post_length": post_length, "base_commit": base,
         "brief": {"text": brief, "sha256": digest_text(brief)},
         "instrument": instrument, "delta": delta,

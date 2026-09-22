@@ -11,9 +11,9 @@ annotated template is `templates/panel.toml`.
 | `title` | required | shown in status and export |
 | `rounds` | 1 | rounds to play; phases must add up to it |
 | `post_length` | 400 | words per post; a phase may override with `length` |
-| `jobs` | 1 | seats run in parallel per round |
-| `harness` | `claude` | seat default: `claude` or `codex` |
-| `model` | `opus` | seat default; verified against the served model |
+| `jobs` | per harness | seats in parallel per round; the default runs each harness's seats independently, up to `per_harness` each, because only seats sharing an account share a quota wall |
+| `harness` | `claude` | seat default: `claude`, `codex` or `agy` |
+| `model` | `opus` | seat default; resolved against the harness's catalog, so `opus-5` becomes `claude-opus-5`, then verified against the served model |
 | `effort` | `high` | seat default; harness-specific values |
 | `tools` | `read` | seat default: `none`, `read`, `write`, `research` |
 | `isolation` | `strongest` | seat default: `strongest`, `enforced`, `private-home`, `none` |
@@ -22,7 +22,8 @@ annotated template is `templates/panel.toml`.
 | `compaction` | `forbid` | `forbid` pins the whole context window; `allow` lets the harness compact |
 | `persona` | none | seat default persona id |
 | `grants` | `[]` | doors opened for every seat: `web`, `mcp`, `settings`, `instructions`, `hooks` |
-| `claude_args`, `codex_args` | `[]` | raw arguments appended to that harness's command line |
+| `per_harness` | 2 | seats of one harness running at once; the cap that protects a shared quota |
+| `claude_args`, `codex_args`, `agy_args` | `[]` | raw arguments appended to that harness's command line |
 | `env` | `[]` | operator environment variable names passed through to seats |
 | `instrument` | `review` for a panel | what every seat is asked to produce |
 | `brief` | required | `{ text = "..." }` or `{ path = "brief.md" }` (relative to the plan) |

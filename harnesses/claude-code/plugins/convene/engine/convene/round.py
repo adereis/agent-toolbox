@@ -13,8 +13,10 @@ import os
 import shutil
 import signal
 import subprocess
+import threading
 import time
 import uuid
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -317,8 +319,13 @@ def run_round(root, n, *, jobs=None, timeout=None):
             raise ValueError(f"round {n} is already published")
         if n > 1 and (n - 1) not in board.published_rounds(root):
             raise ValueError(f"round {n - 1} is not published yet")
-        jobs = jobs or plan.get("jobs", 1)
-        event(root, round=n, event="round-opened", jobs=jobs)
+        jobs = jobs or plan.get("jobs") or 1
+        # Concurrency is capped per harness, not only overall: seats sharing
+        # one account meet the same quota wall together, while seats on
+        # different harnesses are independent and should not wait for it.
+        per_harness = plan.get("per_harness") or 1
+        gates = defaultdict(lambda: threading.Semaphore(max(1, per_harness)))
+        event(root, round=n, event="round-opened", jobs=jobs, per_harness=per_harness)
         open_round(root, plan, n)
         speaking = board.acting(plan, n)
         for seat in plan["seats"]:
@@ -328,7 +335,8 @@ def run_round(root, n, *, jobs=None, timeout=None):
 
         def task(seat):
             try:
-                return seat["id"], run_seat(root, plan, seat, n, timeout=timeout)
+                with gates[seat["harness"]]:
+                    return seat["id"], run_seat(root, plan, seat, n, timeout=timeout)
             except (RuntimeError, ValueError, OSError, subprocess.SubprocessError) as exc:
                 event(root, round=n, seat=seat["id"], event="stopped", error=str(exc))
                 return seat["id"], f"stopped: {exc}"
