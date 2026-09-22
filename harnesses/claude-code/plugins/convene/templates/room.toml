@@ -43,7 +43,7 @@ persona = "archie-tecture"
 id = "skeptic"
 persona = "quinn-t-shun"
 harness = "codex"
-model = "gpt-5.6-terra"
+model = "terra"
 
 [[seats]]
 id = "drafter"

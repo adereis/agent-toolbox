@@ -20,9 +20,13 @@ perspectives beat five seats with one.
 put at least one seat on Codex when it is installed, and prefer a model
 that is not the one you are running on. Every seat's served model is
 verified from the harness's own evidence and stamped on its receipt; a
-mismatch fails the seat rather than passing quietly. Claude accepts
-`opus`, `sonnet`, `haiku` or a full id; Codex needs a slug its catalog
-lists (`~/.codex/models_cache.json`).
+mismatch fails the seat rather than passing quietly. Name a model by
+its family unless the user asked for a version: `opus`, `fable`, `terra`,
+`sol`, `gemini-pro`, `flash`. The engine resolves a family to the newest
+version that harness lists, so a plan never goes stale when a model ships.
+A version such as `opus-5.5` or `gpt-5.6-terra` pins the seat to it. A
+name the catalog cannot place is refused, and the refusal lists the
+families it has.
 
 **Tools.** `read` (the default) lets a seat read the repository and its
 materials. `none` is for a seat that must answer from the brief alone;

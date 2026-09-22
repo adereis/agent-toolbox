@@ -40,6 +40,27 @@ class AntigravityTests(unittest.TestCase):
                                  "model": "gemini-9", "effort": "low", "tools": "write",
                                  "isolation": "none"}])
 
+    def test_a_family_resolves_to_its_newest_version_at_the_seat_effort(self):
+        """The default is `gemini-pro`; the plan's effort completes the slug."""
+        def seat(model, effort):
+            return [{"id": "g", "persona": "quinn-t-shun", "harness": "agy", "model": model,
+                     "effort": effort, "tools": "write", "isolation": "none"}]
+        root, frozen = self.prepare(seats=seat("flash", "low"))
+        self.assertEqual(frozen["seats"][0]["model"], "gemini-3.8-flash-low")
+        self.assertEqual(frozen["seats"][0]["model_requested"], "flash")
+        root, frozen = self.prepare(seats=[{"id": "g", "persona": "quinn-t-shun",
+                                            "harness": "agy", "tools": "write",
+                                            "isolation": "none"}], model=None)
+        self.assertEqual(frozen["seats"][0]["model"], "gemini-3.1-pro-high")
+        # Pro has no medium; the refusal names the efforts it has.
+        with self.assertRaisesRegex(ValueError, "gemini-3.1-pro at efforts high, low, not 'medium'"):
+            self.prepare(seats=seat("gemini-pro", "medium"))
+        with self.assertRaisesRegex(ValueError, r"more than one family \(gemini-flash, gemini-pro\)"):
+            self.prepare(seats=seat("gemini", "low"))
+        with patch.object(type(harnesses.get("agy")), "models", return_value=None):
+            with self.assertRaisesRegex(ValueError, "is a family.*name an exact slug"):
+                self.prepare(seats=seat("gemini-pro", "high"))
+
     def test_only_write_tools_and_no_private_home(self):
         # Inherited from the plan's default, as a review panel writes it for
         # every seat: widened to what agy can enforce, and recorded.

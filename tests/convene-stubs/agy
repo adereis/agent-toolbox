@@ -11,7 +11,8 @@ if args == ["--version"]:
     sys.exit(0)
 if args == ["models"]:
     print("Fetching available models...\ngemini-3.8-flash-high\tGemini 3.8 Flash (High)\n"
-          "gemini-3.8-flash-low\tGemini 3.8 Flash (Low)\ngemini-3.1-pro-high\tGemini 3.1 Pro (High)")
+          "gemini-3.8-flash-low\tGemini 3.8 Flash (Low)\ngemini-3.7-flash-low\tGemini 3.7 Flash (Low)\n"
+          "gemini-3.1-pro-high\tGemini 3.1 Pro (High)\ngemini-3.1-pro-low\tGemini 3.1 Pro (Low)")
     sys.exit(0)
 if "--model" in args and args[args.index("--model") + 1] == "bogus-model-xyz":
     print("Error: model 'bogus-model-xyz' not recognized. Available models: gemini-3.8-flash-low", file=sys.stderr)

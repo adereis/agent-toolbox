@@ -113,6 +113,16 @@ class RunTests(unittest.TestCase):
         self.assertEqual(played[0][1]["_board"]["absent"], ["skeptic", "maintainer"])
         self.assertIn("No post this round from", board.text(root, runs.load(root)[1]))
 
+    def test_every_claude_alias_passes_its_served_model_receipt(self):
+        """`fable` once failed here: only opus, sonnet and haiku were families."""
+        root, _ = self.prepare(seats=[{"id": "skeptic", "persona": "quinn-t-shun",
+                                       "model": "fable"}])
+        played, why = round_.run(root)
+        got = self.receipt(root, "skeptic")
+        self.assertEqual(got["status"], "answered", got.get("error"))
+        self.assertEqual(got["requested_model"], "fable")
+        self.assertTrue(got["model"].startswith("claude-fable-"))
+
     def test_quota_refused_holds_the_round_and_keeps_no_session(self):
         root, _ = self.prepare(brief={"text": "[[stub:quota-refused]] Review."})
         played, why = round_.run(root)

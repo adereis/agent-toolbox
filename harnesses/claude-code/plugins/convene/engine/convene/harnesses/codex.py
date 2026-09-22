@@ -9,7 +9,8 @@ import shutil
 from pathlib import Path
 
 from convene import quota
-from convene.harnesses import Capabilities, Harness, granted, guard_text, may_search
+from convene.harnesses import (Capabilities, Harness, families, granted, guard_text,
+                               is_family, may_search, newest_in_family)
 from convene.storage import read, rows
 
 FALLBACK = "Falling back from WebSockets to HTTPS transport."
@@ -20,8 +21,8 @@ NO_TOOLS = ["-c", "features.shell_tool=false", "-c", "features.unified_exec=fals
 class Codex(Harness):
     name = "codex"
     home_name = ".codex"
-    # What a seat gets when the plan names no model.
-    default_model = "gpt-5.6-terra"
+    # What a seat gets when the plan names no model: a family, never a version.
+    default_model = "terra"
     home_variable = "CODEX_HOME"
     efforts = ("low", "medium", "high", "xhigh", "max", "ultra")
     capabilities = Capabilities(resume=True, fork=True, json_schema=False,
@@ -57,18 +58,30 @@ class Codex(Harness):
         return path, (read(path).get("models", []) if path.exists() else None)
 
     def resolve(self, model, effort, environ=None):
-        model = re.sub(r"^(gpt-\d+)-(\d+)", r"\1.\2", str(model))
+        model = re.sub(r"^(gpt-\d+)-(\d+)", r"\1.\2", str(model).strip().lower())
         path, models = self.catalog(environ)
         out = {"model": model, "effort": effort, "context_window": None,
                "model_evidence": "native turn context"}
         if models is None:
+            if is_family(model):
+                raise ValueError(f"codex model {model!r} is a family, and resolving it needs "
+                                 f"the Codex catalog at {path}; start codex once to write it, "
+                                 "or name an exact slug")
             if effort not in self.efforts:
                 raise ValueError(f"codex effort must be one of {', '.join(self.efforts)}: {effort!r}")
             out["catalog"] = f"absent: {path}; start codex once to refresh it"
             return out
         item = next((m for m in models if m.get("slug") == model), None)
+        # Hidden entries are Codex's own internals; a family never lands on one.
+        listed = [m["slug"] for m in models if m.get("slug") and m.get("visibility") != "hide"]
+        if item is None and is_family(model):
+            slug = newest_in_family(model, listed)
+            item = next((m for m in models if m.get("slug") == slug), None)
         if item is None:
-            raise ValueError(f"Codex catalog {path} does not list {model!r}")
+            raise ValueError(f"Codex catalog {path} does not list {model!r}; it offers the "
+                             f"families {', '.join(families(listed))}, which resolve to their "
+                             "newest version, or an exact slug")
+        model = out["model"] = item["slug"]
         levels = [r["effort"] for r in item.get("supported_reasoning_levels", [])]
         if levels and effort not in levels:
             raise ValueError(f"{model} supports efforts {levels}, not {effort!r}")

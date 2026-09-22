@@ -118,6 +118,15 @@ never enabled silently to make a run pass. Raw arguments and environment
 pass-through exist for what has no name yet, and they too appear in the
 receipt.
 
+Models are named by family (`opus`, `terra`, `gemini-pro`), never by a
+version, in defaults, templates and examples of what to write. A family
+resolves at prepare to the newest version the harness's own catalog lists
+(`newest_in_family` in `harnesses/__init__.py`) and the resolved id is
+frozen with the family recorded beside it, so a release needs no change
+here. Do not add a list of model versions to the engine; where a harness
+has no catalog, as Claude Code has none, pass its own alias through and
+let the receipt verify what was served.
+
 Codex reaches the engine without the plugin: `tools/install.py` links
 `bin/convene` onto `PATH` as the `convene` command and links the plugin's
 `skills/convene/` as a Codex skill. The plugin's `SKILL.md` is the one

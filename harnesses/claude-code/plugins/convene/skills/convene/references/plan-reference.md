@@ -13,7 +13,7 @@ annotated template is `templates/panel.toml`.
 | `post_length` | 400 | words per post; a phase may override with `length` |
 | `jobs` | per harness | seats in parallel per round; the default runs each harness's seats independently, up to `per_harness` each, because only seats sharing an account share a quota wall |
 | `harness` | `claude` | seat default: `claude`, `codex` or `agy` |
-| `model` | the harness's own | seat default; unset means each harness's default (`opus`, `gpt-5.6-terra`, `gemini-3.1-pro`), resolved against that harness's catalog so `opus-5` becomes `claude-opus-5`, then verified against the served model |
+| `model` | the harness's own | seat default; a family (`opus`, `terra`, `gemini-pro`) resolves at prepare to the newest version its harness's catalog lists and is frozen there, and a version (`opus-5.5`, `gpt-5.6-terra`) pins; unset means each harness's default family (`opus`, `terra`, `gemini-pro`); verified against the served model |
 | `effort` | `high` | seat default; harness-specific values |
 | `tools` | `read` | seat default: `none`, `read`, `write`, `research` |
 | `isolation` | `strongest` | seat default: `strongest`, `enforced`, `private-home`, `none` |

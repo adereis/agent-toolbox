@@ -9,20 +9,19 @@ import time
 from pathlib import Path
 
 from convene import quota
-from convene.harnesses import (Capabilities, Harness, granted, guard_text, may_search,
-                               model_matches)
+from convene.harnesses import (Capabilities, Harness, granted, guard_text, is_family,
+                               may_search, model_matches)
 from convene.storage import read, rows, write
 
-# Model names Claude Code accepts, so a seat fails at prepare time with the
-# valid names rather than at launch with `unrecognized_model`. Source:
-# `claude --model` help text and the published model ids, 2026-09-22. The
-# list goes stale by design: an exact `claude-...` id that is not listed is
-# passed through and recorded as unverified, so a newly released model needs
-# no code change. Only a string that is neither an alias nor a `claude-` id
-# is refused, and the refusal names what would have worked.
+# Claude Code resolves its own aliases to the latest model of each family,
+# and has no local catalog of full ids, so the engine keeps no list of
+# versions: an alias passes through, and the served id is checked against it
+# on the receipt. Source for the aliases: `claude --model` help text. A
+# version is written by the user as `opus-5.5` or `claude-opus-5-5`; both
+# reach the CLI as the latter. A name that is neither is refused at prepare,
+# not at launch where it returns `unrecognized_model`, and the refusal names
+# what would have worked.
 ALIASES = ("fable", "opus", "sonnet", "haiku")
-KNOWN_MODELS = ("claude-fable-5-1", "claude-opus-5", "claude-sonnet-5",
-                "claude-haiku-4-5-20251001")
 
 
 def entitled_models(real_home=None):
@@ -45,26 +44,25 @@ def entitled_models(real_home=None):
 def resolve_model(model, real_home=None):
     """User shorthand to a name Claude Code accepts; (name, note) or raise.
 
-    `opus-5` is what a person says and `claude-opus-5` is what the CLI takes,
-    so the prefix is tried against the catalog rather than pasted on blindly.
+    `opus-5.5` is what a person says and `claude-opus-5-5` is what the CLI
+    takes: Claude ids spell versions with dashes, never dots.
     """
     text = str(model).strip().lower()
     if not text:
         raise ValueError("claude model must not be empty")
-    if text in ALIASES:
-        return text, None
-    known = tuple(KNOWN_MODELS) + entitled_models(real_home)
-    if text in known:
-        return text, None
-    if f"claude-{text}" in known:
-        return f"claude-{text}", None
-    if text.startswith("claude-"):
-        return text, f"{text} is not in this engine's catalog; taken as written"
+    bare = text.removeprefix("claude-").replace(".", "-")
+    if bare in ALIASES:
+        return bare, None
+    if not is_family(bare) and (text.startswith("claude-") or bare.split("-")[0] in ALIASES):
+        full = f"claude-{bare}"
+        if full in entitled_models(real_home):
+            return full, None
+        return full, (f"{full} is not in Claude Code's cached model list; the receipt "
+                      "verifies what is served")
     raise ValueError(
-        f"claude model {model!r} is not a name Claude Code accepts. Use an alias "
-        f"({', '.join(ALIASES)}), a known id ({', '.join(known)}), or an exact "
-        f"claude-... id. Shorthand resolves when the claude- prefix makes a known "
-        f"id, as opus-5 does.")
+        f"claude model {model!r} is not a name Claude Code accepts. Use a family alias "
+        f"({', '.join(ALIASES)}), which the CLI resolves to its latest model, or a version "
+        f"such as opus-5.5 or claude-opus-5-5.")
 
 
 # Overrides the operator's settings for the seat only: pins the output style
@@ -97,7 +95,7 @@ KEYCHAIN_HINT = 'security find-generic-password -s "Claude Code-credentials" -w'
 class Claude(Harness):
     name = "claude"
     home_name = ".claude"
-    # What a seat gets when the plan names no model.
+    # What a seat gets when the plan names no model: a family, never a version.
     default_model = "opus"
     home_variable = "CLAUDE_CONFIG_DIR"
     efforts = ("low", "medium", "high", "xhigh", "max")

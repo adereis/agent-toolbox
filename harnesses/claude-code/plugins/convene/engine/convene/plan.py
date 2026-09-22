@@ -169,7 +169,12 @@ def _seat(item, defaults, project_root, plan_dir, environ=None):
         raise ValueError(f"seat {seat['id']!r}: a worktree seat needs tools = \"write\"")
     if seat["compaction"] not in COMPACTION:
         raise ValueError(f"seat {seat['id']!r}: compaction must be one of {', '.join(COMPACTION)}")
-    resolved = harness.resolve(seat["model"], seat["effort"], environ)
+    asked = seat["model"]
+    resolved = harness.resolve(asked, seat["effort"], environ)
+    if resolved["model"] != asked:
+        # A family resolves once, here, and the resolved id is what every
+        # round runs; a release mid-run must not switch a seat's model.
+        seat["model_requested"] = asked
     seat.update(model=resolved["model"], effort=resolved["effort"],
                 context_window=resolved.get("context_window"),
                 model_evidence=resolved.get("model_evidence"))

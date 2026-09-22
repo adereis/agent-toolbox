@@ -73,11 +73,21 @@ In Claude Code:
 
 ```
 /convene:panel HEAD~3..HEAD
-/convene:panel HEAD seat=codex/gpt-5.6-terra seat=claude/opus --persona sec-urity --persona quinn-t-shun
+/convene:panel HEAD seat=codex/terra seat=claude/opus --persona sec-urity --persona quinn-t-shun
 /convene:room Add a --json flag to the session browser that prints what --list prints
 /convene:fanout seats=3 Implement --json for the session browser; verify with the existing tests
 /convene:status
 ```
+
+Name a seat's model by its family: `opus`, `fable`, `terra`, `sol`,
+`gemini-pro`, `flash`. `prepare` resolves a family to the newest version
+that harness's own catalog lists, so a plan written today picks up next
+month's release without an edit. The resolved version is frozen into the
+run, and every round of that run uses it. For example, `seat=codex/terra`
+prepares as `gpt-5.6-terra (from terra)`. A version, such as `opus-5.5` or
+`gpt-5.6-terra`, pins the seat instead. Claude Code has no local catalog, so
+a Claude family is passed as the CLI's own alias and the receipt records
+the version that answered.
 
 The command writes a plan from `templates/panel.toml`, prepares and runs it,
 reads the board, synthesizes, exports, and reports the receipts. The same

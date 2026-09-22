@@ -89,20 +89,79 @@ def guard_text(seat):
     return text
 
 
+# A plan names a model family (`opus`, `terra`, `gemini-pro`) and the engine
+# picks the newest member from the harness's own catalog at prepare time, so
+# a release needs no code change here. The resolved id is frozen in the plan
+# and the receipt; a version number in the name pins it instead.
+
+def _tokens(name):
+    return [t for t in re.split(r"[-_\s]+", str(name).strip().lower()) if t]
+
+
+def _words(name):
+    """The family words of a model name: every token that is not a version."""
+    return [t for t in _tokens(name) if not t[0].isdigit()]
+
+
+def _version(name):
+    return tuple(int(n) for t in _tokens(name) if t[0].isdigit()
+                 for n in re.findall(r"\d+", t))
+
+
+def is_family(name):
+    """Whether a model name names a family rather than a version: no digit."""
+    return bool(_tokens(name)) and not re.search(r"\d", str(name))
+
+
+def families(slugs):
+    """The family names a catalog offers, for a refusal to list."""
+    return sorted({"-".join(_words(s)) for s in slugs if _words(s)})
+
+
+def newest_in_family(family, slugs):
+    """The newest catalog slug in `family`, or None when nothing matches.
+
+    A slug is in the family when every family word is one of its words.
+    Among those, the members with the fewest words win, so `terra` means
+    `gpt-5.6-terra` and not a later `gpt-6-terra-mini`. Two different word
+    sets left tied are ambiguous, as `gemini` is between Flash and Pro, and
+    the refusal names both. Inside the family the highest version wins.
+    """
+    wanted = set(_words(family))
+    members = [s for s in slugs if wanted <= set(_words(s))]
+    if not members:
+        return None
+    fewest = min(len(_words(s)) for s in members)
+    members = [s for s in members if len(_words(s)) == fewest]
+    shapes = families(members)
+    if len(shapes) > 1:
+        raise ValueError(f"model {family!r} names more than one family "
+                         f"({', '.join(shapes)}); name one of them")
+    return max(members, key=lambda s: (_version(s), s))
+
+
+def model_text(seat):
+    """A seat's model as status prints it: the id, and the family it came from."""
+    asked = seat.get("model_requested")
+    return f"{seat['model']} (from {asked})" if asked else seat["model"]
+
+
 def model_matches(expected, actual):
     """Whether the served model id satisfies the requested one."""
-    if expected in ("haiku", "sonnet", "opus"):
-        return bool(actual and re.fullmatch(r"claude-" + expected + r"-[a-z0-9.-]+", actual))
-    return actual == expected or bool(
-        actual and re.fullmatch(re.escape(expected) + r"-\d{8}", actual))
+    if not actual:
+        return False
+    if is_family(expected):
+        return set(_words(expected)) <= set(_words(actual))
+    return actual == expected or bool(re.fullmatch(re.escape(expected) + r"-\d{8}", actual))
 
 
 class Harness:
     """Base class; subclasses fill the methods the engine calls."""
 
-    # The model a seat gets when the plan names none. Every harness sets it;
-    # there is no cross-harness default, because a model id means nothing
-    # outside the catalog that lists it.
+    # The model a seat gets when the plan names none. Every harness sets it,
+    # as a family rather than a version so it never goes stale; there is no
+    # cross-harness default, because a name means nothing outside the
+    # catalog that lists it.
     default_model = None
 
     # Flags the engine owns, or that open a door a grant names. A seat's raw

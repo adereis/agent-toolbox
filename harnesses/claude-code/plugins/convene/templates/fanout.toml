@@ -41,7 +41,7 @@ persona = "connie-tinuity"
 id = "two"
 persona = "archie-tecture"
 harness = "codex"
-model = "gpt-5.6-terra"
+model = "terra"
 
 [[seats]]
 id = "three"

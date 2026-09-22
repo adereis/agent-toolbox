@@ -7,7 +7,7 @@ from pathlib import Path
 
 from convene_support import PLUGIN, Sandbox  # noqa: F401  (sets sys.path)
 
-from convene import harnesses, instruments, personas, plan, runs
+from convene import harnesses, instruments, personas, plan, round as round_, runs
 from convene.presets import panel
 from convene.storage import read
 
@@ -70,39 +70,99 @@ class PlanTests(unittest.TestCase):
             self.prepare(self.box.plan(seats=[{"id": "a", "persona": "sec-urity",
                                                "harness": "codex", "model": "gpt-9"}]))
 
-    def test_claude_seat_resolves_user_shorthand_against_the_catalog(self):
-        """`opus-5` is what a person says; `claude-opus-5` is what the CLI takes."""
-        root, frozen = self.prepare(self.box.plan(seats=[
-            {"id": "a", "persona": "sec-urity", "harness": "claude", "model": "opus-5"}]))
-        self.assertEqual(frozen["seats"][0]["model"], "claude-opus-5")
-        # An id the catalog does not know still runs, so a new model needs no
-        # code change, but the plan records that nothing verified it.
-        root, frozen = self.prepare(self.box.plan(seats=[
-            {"id": "a", "persona": "sec-urity", "harness": "claude",
-             "model": "claude-unreleased-9"}]))
-        self.assertEqual(frozen["seats"][0]["model"], "claude-unreleased-9")
-        # A string that is neither an alias nor a claude- id is refused here
-        # rather than at launch, where it returns `unrecognized_model`.
-        for bogus in ("opus5", "gpt-5"):
+    def test_claude_seat_resolves_user_shorthand_without_a_version_list(self):
+        """`opus-5.5` is what a person says; `claude-opus-5-5` is what the CLI takes."""
+        for said, taken in (("opus-5.5", "claude-opus-5-5"), ("Opus-5", "claude-opus-5"),
+                            ("claude-opus", "opus"), ("Fable", "fable"),
+                            ("claude-unreleased-9", "claude-unreleased-9")):
+            with self.subTest(model=said):
+                root, frozen = self.prepare(self.box.plan(seats=[
+                    {"id": "a", "persona": "sec-urity", "harness": "claude", "model": said}]))
+                self.assertEqual(frozen["seats"][0]["model"], taken)
+        # An id nothing lists still runs, so a release needs no code change,
+        # but the plan records that only the receipt will verify it.
+        self.assertIn("receipt verifies",
+                      harnesses.get("claude").resolve("claude-unreleased-9", "high")["catalog"])
+        # A string that is neither an alias nor a Claude version is refused
+        # here rather than at launch, where it returns `unrecognized_model`.
+        for bogus in ("opus5", "gpt-5", "terra"):
             with self.subTest(model=bogus):
                 with self.assertRaisesRegex(ValueError, "not a name Claude Code accepts"):
                     self.prepare(self.box.plan(seats=[
                         {"id": "a", "persona": "sec-urity", "harness": "claude",
                          "model": bogus}]))
 
+    def test_codex_family_resolves_to_its_newest_listed_version(self):
+        """A plan says `terra`; a Terra released tomorrow needs no code change."""
+        root, frozen = self.prepare(self.box.plan(seats=[
+            {"id": "a", "persona": "sec-urity", "harness": "codex", "model": "Terra"}]))
+        seat = frozen["seats"][0]
+        # Newer than gpt-5.4-terra; the hidden gpt-7-terra is Codex's own.
+        self.assertEqual(seat["model"], "gpt-5.6-terra")
+        self.assertEqual(seat["model_requested"], "Terra")
+        self.assertEqual(seat["context_window"], 872000)
+        self.assertIn("codex/gpt-5.6-terra (from Terra) effort=high",
+                      round_.render_status(round_.status(root)))
+        # A family with a single member, newer than every other family.
+        root, frozen = self.prepare(self.box.plan(seats=[
+            {"id": "a", "persona": "sec-urity", "harness": "codex", "model": "astra"}]))
+        self.assertEqual(frozen["seats"][0]["model"], "gpt-6-astra")
+        # An exact slug pins, and records no family.
+        root, frozen = self.prepare(self.box.plan(seats=[
+            {"id": "a", "persona": "sec-urity", "harness": "codex", "model": "gpt-5.4-terra"}]))
+        self.assertEqual(frozen["seats"][0]["model"], "gpt-5.4-terra")
+        self.assertNotIn("model_requested", frozen["seats"][0])
+        # An unknown family is refused with the families that exist.
+        with self.assertRaisesRegex(ValueError, "families gpt, gpt-astra, gpt-sol, gpt-terra"):
+            self.prepare(self.box.plan(seats=[
+                {"id": "a", "persona": "sec-urity", "harness": "codex", "model": "nova"}]))
+        # Without a catalog a family cannot resolve, and says what would.
+        (self.box.home / ".codex/models_cache.json").unlink()
+        with self.assertRaisesRegex(ValueError, "is a family.*start codex once"):
+            self.prepare(self.box.plan(seats=[
+                {"id": "a", "persona": "sec-urity", "harness": "codex", "model": "terra"}]))
+
+    def test_family_resolution_rules(self):
+        slugs = ["gpt-5.5", "gpt-5.4-terra", "gpt-5.10-terra", "gpt-6-terra-mini",
+                 "gemini-3.8-flash", "gemini-3.1-pro", "claude-haiku-4-5-20251001"]
+        pick = harnesses.newest_in_family
+        # Versions compare as numbers, so 5.10 is newer than 5.4, and the
+        # plainest member wins: the newer gpt-6-terra-mini is not `terra`.
+        self.assertEqual(pick("terra", slugs), "gpt-5.10-terra")
+        self.assertEqual(pick("terra-mini", slugs), "gpt-6-terra-mini")
+        self.assertEqual(pick("Gemini-Pro", slugs), "gemini-3.1-pro")
+        self.assertEqual(pick("haiku", slugs), "claude-haiku-4-5-20251001")
+        self.assertIsNone(pick("luna", slugs))
+        with self.assertRaisesRegex(ValueError, r"more than one family \(gemini-flash, gemini-pro\)"):
+            pick("gemini", slugs)
+        self.assertTrue(harnesses.is_family("gemini-pro"))
+        self.assertFalse(harnesses.is_family("gpt-5.6-terra"))
+        # The served id satisfies a family when it carries every family word;
+        # `fable` failed here once, because only three aliases were known.
+        match = harnesses.model_matches
+        self.assertTrue(match("fable", "claude-fable-5-1"))
+        self.assertTrue(match("opus", "claude-opus-5-5"))
+        self.assertFalse(match("opus", "claude-sonnet-5"))
+        self.assertTrue(match("claude-opus-5-5", "claude-opus-5-5-20260901"))
+        self.assertFalse(match("claude-opus-5", "claude-opus-5-5"))
+        self.assertFalse(match("opus", None))
+
     def test_a_seat_without_a_model_takes_its_own_harness_default(self):
         """One default across harnesses would hand `opus` to Gemini."""
         self.assertIsNone(plan.DEFAULTS["model"], "no cross-harness model default")
-        for name, expected in (("claude", "opus"), ("codex", "gpt-5.6-terra"),
-                               ("agy", "gemini-3.1-pro")):
+        for name, expected in (("claude", "opus"), ("codex", "terra"),
+                               ("agy", "gemini-pro")):
             with self.subTest(harness=name):
                 self.assertEqual(harnesses.get(name).default_model, expected)
-        # Stated as an invariant, not as a list: a harness added later that
-        # forgets it would pass `None` to a CLI as the string "None".
+        # Stated as invariants, not as a list: a harness added later that
+        # forgets a default would pass `None` to a CLI as the string "None",
+        # and one that names a version would go stale at the next release.
         for name, harness in harnesses.registry().items():
             with self.subTest(harness=name):
                 self.assertIsNotNone(harness.default_model,
                                      f"{name} must name the model a seat gets by default")
+                self.assertTrue(harnesses.is_family(harness.default_model),
+                                f"{name} must default to a family, not a version")
         # End to end, where the plan names no model at any level, for each
         # harness whose catalog the sandbox can stand in for.
         for name, expected in (("claude", "opus"), ("codex", "gpt-5.6-terra")):

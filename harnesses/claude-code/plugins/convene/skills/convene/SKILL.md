@@ -32,11 +32,14 @@ operator may be any of them.
    `convene personas` lists every persona with its id and one line of
    what it reviews; read it rather than inventing an id, because a plan
    naming one that does not exist fails at prepare.
-   Resolve what the user called a model into what its CLI accepts before
-   you put it anywhere: `opus-5` is a name for `claude-opus-5`, and
-   `convene prepare` refuses a string no catalog recognizes rather than
-   letting the seat die at launch. Never pass a user's shorthand to a CLI
-   unresolved, including in a quick check of your own.
+   Write a model as its family (`opus`, `terra`, `gemini-pro`) unless the
+   user named a version. `convene prepare` resolves the family to the
+   newest version the harness lists and prints what it chose, as in
+   `gpt-5.6-terra (from terra)`. It refuses a name no catalog can place
+   and lists the families that exist, rather than letting the seat die at
+   launch. Never pass a user's shorthand straight to a CLI, including in a
+   quick check of your own: `opus-5.5` reaches Claude as `claude-opus-5-5`
+   only through the engine.
 4. **Agree the plan, unless the invocation already settled it.** A convene
    run spends real provider quota on several sessions, so the user sees
    the plan before it runs. State the range or brief, every seat as

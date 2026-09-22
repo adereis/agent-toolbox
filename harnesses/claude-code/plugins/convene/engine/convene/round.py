@@ -497,6 +497,7 @@ def status(root):
         acting = [n for n in range(1, budget + 1) if seat["id"] in board.acting(plan, n)]
         seats[seat["id"]] = {
             "label": board.label(seat), "harness": seat["harness"], "model": seat["model"],
+            "model_requested": seat.get("model_requested"),
             "effort": seat["effort"], "tools": seat["tools"], "isolation": seat["isolation"],
             "workspace": seat["workspace"], "status": state.get("status"),
             "session_id": state.get("session_id"), "receipts": receipts,
@@ -626,7 +627,7 @@ def render_status(data):
         lines.append("  chair note queued for round " + ", ".join(str(r) for r in data["chair"]["queued"]))
     for name, seat in data["seats"].items():
         lines.append(_seat_line(name, seat))
-        lines.append(f"    {seat['harness']}/{seat['model']} effort={seat['effort']} "
+        lines.append(f"    {seat['harness']}/{harnesses.model_text(seat)} effort={seat['effort']} "
                      f"tools={seat['tools']} isolation={seat['isolation']} "
                      f"workspace={seat['workspace']}")
         for n, got in sorted(seat["receipts"].items()):

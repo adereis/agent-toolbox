@@ -61,10 +61,18 @@ class Sandbox:
              "supported_reasoning_levels": [{"effort": e} for e in ("low", "medium", "high")]},
             {"slug": "gpt-5.6-sol", "context_window": 272000, "max_context_window": 872000,
              "supported_reasoning_levels": [{"effort": e} for e in ("low", "medium", "high", "xhigh")]},
-            # The Codex default, so a seat that names no model can be prepared
-            # here the way a real one is rather than only asserted as a string.
+            # The Codex default family is `terra`, so a seat that names no
+            # model resolves here the way a real one does: to the newest
+            # Terra, past an older one and a newer model of another family.
             {"slug": "gpt-5.6-terra", "context_window": 272000, "max_context_window": 872000,
              "supported_reasoning_levels": [{"effort": e} for e in ("low", "medium", "high", "xhigh")]},
+            {"slug": "gpt-5.4-terra", "context_window": 272000,
+             "supported_reasoning_levels": [{"effort": e} for e in ("low", "medium", "high")]},
+            {"slug": "gpt-6-astra", "context_window": 272000,
+             "supported_reasoning_levels": [{"effort": e} for e in ("low", "medium", "high")]},
+            # Codex's own internals are hidden and never a family's answer.
+            {"slug": "gpt-7-terra", "visibility": "hide", "context_window": 272000,
+             "supported_reasoning_levels": [{"effort": e} for e in ("low", "medium", "high")]},
         ]}))
         self.project = self.root / "project"
         self.make_project()

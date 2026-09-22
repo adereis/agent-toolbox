@@ -7,8 +7,8 @@ import json
 import sys
 from pathlib import Path
 
-from convene import (doctor as doctor_, export as export_, follow as follow_, personas,
-                     plan as plan_, runs, seal as seal_)
+from convene import (doctor as doctor_, export as export_, follow as follow_, harnesses,
+                     personas, plan as plan_, runs, seal as seal_)
 from convene import round as round_, board as board_
 
 HELP = """\
@@ -58,7 +58,7 @@ type next. A worked example:
     red flags: 1 (marked ! below)       count of the ! lines further down
     HELD: round 3 waiting on skeptic (provider quota; resets 14:20Z)
   - skeptic (Quinn T. Shun): answered 1 of 2 rounds, r002 quota
-      codex/gpt-5.6-terra effort=high tools=read isolation=enforced ...
+      codex/gpt-5.6-terra (from terra) effort=high tools=read ...
       r001: answered, served gpt-5.6-terra, 47.2s, 25 tool calls, tier enforced
       r002: quota
   next: convene continue <run> skeptic once the window resets, ...
@@ -222,7 +222,8 @@ def dispatch(args):
             print(f"prepared {frozen['name']} at {root}")
             for seat in frozen["seats"]:
                 doors = ("" if not seat["grants"] else " grants=" + ",".join(seat["grants"]))
-                print(f"  {seat['id']}: {seat['harness']}/{seat['model']} effort={seat['effort']} "
+                print(f"  {seat['id']}: {seat['harness']}/{harnesses.model_text(seat)} "
+                      f"effort={seat['effort']} "
                       f"tools={seat['tools']} isolation={seat['isolation']} "
                       f"workspace={seat['workspace']}{doors}")
             per = frozen.get("per_harness")

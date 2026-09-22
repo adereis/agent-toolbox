@@ -18,7 +18,8 @@ import subprocess
 from pathlib import Path
 
 from convene import quota
-from convene.harnesses import Capabilities, Harness, granted, guard_text
+from convene.harnesses import (Capabilities, Harness, families, granted, guard_text,
+                               is_family, newest_in_family)
 from convene.storage import read, rows
 
 TRANSCRIPT = "antigravity-cli/brain/{sid}/.system_generated/logs/transcript_full.jsonl"
@@ -31,8 +32,9 @@ FORBIDDEN_DELEGATION = re.compile(r"invoke_subagent|send_message|schedule", re.I
 class Antigravity(Harness):
     name = "agy"
     home_name = ".gemini"
-    # What a seat gets when the plan names no model.
-    default_model = "gemini-3.1-pro"
+    # What a seat gets when the plan names no model: a family, never a
+    # version. The plan's default effort (high) completes the slug.
+    default_model = "gemini-pro"
     home_variable = ""  # nothing relocates it; only the jail can give it a private home
     efforts = ("low", "medium", "high")
     capabilities = Capabilities(resume=True, fork=False, json_schema=False,
@@ -68,17 +70,33 @@ class Antigravity(Harness):
     def resolve(self, model, effort, environ=None):
         if effort not in self.efforts:
             raise ValueError(f"agy effort must be one of {', '.join(self.efforts)}: {effort!r}")
-        model = str(model)
+        model = str(model).strip().lower()
         available = self.models()
         out = {"model": model, "effort": effort, "context_window": None,
                "model_evidence": "result.model in the stream"}
         if available is None:
+            if is_family(model):
+                raise ValueError(f"agy model {model!r} is a family, and resolving it needs "
+                                 "`agy models`, which did not answer; name an exact slug")
             out["catalog"] = "agy models did not answer; the model is taken as written"
             return out
+        # A slug carries its effort as a suffix (`gemini-3.1-pro-high`); the
+        # family is resolved on the model with the suffix taken off.
+        suffix = re.compile(r"-(" + "|".join(self.efforts) + r")$")
+        bases = sorted({suffix.sub("", s) for s in available})
+        if model not in available and is_family(model):
+            model = newest_in_family(model, bases) or model
         if model not in available and f"{model}-{effort}" in available:
             model = f"{model}-{effort}"
         if model not in available:
-            raise ValueError(f"agy does not list {model!r}; `agy models` prints the slugs")
+            offered = sorted(m.group(1) for s in available
+                             if (m := suffix.search(s)) and suffix.sub("", s) == model)
+            if offered:
+                raise ValueError(f"agy offers {model} at efforts {', '.join(offered)}, "
+                                 f"not {effort!r}")
+            raise ValueError(f"agy does not list {model!r}; it offers the families "
+                             f"{', '.join(families(bases))}, which resolve to their newest "
+                             "version, or an exact slug from `agy models`")
         out.update(model=model, catalog="agy models")
         return out
 

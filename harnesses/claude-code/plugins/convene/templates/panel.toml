@@ -19,7 +19,7 @@ jobs = 1                      # seats in parallel; 1 because seats on one
 # private-home, then none; the resolved tier is frozen and stamped on
 # every receipt.
 harness = "claude"            # claude | codex
-model = "opus"                # a model the harness accepts
+model = "opus"                # a family resolves to its newest version; a version pins
 effort = "high"
 tools = "read"                # none | read | write | research
 isolation = "strongest"       # strongest | enforced | private-home | none
@@ -57,7 +57,7 @@ persona = "quinn-t-shun"
 id = "maintainer"
 persona = "connie-tinuity"
 harness = "codex"
-model = "gpt-5.6-terra"
+model = "terra"
 
 [[seats]]
 id = "security"
