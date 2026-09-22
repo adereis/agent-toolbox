@@ -19,5 +19,11 @@ register hooks or change settings; follow docs/installation.md for the
 selected scope when configuration changes are requested.
 
 Do not import user configuration back into the repository or deploy anything
-from examples/. Retired names and migration instructions are listed in
-docs/migration.md. Keep machine-specific agents and MCP launchers local.
+from examples/. Keep machine-specific agents and MCP launchers local.
+
+Retired names and migration instructions are listed in docs/migration.md.
+Read it on a machine you have not synced recently and check the paths it
+names. A component dropped from the catalog is no longer inspected, so a
+dry run reports no conflict while its files stay installed and active; a
+clean run is not evidence that retired components are gone. Report what you
+find and remove it only within the user's authorization.

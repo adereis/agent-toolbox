@@ -53,6 +53,35 @@ verification guidance is retained as short, opt-in
 [prompts](../prompts/README.md), without automatic delegation or installation
 of browser dependencies.
 
+## Retired session-resume skill
+
+`session-resume` is still supported, but only as a standalone script. The
+skill wrapper that `/sync` once deployed to `skills/session-resume/` was
+removed in June 2026 because it carried its own copy of the script and drifted
+from it. Remove the installed directory from the Claude configuration scopes
+where you previously installed it, honoring `CLAUDE_CONFIG_DIR` when set:
+
+```bash
+rm -rf ~/.claude/skills/session-resume
+```
+
+The installer will not report this and cannot clean it up. The catalog no
+longer claims that path, so `link_status` never examines it: whether it holds
+copied files or dangling symlinks, the dry run says nothing while the stale
+skill stays registered. A clean `/sync` is not evidence the directory is gone.
+
+Recognize the obsolete copy by a private `session-resume.py` beside its
+`SKILL.md`, and by the `--skill` flag that copy accepts; the supported script
+renamed that flag to `--list`. The removed files are preserved in git history
+at `83fbb1c` if you want to compare behavior before deleting.
+
+Keep `claude-code-session-resume.py`, the `scripts` component that installs
+it, and any `~/bin` symlink or alias pointing at it. Those are the supported
+entry points. The script execs `claude --resume` in place, so it must be the
+terminal's foreground process and cannot run from inside a session; that is
+why no skill wraps it. Codex never received this skill, because its session
+browser arrived after the wrapper was removed.
+
 ## Statusline illustration
 
 The terminal screenshot has been removed. The statusline remains supported;
