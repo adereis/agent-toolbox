@@ -65,7 +65,10 @@ keyring, so the enforced jail runs `xdg-dbus-proxy` (Fedora: `dnf install
 xdg-dbus-proxy`) filtered to `org.freedesktop.secrets` and binds only that
 socket; the receipt flags it, because the secrets service exposes every
 secret the keyring holds. Without the proxy, `enforced` is unavailable for
-`agy` and `strongest` resolves to `none`.
+`agy` and `strongest` resolves to `none`. The proxy's socket lives in a
+private directory under `$XDG_RUNTIME_DIR/agent-toolbox/`. A run killed
+outright leaves that directory behind, and the next enforced agy launch
+removes it once its proxy is gone.
 
 ## Use
 

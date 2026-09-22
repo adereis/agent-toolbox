@@ -2,11 +2,13 @@
 
 import contextlib
 import io
+import json
 import os
 import re
 import shutil
 import subprocess
 import sys
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -332,6 +334,64 @@ class RealBusProxyTests(unittest.TestCase):
                          "the runtime directory holds the proxied socket and nothing else")
         self.assertEqual(launched.attestation["session_bus"]["names"], ["org.freedesktop.secrets"])
         self.assertIsNone(tier._buses.get(str(box.root / "seat")), "finish reaped the proxy")
+
+
+class BusSweepTests(unittest.TestCase):
+    """A SIGKILLed run leaves its bus directory behind; the next one clears it."""
+
+    def test_only_directories_whose_proxy_is_gone_are_swept(self):
+        box = Sandbox(self)
+        base = box.root / "runtime" / "agent-toolbox"
+
+        def directory(name, owner=None, age=0):
+            path = base / f"bus.{name}"
+            path.mkdir(parents=True)
+            (path / "bus").write_text("")
+            if owner is not None:
+                (path / bwrap.BUS_OWNER).write_text(json.dumps(owner))
+            stamp = time.time() - age
+            os.utime(path, (stamp, stamp))
+            return path
+
+        gone = subprocess.Popen(["sleep", "30"])
+        identity = platform.process_identity(gone.pid)
+        gone.kill()
+        gone.wait()
+        dead = directory("dead", {"pid": gone.pid, "identity": identity})
+        live = directory("live", {"pid": os.getpid(),
+                                  "identity": platform.process_identity(os.getpid())})
+        orphan = directory("orphan", age=bwrap.BUS_SWEEP_GRACE + 1)
+        fresh = directory("fresh")
+        removed = bwrap.sweep_buses(base)
+        self.assertEqual(sorted(removed), sorted([dead, orphan]))
+        self.assertTrue(live.exists(), "a live proxy's directory stays")
+        self.assertTrue(fresh.exists(), "one still being set up stays")
+
+    def test_a_new_bus_directory_sweeps_first_and_records_its_proxy(self):
+        box = Sandbox(self, fake_bwrap=True)
+        (box.home / ".gemini").mkdir(exist_ok=True)
+        (box.home / ".gemini/oauth_creds.json").write_text("{}")
+        base = Path(os.environ["XDG_RUNTIME_DIR"]) / "agent-toolbox"
+        base.mkdir(parents=True, exist_ok=True)
+        stale = base / "bus.stale"
+        stale.mkdir()
+        old = time.time() - bwrap.BUS_SWEEP_GRACE - 1
+        os.utime(stale, (old, old))
+        work = box.root / "work"
+        (work / "materials").mkdir(parents=True)
+        (work / "START.md").write_text("x")
+        tier, harness = isolation.get("enforced"), harnesses.get("agy")
+        with patch.object(bwrap.sys, "platform", "linux"):
+            tier.wrap(["agy"], harness=harness, seat_home=box.root / "seat", workspace=work,
+                      project_root=box.project, repo_ro=True)
+        try:
+            self.assertFalse(stale.exists())
+            bus = tier._buses[str(box.root / "seat")]
+            owner = json.loads((bus["dir"] / bwrap.BUS_OWNER).read_text())
+            self.assertEqual(owner["pid"], bus["process"].pid)
+            self.assertEqual(owner["identity"], platform.process_identity(bus["process"].pid))
+        finally:
+            tier.finish(harness, box.root / "seat")
 
 
 class JailInvariantTests(unittest.TestCase):

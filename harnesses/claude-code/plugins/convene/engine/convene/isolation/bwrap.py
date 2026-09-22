@@ -22,14 +22,17 @@ proxy socket instead, and the receipt says so.
 
 from __future__ import annotations
 
+import json
 import os
 import select
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
+from convene import platform
 from convene import workspace as worktrees
 from convene.harnesses import base_environment
 from convene.isolation import Launch
@@ -54,6 +57,12 @@ OPTIONAL_TREES = ("/opt", "/var/lib", "/sys", "/nix", "/snap")
 USR_ALIASES = ("/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32")
 NAMESPACES = ("--unshare-pid", "--unshare-ipc", "--unshare-uts", "--unshare-cgroup-try")
 BUS_READY_SECONDS = 15
+# The record each bus directory keeps of the proxy that owns it, and how old
+# a directory must be before a sweep may judge it. The grace covers the gap
+# between creating the directory and starting the proxy, so a concurrent
+# launch's directory is never taken for a dead one.
+BUS_OWNER = "proxy.json"
+BUS_SWEEP_GRACE = 4 * BUS_READY_SECONDS
 
 
 def resolver_paths(resolv=Path("/etc/resolv.conf"), root=Path("/")):
@@ -191,13 +200,47 @@ def bus_socket_dir(environ=None):
 
     Under the runtime directory when there is one, because socket paths are
     limited to 107 bytes and that is the shortest private place there is;
-    under `~/tmp` otherwise.
+    under `~/tmp` otherwise. Directories a killed run left behind are swept
+    first, so they do not collect until logout.
     """
     environ = os.environ if environ is None else environ
     runtime = environ.get("XDG_RUNTIME_DIR")
     base = Path(runtime) / "agent-toolbox" if runtime else Path.home() / "tmp"
     base.mkdir(mode=0o700, parents=True, exist_ok=True)
+    sweep_buses(base)
     return Path(tempfile.mkdtemp(prefix="bus.", dir=base))
+
+
+def sweep_buses(base, now=None):
+    """Remove bus directories whose proxy is gone; return what was removed.
+
+    `finish` removes a directory when its seat ends, but a run killed with
+    SIGKILL never reaches it. The proxy itself dies with the jail, so what
+    remains is a directory and a dead socket. A directory is removed only
+    when its recorded proxy no longer exists as the same process, or when it
+    never recorded one and is older than the grace period. A directory
+    another launch is still setting up is therefore never touched.
+    """
+    now = time.time() if now is None else now
+    removed = []
+    for directory in sorted(Path(base).glob("bus.*")):
+        if not directory.is_dir() or directory.is_symlink():
+            continue
+        try:
+            age = now - directory.stat().st_mtime
+            owner = json.loads((directory / BUS_OWNER).read_text())
+        except FileNotFoundError:
+            owner = None
+        except (OSError, ValueError):
+            continue
+        if owner is None:
+            dead = age > BUS_SWEEP_GRACE
+        else:
+            dead = platform.process_identity(owner["pid"]) != owner["identity"]
+        if dead:
+            shutil.rmtree(directory, ignore_errors=True)
+            removed.append(directory)
+    return removed
 
 
 class Enforced:
@@ -350,6 +393,10 @@ class Enforced:
             shutil.rmtree(socket_dir, ignore_errors=True)
             raise
         os.close(writer)
+        # Written before the proxy is known to be ready, so a sweep can tell
+        # this directory's owner apart from a dead one from the start.
+        (socket_dir / BUS_OWNER).write_text(json.dumps(
+            {"pid": proc.pid, "identity": platform.process_identity(proc.pid)}))
         ready, _, _ = select.select([reader], [], [], BUS_READY_SECONDS)
         if not ready or os.read(reader, 1) == b"":
             os.close(reader)
