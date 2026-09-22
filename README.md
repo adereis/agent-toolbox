@@ -69,8 +69,8 @@ learning who wrote what.
 In Claude Code, run `/sync` from a checkout: it wraps the installer, picks a
 scope with you, and updates the plugins in the marketplace manifest. Prefer
 it to a bare `git pull`, because installed components are symlinks that
-follow the checkout immediately while a plugin is a pinned copy that stays
-on its old commit until it is updated.
+follow the checkout immediately while a plugin is a copy that is replaced
+only when its declared version changes.
 
 Everywhere else, choose a harness and scope, then preview the selected
 components:

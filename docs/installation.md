@@ -171,12 +171,20 @@ plugin with `claude plugin uninstall convene@agent-toolbox`.
 Updating a plugin is a separate step, because a plugin does not track the
 checkout the way installed components do. The installer creates symlinks, so
 `git pull` changes what a skill or script does immediately. A plugin is
-copied into `~/.claude/plugins/cache/` and pinned to the commit it came from,
-so the same pull leaves it running the old code until you update it:
+copied into `~/.claude/plugins/cache/<marketplace>/<name>/<version>/`, so the
+same pull leaves it running the old code until you update it:
 
 ```bash
+claude plugin marketplace update agent-toolbox
 claude plugin update convene@agent-toolbox
 ```
+
+The update compares **version strings, not commits**. A plugin whose
+`version` has not changed reports "already at the latest version" and copies
+nothing, however far the checkout has moved. Changing a plugin therefore
+means bumping `version` in both its `.claude-plugin/plugin.json` and its
+entry in the root marketplace manifest; `claude plugin tag` validates that
+the two agree. Without that bump no installed copy will ever see the change.
 
 The update applies after Claude Code restarts. `/sync` performs this step
 for every plugin in the marketplace manifest, which is the reason to sync

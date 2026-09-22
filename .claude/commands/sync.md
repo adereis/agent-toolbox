@@ -50,8 +50,17 @@ commands.
 Cover them on every sync, because their update semantics differ from the
 rest of the repository. Installer components are symlinks into the checkout,
 so a `git pull` updates them immediately. A plugin is copied into
-`~/.claude/plugins/cache/` and pinned to the commit it was installed from,
-so the same pull leaves it stale until it is updated explicitly.
+`~/.claude/plugins/cache/<marketplace>/<name>/<version>/`, so the same pull
+leaves it stale until it is updated explicitly.
+
+`claude plugin update` compares version strings, not commits: a plugin whose
+`version` is unchanged reports "already at the latest version" and copies
+nothing, however far the checkout has moved. Before updating, compare each
+manifest `version` against the installed one from `claude plugin list --json`.
+When the checkout has changed a plugin but not its version, say so and stop
+rather than reporting a successful sync: the fix is to bump `version` in both
+the plugin's `.claude-plugin/plugin.json` and its marketplace entry, which
+`claude plugin tag` validates, and that is a release decision for the user.
 
 Read the plugin names from `.claude-plugin/marketplace.json` rather than
 naming them here; the manifest is the authoritative list and gains entries
@@ -70,8 +79,9 @@ For each plugin in the manifest, name whether it is absent, installed at
 which scope, or installed and possibly behind the checkout. On apply:
 
 ```bash
-claude plugin install <name>@agent-toolbox --scope user   # absent
-claude plugin update <name>@agent-toolbox                 # already installed
+claude plugin marketplace update agent-toolbox             # refresh first
+claude plugin install <name>@agent-toolbox --scope user    # absent
+claude plugin update <name>@agent-toolbox                  # already installed
 ```
 
 Use the scope the user selected for this sync; plugin scopes are `user`,
