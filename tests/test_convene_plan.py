@@ -70,6 +70,33 @@ class PlanTests(unittest.TestCase):
             self.prepare(self.box.plan(seats=[{"id": "a", "persona": "sec-urity",
                                                "harness": "codex", "model": "gpt-9"}]))
 
+    def test_claude_seat_resolves_user_shorthand_against_the_catalog(self):
+        """`opus-5` is what a person says; `claude-opus-5` is what the CLI takes."""
+        root, frozen = self.prepare(self.box.plan(seats=[
+            {"id": "a", "persona": "sec-urity", "harness": "claude", "model": "opus-5"}]))
+        self.assertEqual(frozen["seats"][0]["model"], "claude-opus-5")
+        # An id the catalog does not know still runs, so a new model needs no
+        # code change, but the plan records that nothing verified it.
+        root, frozen = self.prepare(self.box.plan(seats=[
+            {"id": "a", "persona": "sec-urity", "harness": "claude",
+             "model": "claude-unreleased-9"}]))
+        self.assertEqual(frozen["seats"][0]["model"], "claude-unreleased-9")
+        # A string that is neither an alias nor a claude- id is refused here
+        # rather than at launch, where it returns `unrecognized_model`.
+        for bogus in ("opus5", "gpt-5"):
+            with self.subTest(model=bogus):
+                with self.assertRaisesRegex(ValueError, "not a name Claude Code accepts"):
+                    self.prepare(self.box.plan(seats=[
+                        {"id": "a", "persona": "sec-urity", "harness": "claude",
+                         "model": bogus}]))
+
+    def test_every_harness_can_take_raw_arguments_from_the_plan(self):
+        """`agy` is a first-class harness, so `agy_args` must reach the seat."""
+        for harness in ("claude", "codex", "agy"):
+            with self.subTest(harness=harness):
+                self.assertIn(f"{harness}_args", plan.ACCESS_FIELDS)
+                self.assertIn(f"{harness}_args", plan.DEFAULTS)
+
     def test_unsupported_plan_shapes_are_refused_by_name(self):
         for fields, message in (
             ({"synthesis": {"by": "skeptic"}}, "needs at least one other seat"),

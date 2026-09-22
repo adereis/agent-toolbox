@@ -13,6 +13,60 @@ from convene.harnesses import (Capabilities, Harness, granted, guard_text, may_s
                                model_matches)
 from convene.storage import read, rows, write
 
+# Model names Claude Code accepts, so a seat fails at prepare time with the
+# valid names rather than at launch with `unrecognized_model`. Source:
+# `claude --model` help text and the published model ids, 2026-09-22. The
+# list goes stale by design: an exact `claude-...` id that is not listed is
+# passed through and recorded as unverified, so a newly released model needs
+# no code change. Only a string that is neither an alias nor a `claude-` id
+# is refused, and the refusal names what would have worked.
+ALIASES = ("fable", "opus", "sonnet", "haiku")
+KNOWN_MODELS = ("claude-fable-5-1", "claude-opus-5", "claude-sonnet-5",
+                "claude-haiku-4-5-20251001")
+
+
+def entitled_models(real_home=None):
+    """Extra model ids this account was offered, from Claude Code's own cache."""
+    home = Path(real_home) if real_home else Path.home()
+    try:
+        cached = read(home / ".claude.json") or {}
+    except Exception:
+        return ()
+    found = []
+    for item in cached.get("additionalModelOptionsCache") or ():
+        value = item.get("value") if isinstance(item, dict) else None
+        if isinstance(value, str) and value:
+            # A cached value may carry a context-window suffix, as in
+            # `claude-fable-5-1[1m]`; the bare id is what --model takes.
+            found.append(value.split("[", 1)[0])
+    return tuple(found)
+
+
+def resolve_model(model, real_home=None):
+    """User shorthand to a name Claude Code accepts; (name, note) or raise.
+
+    `opus-5` is what a person says and `claude-opus-5` is what the CLI takes,
+    so the prefix is tried against the catalog rather than pasted on blindly.
+    """
+    text = str(model).strip().lower()
+    if not text:
+        raise ValueError("claude model must not be empty")
+    if text in ALIASES:
+        return text, None
+    known = tuple(KNOWN_MODELS) + entitled_models(real_home)
+    if text in known:
+        return text, None
+    if f"claude-{text}" in known:
+        return f"claude-{text}", None
+    if text.startswith("claude-"):
+        return text, f"{text} is not in this engine's catalog; taken as written"
+    raise ValueError(
+        f"claude model {model!r} is not a name Claude Code accepts. Use an alias "
+        f"({', '.join(ALIASES)}), a known id ({', '.join(known)}), or an exact "
+        f"claude-... id. Shorthand resolves when the claude- prefix makes a known "
+        f"id, as opus-5 does.")
+
+
 # Overrides the operator's settings for the seat only: pins the output style
 # (an Explanatory style makes the model teach instead of answer) and stops
 # lifecycle hooks from running inside a seat unless `hooks` is granted.
@@ -66,13 +120,14 @@ class Claude(Harness):
     }
 
     def resolve(self, model, effort, environ=None):
-        model = str(model).lower()
-        if model not in ("haiku", "sonnet", "opus") and not model.startswith("claude-"):
-            model = "claude-" + model
+        model, note = resolve_model(model)
         if effort not in self.efforts:
             raise ValueError(f"claude effort must be one of {', '.join(self.efforts)}: {effort!r}")
-        return {"model": model, "effort": effort, "context_window": MAX_WINDOW,
-                "model_evidence": "explicit model; served identity verified after launch"}
+        out = {"model": model, "effort": effort, "context_window": MAX_WINDOW,
+               "model_evidence": "explicit model; served identity verified after launch"}
+        if note:
+            out["catalog"] = note
+        return out
 
     def prepare_home(self, home):
         config = Path(home) / ".claude.json"
