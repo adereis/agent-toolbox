@@ -11,7 +11,7 @@ from convene_support import Sandbox
 
 from convene import board, plan, platform, round as round_, runs, workspace
 from convene.cli import main
-from convene.storage import read, trail
+from convene.storage import read, trail, write
 
 
 class RoundTests(unittest.TestCase):
@@ -126,6 +126,32 @@ class RoundTests(unittest.TestCase):
         self.assertIn("rounds: 2 of 2 published (1-2)", text)
         self.assertIn("red flags: 2 (marked ! below)", text)
         self.assertIn(f"next: convene board {root.name}", text)
+
+    def test_only_the_latest_signal_says_a_run_converged(self):
+        """An extended run that played past its convergence is not done."""
+        root, _ = self.prepare(rounds=2, seats=[{"id": "a", "persona": "archie-tecture"}])
+        round_.run_round(root, 1)
+        round_.run_round(root, 2)
+        board.extend(root, 4)
+
+        def signal(n, converged):
+            path = root / "board" / "rounds" / f"r{n:03d}" / "convergence.json"
+            write(path, {**read(path), "converged": converged,
+                         "reason": "novelty" if converged else None})
+
+        # Converged at round one, then played past it: not converged now.
+        signal(1, True)
+        signal(2, False)
+        data = round_.status(root)
+        self.assertFalse(data["converged"])
+        self.assertEqual(data["next"], f"convene run {root.name}")
+        # Converged at the latest round with budget left: both halves named.
+        signal(2, True)
+        data = round_.status(root)
+        self.assertTrue(data["converged"])
+        self.assertEqual(data["next"],
+                         f"convene board {root.name}, then convene export {root.name} DIR; "
+                         f"the run converged, and convene run {root.name} plays past it")
 
     def test_worktree_seat_changes_are_captured_and_pruned(self):
         root, frozen = self.prepare(rounds=1, seats=[

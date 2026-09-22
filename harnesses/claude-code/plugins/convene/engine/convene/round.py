@@ -475,6 +475,12 @@ def next_step(root, plan, *, published, budget, held, withheld, converged):
                 f"then convene unseal {name}")
     if len(published) < budget and not converged:
         return f"convene run {name}"
+    if converged and len(published) < budget:
+        # `run` would play one more round and stop again if the signal holds,
+        # so say both halves: the room thinks it is done, and going past
+        # that is the operator's call, usually made by extending the budget.
+        return (f"convene board {name}, then convene export {name} DIR; the run "
+                f"converged, and convene run {name} plays past it")
     return f"convene board {name}, then convene export {name} DIR"
 
 
@@ -528,9 +534,12 @@ def status(root):
     held = [r for r in rows if r.get("event") == "round-held"]
     still_held = held[-1:] if held and held[-1].get("round") not in published else []
     # A phased run is not asked whether it converged, so its measured signal
-    # must not be allowed to end the run early here either.
+    # must not be allowed to end the run early here either. Only the latest
+    # round counts, as it does for `run`: a room that converged at round five
+    # and was extended and played past it has not converged at round seven
+    # unless its latest signal says so again.
     unphased = len(plan["phases"]) == 1 and not plan["phases"][0].get("seats")
-    converged = unphased and any(s["converged"] for s in signals)
+    converged = unphased and bool(signals) and signals[-1]["converged"]
     flags = sum(len(got.get("red_flags") or [])
                 for one in seats.values() for got in one["receipts"].values())
     return {"run": str(root), "name": plan["name"], "title": plan["title"], "kind": plan["kind"],
