@@ -87,7 +87,9 @@ run, and every round of that run uses it. For example, `seat=codex/terra`
 prepares as `gpt-5.6-terra (from terra)`. A version, such as `opus-5.5` or
 `gpt-5.6-terra`, pins the seat instead. Claude Code has no local catalog, so
 a Claude family is passed as the CLI's own alias and the receipt records
-the version that answered.
+the version that answered. Every later round of that seat resumes pinned to
+that version, and its receipt shows the pin as `model_pinned`. So an Opus
+released between rounds two and three does not change who is speaking.
 
 The command writes a plan from `templates/panel.toml`, prepares and runs it,
 reads the board, synthesizes, exports, and reports the receipts. The same

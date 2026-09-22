@@ -55,7 +55,10 @@ with open(os.path.join(home, "stub-calls.jsonl"), "a") as log:
                           "prompt": prompt}) + "\n")
 
 if requested in ("opus", None):
-    served = "claude-opus-5-20260601"
+    # A release lands when this marker exists: the alias, and the CLI's
+    # default, then serve the newer Opus, as the real CLI does.
+    released = os.path.exists(os.path.join(home, "stub-new-opus"))
+    served = "claude-opus-6-20270101" if released else "claude-opus-5-20260601"
 elif requested.startswith("claude-"):
     served = requested
 else:

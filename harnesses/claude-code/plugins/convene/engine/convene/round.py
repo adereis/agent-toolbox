@@ -158,6 +158,14 @@ def launch(root, plan, seat, n, prompt, mode, session_id, *, timeout=None):
     """Run one turn and bank what it produced, however it ended."""
     root, name = Path(root), seat["id"]
     harness = harnesses.get(seat["harness"])
+    pinned = read(state_path(root, name)).get("model_served") if mode != "start" else None
+    if pinned == seat["model"]:
+        pinned = None  # the plan already names the exact version
+    if pinned:
+        # A family such as `opus` means whatever is newest when the CLI
+        # runs; a resumed session must keep the version it began on, so a
+        # release between rounds cannot switch the seat's model.
+        seat = {**seat, "model_pinned": pinned}
     tier = isolation.get(seat["isolation"])
     work, seat_home = root / "work" / name, root / "homes" / name
     record = root / "records" / name / f"r{n:03d}"
@@ -250,12 +258,15 @@ def launch(root, plan, seat, n, prompt, mode, session_id, *, timeout=None):
         "quota_scope": stop.get("scope") if stop else None,
         "quota_resets_at": stop.get("resets_at") if stop else None,
         "inputs_intact": intact, "red_flags": flags,
+        **({"model_pinned": pinned} if pinned else {}),
     })
     if compacted:
         event(root, round=n, seat=name, event="compacted", markers=len(compacted))
     state = read(state_path(root, name))
     if got.get("session_id"):
         state["session_id"] = got["session_id"]
+    if status == "answered" and got.get("model") and not state.get("model_served"):
+        state["model_served"] = got["model"]
     elif stop and stop.get("session_id") and stop["phase"] == "interrupted":
         state["session_id"] = stop["session_id"]
     state["rounds"][str(n)] = {"status": status, "seconds": seconds, "error": detail,

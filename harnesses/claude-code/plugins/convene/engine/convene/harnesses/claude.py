@@ -192,10 +192,13 @@ class Claude(Harness):
         if not granted(seat, "mcp"):
             args += NO_MCP
         args += list(seat.get("args") or [])
+        # Every launch names the model: a resume without it runs the CLI's
+        # default, and a resume with the family alone runs the newest one.
+        model = seat.get("model_pinned") or seat["model"]
         if mode == "start":
-            args += ["--model", seat["model"], "--session-id", session_id]
+            args += ["--model", model, "--session-id", session_id]
         else:
-            args += ["--resume", session_id]
+            args += ["--resume", session_id, "--model", model]
             if mode == "fork":
                 args += ["--fork-session"]
         payload = json.dumps({"type": "user", "message": {
@@ -226,8 +229,9 @@ class Claude(Harness):
         if len(models) != 1:
             raise RuntimeError(f"missing or mixed Claude model identity: {sorted(models)}")
         model = models.pop()
-        if not model_matches(seat["model"], model):
-            raise RuntimeError(f"Claude served {model}, requested {seat['model']}")
+        expected = seat.get("model_pinned") or seat["model"]
+        if not model_matches(expected, model):
+            raise RuntimeError(f"Claude served {model}, requested {expected}")
         usage = result.get("modelUsage", {}) or {}
         if not usage.get(model, {}).get("outputTokens"):
             raise RuntimeError("Claude lacks served-model usage evidence")

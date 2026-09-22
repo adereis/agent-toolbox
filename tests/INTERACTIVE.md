@@ -186,7 +186,10 @@ seat as the other) and two phases, `discuss` (both) then `draft` (drafter
 only), on the enforced tier. Run it with `bin/convene run NAME`. Expected:
 round two resumes both sessions (`launch.json` shows `--resume` or
 `resume SID` and the receipt's `session_id` equals round one's); the
-drafter's `changes.patch` appears under `board/made/drafter/r002/` and on
+Claude seat's round-two `launch.json` passes `--model` the exact id round
+one served, not `haiku`, and its receipt shows that id as `model_pinned`;
+a Codex seat named by family (`luna`) prepares as `gpt-5.6-luna (from
+luna)` or its successor; the drafter's `changes.patch` appears under `board/made/drafter/r002/` and on
 the round-two digest; `git -C <project> worktree list` shows the seat's
 worktree and the operator's checkout has no changes; the drafter's
 receipt shows `isolation.worktree_git` naming the project's `.git`.

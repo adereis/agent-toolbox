@@ -93,6 +93,26 @@ class RoundTests(unittest.TestCase):
         self.assertIn("- a (Archie Tecture): answered 2 of 2 rounds", text)
         self.assertIn("- b (Quinn T. Shun): answered 2 of 2 rounds", text)
 
+    def test_a_release_between_rounds_does_not_switch_a_seat_model(self):
+        """`opus` is resolved by the CLI; round two must keep round one's Opus."""
+        root, frozen = self.prepare(rounds=2)
+        round_.run_round(root, 1)
+        first = self.receipt(root, "a", 1)["model"]
+        self.assertEqual(first, "claude-opus-5-20260601")
+        # A newer Opus ships while the room waits between rounds.
+        next(root.glob("homes/a/**/stub-calls.jsonl")).with_name("stub-new-opus").touch()
+        round_.run_round(root, 2)
+        second = self.receipt(root, "a", 2)
+        self.assertEqual(second["status"], "answered", second.get("error"))
+        self.assertEqual(second["model"], first)
+        self.assertEqual(second["model_pinned"], first)
+        self.assertEqual(second["requested_model"], "opus")
+        argv = self.box.calls("a", "claude")[1]["argv"]
+        self.assertIn("--resume", argv)
+        self.assertEqual(argv[argv.index("--model") + 1], first)
+        # A seat whose plan already names the exact version needs no pin.
+        self.assertNotIn("model_pinned", self.receipt(root, "b", 2))
+
     def test_status_names_the_command_to_type_next_at_every_stage(self):
         root, _ = self.prepare(rounds=2, seats=[{"id": "a", "persona": "archie-tecture"}])
         text = round_.render_status(round_.status(root))
