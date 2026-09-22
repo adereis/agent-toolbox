@@ -66,7 +66,14 @@ learning who wrote what.
 
 ## Installation
 
-Choose a harness and scope, then preview the selected components:
+In Claude Code, run `/sync` from a checkout: it wraps the installer, picks a
+scope with you, and updates the plugins in the marketplace manifest. Prefer
+it to a bare `git pull`, because installed components are symlinks that
+follow the checkout immediately while a plugin is a pinned copy that stays
+on its old commit until it is updated.
+
+Everywhere else, choose a harness and scope, then preview the selected
+components:
 
 ```bash
 git clone https://github.com/adereis/agent-toolbox.git
@@ -79,10 +86,18 @@ Add `--apply` to create the links. Existing conflicting files are preserved.
 See [installation](docs/installation.md) for scope, components, configuration,
 and removal.
 
-`/sync` in Claude Code wraps this same installer and additionally updates the
-plugins listed in the marketplace manifest. Prefer it to a bare `git pull`:
-installed components are symlinks and follow the checkout immediately, while
-a plugin is a pinned copy that stays on its old commit until it is updated.
+That selection is a starting point rather than everything available.
+`instructions` and `prompts` are not in it, so
+[the policy modules](instructions/README.md) and
+[the task prompts](prompts/README.md) need naming explicitly; both are inert
+once installed and cost nothing until something reads them.
+
+Scope is worth a moment's thought, because components differ in what they
+cost when unused. An installed skill, and a plugin, advertise themselves to
+every session at the scope you chose, while prompts, instruction modules and
+scripts stay silent until invoked. See
+[what a component costs a session](docs/installation.md#what-a-component-costs-a-session)
+before installing a rarely-used workflow at user scope.
 
 `scripts` links every harness utility where a skill can reach it by path.
 `commands` puts the ones you run yourself on your `PATH` in `~/.local/bin`,

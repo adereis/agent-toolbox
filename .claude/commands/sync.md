@@ -10,6 +10,22 @@ python3 tools/install.py --harness claude-code --scope user \
 
 `commands` is user scope only; drop it when installing to project scope.
 
+That default is a selection, not the whole catalog. `instructions` and
+`prompts` are deliberately outside it, because a policy module and a task
+prompt are things a person opts into rather than receives by default. Name
+what the default omits when reporting a sync, so an omission is a visible
+choice rather than a silent one, and offer the components the user's request
+implies. A user asking for baseline adoption needs `instructions`, since
+[the prompt](../../prompts/adopt-baseline.md) stops when the module is
+missing.
+
+Weigh scope against session cost before installing. A skill advertises
+itself in every session at the scope it was installed to, while prompts,
+instruction modules and scripts cost nothing until they are read; see
+`docs/installation.md` under "What a component costs a session". Prefer
+`--scope project` for a workflow belonging to one repository, and say what a
+user-scope install will be present in every session for.
+
 Review the dry-run output. If the user requested installation or sync, apply
 that same selection with `--apply`. Conflicting files are preserved: report
 the paths and resolve the conflict within the user's authorization before

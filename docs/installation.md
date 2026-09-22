@@ -43,6 +43,30 @@ project-specific skill installation. This installer does not change
 | `profiles` | Unavailable | User scope only | Links `subscription.config.toml` and `api.config.toml` directly into the Codex configuration directory |
 | `commands` | Yes | Yes | User scope only; links the utilities you run yourself into `~/.local/bin`, without their file extension, `convene` included |
 
+### What a component costs a session
+
+Components differ in whether an agent pays for them when it is doing
+something else. A skill advertises its name and description to every session
+that can discover it, so an installed skill is a standing cost in every
+project at user scope, whether or not it is ever used. A prompt, an
+instruction module, and a script cost nothing until something reads them.
+
+| Component | Cost when unused | Why |
+|-----------|------------------|-----|
+| `skills` | Every session, at the installed scope | Name and description are offered to the model so it can choose the skill |
+| Plugins | Every session, at the installed scope | Bundled skills and commands are advertised the same way; `claude plugin details <name>` prints the figure |
+| `prompts` | None | Plain text outside any discovery path; read only when named |
+| `instructions` | None until adopted | Inert files; a module applies only after an instruction file imports or inlines it |
+| `scripts`, `commands` | None | Executables, run on demand |
+| `hooks`, `settings` | None until registered | Installing a script does not configure the harness to run it |
+
+Choose scope against that cost. A workflow used across projects earns user
+scope; one that belongs to a single repository should be installed with
+`--scope project` so other work does not carry it. A workflow that runs
+rarely and edits your own configuration is better as a prompt than as a
+skill, which is why [baseline adoption](../prompts/adopt-baseline.md) ships
+as one.
+
 Install the Codex [authentication profiles](../harnesses/codex/README.md#authentication-profiles)
 with:
 

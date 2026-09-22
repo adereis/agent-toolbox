@@ -4,6 +4,15 @@ This repository distributes reusable tools, prompts, instructions, skills,
 and harness integrations. Explain significant design choices before editing,
 implement the agreed scope, and document usage with the change.
 
+This file covers developing the repository. A harness loads it before
+anything else, so it is also the first thing an agent reads here, and it
+answers how to change these components rather than what they are or who
+runs them. Read [README.md](README.md) for that: what the project is, the
+catalog of components, which harness each supports, and how a user installs
+them. Answer a question about the project from the README, and install or
+operate components by following it; use the conventions below when editing
+the repository itself.
+
 ## Layout and ownership
 
 - `harnesses/<name>/` owns harness-specific configuration, hooks, agent
