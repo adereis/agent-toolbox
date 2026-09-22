@@ -1,7 +1,7 @@
 {
   "name": "convene",
   "description": "Multi-seat panels, rooms and fanouts: independent native CLI sessions (Claude Code, Codex) with declared personas, isolation tiers and receipts.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "name": "Ademar Reis"
   },
