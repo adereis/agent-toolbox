@@ -56,7 +56,11 @@ class FanoutTests(unittest.TestCase):
         self.assertEqual(data["seats"]["one"]["receipts"][1]["seconds"], "withheld")
         self.assertEqual(data["seats"]["one"]["receipts"][1]["tool_calls"], "withheld")
         self.assertEqual(data["seats"]["one"]["receipts"][1]["status"], "answered")
-        self.assertIn("read sealed", round_.render_status(data))
+        text = round_.render_status(data)
+        self.assertIn("read sealed", text)
+        self.assertIn("duration withheld, tool calls withheld", text)
+        self.assertNotIn("withhelds", text)
+        self.assertIn(f"next: convene seal {root.name}", text)
 
         result = seal.seal(root, seed=7)
         self.assertEqual(result["letters"], ["A", "B", "C"])

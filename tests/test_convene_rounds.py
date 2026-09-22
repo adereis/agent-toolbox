@@ -86,7 +86,26 @@ class RoundTests(unittest.TestCase):
         events = [r for r in trail(root) if r.get("event") == "resting"]
         self.assertEqual([(r["round"], r["seat"]) for r in events], [(2, "b"), (3, "a")])
         data = round_.status(root)
-        self.assertIn("phases: discuss x1, draft x1 [a], critique x1 [b]", round_.render_status(data))
+        text = round_.render_status(data)
+        self.assertIn("phases: discuss x1, draft x1 [a], critique x1 [b]", text)
+        # Three rounds, but each seat speaks in two: the round it rests in is
+        # not a turn it owes, so neither seat may read as one round behind.
+        self.assertIn("- a (Archie Tecture): answered 2 of 2 rounds", text)
+        self.assertIn("- b (Quinn T. Shun): answered 2 of 2 rounds", text)
+
+    def test_status_names_the_command_to_type_next_at_every_stage(self):
+        root, _ = self.prepare(rounds=2, seats=[{"id": "a", "persona": "archie-tecture"}])
+        text = round_.render_status(round_.status(root))
+        self.assertIn("rounds: 0 of 2 published", text)
+        self.assertIn("not started, 2 rounds to speak in", text)
+        self.assertIn(f"next: convene run {root.name}", text)
+        round_.run_round(root, 1)
+        self.assertIn(f"next: convene run {root.name}", round_.render_status(round_.status(root)))
+        round_.run_round(root, 2)
+        text = round_.render_status(round_.status(root))
+        self.assertIn("rounds: 2 of 2 published (1-2)", text)
+        self.assertIn("red flags: 2 (marked ! below)", text)
+        self.assertIn(f"next: convene board {root.name}", text)
 
     def test_worktree_seat_changes_are_captured_and_pruned(self):
         root, frozen = self.prepare(rounds=1, seats=[
@@ -268,6 +287,43 @@ class RoundTests(unittest.TestCase):
         self.assertIn("budget is now 3 rounds", text)
         self.assertIn("The board -- round 2", text)
         self.assertIn(str(root / "homes/a"), text)
+
+
+class StatusRenderingTests(unittest.TestCase):
+    """The status text is the operator's only read of a run, so pin its shape.
+
+    These are the pieces with no sandbox in them; the run-level assertions
+    live beside the runs that produce them.
+    """
+
+    def test_round_numbers_collapse_instead_of_printing_a_python_list(self):
+        self.assertEqual(round_._spans([1]), "1")
+        self.assertEqual(round_._spans([1, 2, 3, 5]), "1-3, 5")
+        self.assertEqual(round_._spans([4, 2, 1]), "1-2, 4")
+
+    def test_a_turn_leaves_out_the_fields_its_receipt_lacks(self):
+        line = round_._turn_line(1, {"status": "failed", "seconds": 60.0, "tool_calls": None,
+                                     "model": None, "tier": "enforced"})
+        self.assertEqual(line, "    r001: failed, 60.0s, tier enforced")
+        self.assertNotIn("None", line)
+
+    def test_a_blind_turn_names_what_is_withheld_instead_of_formatting_it(self):
+        line = round_._turn_line(2, {"status": "answered", "model": "m",
+                                     "seconds": "withheld", "tool_calls": "withheld"})
+        self.assertIn("duration withheld", line)
+        self.assertIn("tool calls withheld", line)
+        self.assertNotIn("withhelds", line)
+
+    def test_a_seat_reports_every_round_not_only_how_its_last_turn_ended(self):
+        seat = {"label": "L", "acting_rounds": [1, 2, 3], "joined_late": None,
+                "receipts": {1: {"status": "answered"}, 2: {"status": "answered"},
+                             3: {"status": "failed"}}}
+        self.assertEqual(round_._seat_line("a", seat),
+                         "- a (L): answered 2 of 3 rounds, r003 failed")
+
+    def test_a_seat_that_has_not_run_says_so_and_names_its_rounds(self):
+        seat = {"label": "L", "acting_rounds": [1, 2], "joined_late": None, "receipts": {}}
+        self.assertEqual(round_._seat_line("a", seat), "- a (L): not started, 2 rounds to speak in")
 
 
 if __name__ == "__main__":

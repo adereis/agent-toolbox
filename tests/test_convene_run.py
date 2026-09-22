@@ -126,7 +126,10 @@ class RunTests(unittest.TestCase):
         self.assertEqual(self.receipt(root, "skeptic")["quota_scope"], "five_hour")
         data = round_.status(root)
         self.assertEqual(data["held"][0]["waiting_on"], ["maintainer", "skeptic"])
-        self.assertIn("HELD", round_.render_status(data))
+        text = round_.render_status(data)
+        self.assertIn("HELD: round 1 waiting on maintainer, skeptic", text)
+        self.assertIn(f"next: convene continue {root.name} maintainer (and 1 more)", text)
+        self.assertIn(f"then convene promote {root.name} 1", text)
 
     def test_quota_interrupted_keeps_the_session_for_a_continuation(self):
         root, _ = self.prepare(brief={"text": "[[stub:quota-interrupted]] Review."})

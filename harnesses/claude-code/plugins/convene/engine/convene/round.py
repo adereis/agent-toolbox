@@ -429,10 +429,49 @@ def promote_absent(root, n):
         return board.promote(root, n)
 
 
+def _spans(numbers):
+    """[1, 2, 3, 5] -> "1-3, 5", because a Python list repr is not a notation."""
+    spans = []
+    for n in sorted(numbers):
+        if spans and n == spans[-1][1] + 1:
+            spans[-1][1] = n
+        else:
+            spans.append([n, n])
+    return ", ".join(str(a) if a == b else f"{a}-{b}" for a, b in spans)
+
+
+def next_step(root, plan, *, published, budget, held, withheld, converged):
+    """The one command to type next.
+
+    Every other verb ends by naming the verb that follows it; status read
+    the state and stopped, so a prepared run and a finished one ended the
+    same way and neither told the operator what to do. The branches mirror
+    `run`'s stop rule and `seal.guard`'s wording, so a reader is never sent
+    to a command the engine would refuse.
+    """
+    name = plan["name"]
+    if held:
+        waiting = held[0].get("waiting_on") or []
+        first = waiting[0] if waiting else "SEAT"
+        more = f" (and {len(waiting) - 1} more)" if len(waiting) > 1 else ""
+        return (f"convene continue {name} {first}{more} once the window resets, "
+                f"then convene promote {name} {held[0].get('round')}")
+    if withheld:
+        n = withheld[-1]
+        if not seal.is_sealed(root, n):
+            return f"convene seal {name}"
+        return (f"read {root}/sealed/r{n:03d}/, write its {seal.JUDGMENT}, "
+                f"then convene unseal {name}")
+    if len(published) < budget and not converged:
+        return f"convene run {name}"
+    return f"convene board {name}, then convene export {name} DIR"
+
+
 def status(root):
     """A read-only view, safe while a run is in progress."""
     root, plan = runs.load(root, verify=False)
     withheld = seal.withheld(root, plan)
+    budget = board.budget(root, plan)
     seats = {}
     for seat in plan["seats"]:
         state = read(state_path(root, seat["id"]))
@@ -451,71 +490,152 @@ def status(root):
                 receipts[n]["seconds"] = receipts[n]["tool_calls"] = "withheld"
         answered = sorted(int(r) for r, v in state.get("rounds", {}).items()
                           if v.get("status") == "answered")
+        # The rounds this seat speaks in. It listens through the others, so
+        # they are not turns it owes, and counting them would report a
+        # phase seat as permanently behind. Read over the budget rather than
+        # the declared count so an extended run counts its own rounds.
+        acting = [n for n in range(1, budget + 1) if seat["id"] in board.acting(plan, n)]
         seats[seat["id"]] = {
             "label": board.label(seat), "harness": seat["harness"], "model": seat["model"],
             "effort": seat["effort"], "tools": seat["tools"], "isolation": seat["isolation"],
             "workspace": seat["workspace"], "status": state.get("status"),
             "session_id": state.get("session_id"), "receipts": receipts,
-            "attempts": state.get("attempts", []),
+            "attempts": state.get("attempts", []), "acting_rounds": acting,
             # A seat whose first answered round is not the first round it was
             # expected in heard the room before it spoke.
-            "joined_late": answered[0] if answered and answered[0] != next(
-                (r for r in range(1, plan["rounds"] + 1) if seat["id"] in board.acting(plan, r)), 1)
+            "joined_late": answered[0] if answered and answered[0] != (acting[0] if acting else 1)
             else None,
         }
     rows = trail(root)
     published = board.published_rounds(root)
     convergence = [read(root / "board" / "rounds" / f"r{n:03d}" / "convergence.json")
                    for n in published if (root / "board" / "rounds" / f"r{n:03d}" / "convergence.json").exists()]
+    signals = [{k: c[k] for k in ("round", "novelty", "closing", "converged", "reason")}
+               for c in convergence]
     spoken = sorted(int(p.stem[1:]) for p in (root / "chair").glob("r[0-9][0-9][0-9].md"))
     held = [r for r in rows if r.get("event") == "round-held"]
     still_held = held[-1:] if held and held[-1].get("round") not in published else []
+    # A phased run is not asked whether it converged, so its measured signal
+    # must not be allowed to end the run early here either.
+    unphased = len(plan["phases"]) == 1 and not plan["phases"][0].get("seats")
+    converged = unphased and any(s["converged"] for s in signals)
+    flags = sum(len(got.get("red_flags") or [])
+                for one in seats.values() for got in one["receipts"].values())
     return {"run": str(root), "name": plan["name"], "title": plan["title"], "kind": plan["kind"],
             "sealed": seal.sealed_rounds(root), "withheld": withheld,
-            "rounds": board.budget(root, plan), "declared_rounds": plan["rounds"],
+            "rounds": budget, "declared_rounds": plan["rounds"],
             "phases": plan["phases"], "published_rounds": published, "held": still_held,
-            "convergence": [{k: c[k] for k in ("round", "novelty", "closing", "converged", "reason")}
-                            for c in convergence],
+            "convergence": signals, "converged": converged, "red_flags": flags,
             "chair": {"delivered": [r for r in spoken if r in published],
                       "queued": [r for r in spoken if r not in published]},
-            "seats": seats, "last_events": rows[-8:]}
+            "seats": seats, "last_events": rows[-8:],
+            "next": next_step(root, plan, published=published, budget=budget, held=still_held,
+                              withheld=withheld, converged=converged)}
+
+
+def _turn_line(n, got):
+    """One round's receipt, leaving absent fields out rather than printing them.
+
+    A missing tool count used to render as the Python `None` and a withheld
+    duration as `withhelds`, and both appear exactly when a turn failed or a
+    round is blind, which is the worst moment to hand the reader a repr.
+    """
+    bits = [got.get("status") or "unknown"]
+    if got.get("model"):
+        bits.append(f"served {got['model']}")
+    seconds = got.get("seconds")
+    if seconds == "withheld":
+        bits.append("duration withheld")
+    elif seconds is not None:
+        bits.append(f"{seconds:.1f}s")
+    calls = got.get("tool_calls")
+    if calls == "withheld":
+        bits.append("tool calls withheld")
+    elif calls is not None:
+        bits.append(f"{calls} tool calls")
+    if got.get("tier"):
+        bits.append(f"tier {got['tier']}")
+    return f"    r{n:03d}: " + ", ".join(bits)
+
+
+def _seat_line(name, seat):
+    """A seat's record across the run, not just how its last turn ended.
+
+    The seat state file keeps one `status`, overwritten every turn, so a
+    seat that answered three rounds and failed the fourth used to read
+    `status=failed`, which looks like a verdict on the seat.
+    """
+    receipts = seat["receipts"]
+    expected = len(seat["acting_rounds"]) or len(receipts)
+    done = sum(1 for got in receipts.values() if got.get("status") == "answered")
+    trouble = [f"r{n:03d} {got.get('status')}" for n, got in sorted(receipts.items())
+               if got.get("status") != "answered"]
+    if not receipts:
+        summary = f"not started, {expected} round" + ("" if expected == 1 else "s") + " to speak in"
+    else:
+        summary = f"answered {done} of {expected} round" + ("" if expected == 1 else "s")
+        if trouble:
+            summary += ", " + ", ".join(trouble)
+    if seat.get("joined_late"):
+        summary += f", JOINED LATE in round {seat['joined_late']}"
+    return f"- {name} ({seat['label']}): {summary}"
+
+
+def _resets_at(data, n, waiting):
+    """The soonest quota reset among the seats holding round `n` open."""
+    times = sorted({t for s in waiting
+                    for t in [data["seats"].get(s, {}).get("receipts", {})
+                              .get(n, {}).get("quota_resets_at")] if t})
+    return times[0] if times else None
 
 
 def render_status(data):
-    lines = [f"{data['title']}  [{data['kind']}, {data['name']}]", f"  {data['run']}",
-             f"  rounds published: {data['published_rounds'] or 'none'} of {data['rounds']}"
-             + (f" (declared {data['declared_rounds']})" if data['rounds'] != data['declared_rounds'] else "")]
+    published, budget = data["published_rounds"], data["rounds"]
+    rounds = f"  rounds: {len(published)} of {budget} published"
+    if published:
+        rounds += f" ({_spans(published)})"
+    if budget != data["declared_rounds"]:
+        rounds += f"; budget raised from the {data['declared_rounds']} declared"
+    lines = [f"{data['title']}  [{data['kind']}, {data['name']}]", f"  {data['run']}", rounds]
     if len(data["phases"]) > 1 or data["phases"][0].get("seats"):
         lines.append("  phases: " + ", ".join(f"{p['name']} x{p['rounds']}"
                                               + (f" [{', '.join(p['seats'])}]" if p.get("seats") else "")
                                               for p in data["phases"]))
-    for signal in data["convergence"]:
-        if signal["converged"]:
-            lines.append(f"  converged at round {signal['round']} on {signal['reason']}")
+    if len(data["convergence"]) > 1:
+        # Novelty is the room's own stop rule. Printing it only once it has
+        # fired hides the approach, which is the part worth watching. A lone
+        # round is left out: with nothing to differ from it is always 100%.
+        measured = ", ".join(f"r{s['round']:03d} {s['novelty'] or 0:.0f}%"
+                             for s in data["convergence"])
+        fired = next((f"  (converged at round {s['round']} on {s['reason']})"
+                      for s in data["convergence"] if s["converged"]), "")
+        lines.append(f"  novelty: {measured}{fired}")
+    if data["red_flags"]:
+        lines.append(f"  red flags: {data['red_flags']} (marked ! below)")
     if data["held"]:
-        lines.append(f"  HELD: round {data['held'][0].get('round')} waiting on "
-                     f"{', '.join(data['held'][0].get('waiting_on', []))} (provider quota); "
-                     "`convene continue` them when the window resets")
+        waiting = data["held"][0].get("waiting_on", [])
+        number = data["held"][0].get("round")
+        when = _resets_at(data, number, waiting)
+        lines.append(f"  HELD: round {number} waiting on {', '.join(waiting)} "
+                     f"(provider quota{f'; resets {when}' if when else ''})")
     if data["withheld"]:
-        lines.append(f"  blind: rounds {data['withheld']} are read sealed; "
+        lines.append(f"  blind: round {_spans(data['withheld'])} is read sealed; "
                      + ("sealed so far: " + ", ".join(f"r{n:03d}" for n in data["sealed"])
-                        if data["sealed"] else "`convene seal` letters the drafts"))
+                        if data["sealed"] else "no drafts lettered yet"))
     if data["chair"]["queued"]:
         lines.append("  chair note queued for round " + ", ".join(str(r) for r in data["chair"]["queued"]))
     for name, seat in data["seats"].items():
-        lines.append(f"- {name} ({seat['label']}): {seat['harness']}/{seat['model']} "
-                     f"effort={seat['effort']} tools={seat['tools']} isolation={seat['isolation']} "
-                     f"status={seat['status']}"
-                     + (f" JOINED LATE in round {seat['joined_late']}" if seat.get("joined_late") else ""))
-        for n, got in seat["receipts"].items():
-            served = got.get("model") or "?"
-            lines.append(f"    r{n:03d}: {got['status']}, served {served}, "
-                         f"{got.get('seconds')}s, tool calls {got.get('tool_calls')}, "
-                         f"tier {got.get('tier')}")
+        lines.append(_seat_line(name, seat))
+        lines.append(f"    {seat['harness']}/{seat['model']} effort={seat['effort']} "
+                     f"tools={seat['tools']} isolation={seat['isolation']} "
+                     f"workspace={seat['workspace']}")
+        for n, got in sorted(seat["receipts"].items()):
+            lines.append(_turn_line(n, got))
             if got.get("error"):
                 lines.append(f"      error: {got['error'][:200]}")
             for flag in got.get("red_flags") or []:
                 lines.append(f"      ! {flag}")
+    lines.append(f"next: {data['next']}")
     return "\n".join(lines)
 
 
