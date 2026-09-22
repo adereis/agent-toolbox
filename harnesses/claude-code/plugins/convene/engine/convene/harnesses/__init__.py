@@ -191,6 +191,16 @@ class Harness:
     # the opened door as a red flag. Empty for a CLI that needs none.
     bus_names: tuple = ()
 
+    def served_model(self, record):
+        """The model a turn's own stream names, even if the turn failed.
+
+        None where the stream names none or more than one. The engine uses it
+        to pin a session whose first turn was cut off before a receipt could
+        be written; a harness whose seats already run a frozen exact id needs
+        nothing here, because there is nothing to pin.
+        """
+        return None
+
     def installed(self):
         return shutil.which(self.name)
 

@@ -157,6 +157,13 @@ def run_seat(root, plan, seat, n, *, timeout=None):
 def launch(root, plan, seat, n, prompt, mode, session_id, *, timeout=None):
     """Run one turn and bank what it produced, however it ended."""
     root, name = Path(root), seat["id"]
+    if mode not in ("start", "resume"):
+        # A fork continues another session's history, so it must pin to the
+        # version that session was served, which lives in the parent seat's
+        # state, not this one's. Nothing forks through here yet; refusing
+        # keeps the first caller from getting an unpinned seat by accident.
+        raise ValueError(f"launch drives start and resume turns, not {mode!r}; a fork "
+                         "must pin to its parent session's served model")
     harness = harnesses.get(seat["harness"])
     pinned = read(state_path(root, name)).get("model_served") if mode != "start" else None
     if pinned == seat["model"]:
@@ -265,10 +272,18 @@ def launch(root, plan, seat, n, prompt, mode, session_id, *, timeout=None):
     state = read(state_path(root, name))
     if got.get("session_id"):
         state["session_id"] = got["session_id"]
-    if status == "answered" and got.get("model") and not state.get("model_served"):
-        state["model_served"] = got["model"]
     elif stop and stop.get("session_id") and stop["phase"] == "interrupted":
         state["session_id"] = stop["session_id"]
+    # The version a session began on is recorded from its first turn that
+    # shows one, answered or not. A turn a quota cut partway has already
+    # written that model's reasoning into the session, and its continuation
+    # must resume on the same version rather than on whatever the family
+    # alias means by then. A served id that does not match the seat's model
+    # is not adopted: pinning to it would enshrine the mismatch.
+    served = got.get("model") or harness.served_model(record)
+    if (served and state.get("session_id") and not state.get("model_served")
+            and harnesses.model_matches(seat["model"], served)):
+        state["model_served"] = served
     state["rounds"][str(n)] = {"status": status, "seconds": seconds, "error": detail,
                                **({"quota_stop": stop["phase"], "quota_scope": stop.get("scope")}
                                   if stop else {})}

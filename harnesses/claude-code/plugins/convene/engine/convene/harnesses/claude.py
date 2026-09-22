@@ -212,6 +212,13 @@ class Claude(Harness):
     def classify_stop(self, record):
         return quota.classify("claude", record)
 
+    def served_model(self, record):
+        stream = rows(Path(record) / "events.jsonl")
+        models = {r["message"]["model"] for r in stream
+                  if r.get("type") == "assistant"
+                  and r.get("message", {}).get("model") not in (None, "<synthetic>")}
+        return models.pop() if len(models) == 1 else None
+
     def receipt(self, seat, record, home, expected_session=None):
         stream = rows(Path(record) / "events.jsonl")
         results = [r for r in stream if r.get("type") == "result"]

@@ -148,6 +148,30 @@ class RunTests(unittest.TestCase):
             self.assertEqual(self.receipt(root, seat)["quota_stop"], "interrupted")
             self.assertIsNotNone(read(root / "records" / seat / "state.json")["session_id"])
 
+    def test_a_turn_cut_by_a_quota_still_pins_its_session(self):
+        """The cut turn's reasoning is already in the session, on one Opus.
+
+        A pin recorded only from answered turns left the continuation to
+        resume on `opus`, which by then may mean a newer model.
+        """
+        root, _ = self.prepare(seats=[{"id": "skeptic", "persona": "quinn-t-shun"}],
+                               brief={"text": "[[stub:quota-interrupted]] Review."})
+        round_.run(root)
+        self.assertEqual(self.receipt(root, "skeptic")["quota_stop"], "interrupted")
+        state = read(root / "records" / "skeptic" / "state.json")
+        self.assertEqual(state["model_served"], "claude-opus-5-20260601")
+        # A newer Opus ships while the seat waits out its quota window.
+        next(root.glob("homes/skeptic/**/stub-calls.jsonl")).with_name("stub-new-opus").touch()
+        self.assertEqual(round_.continue_seat(root, 1, "skeptic"), "answered")
+        got = self.receipt(root, "skeptic")
+        self.assertEqual(got["model"], "claude-opus-5-20260601")
+        self.assertEqual(got["model_pinned"], "claude-opus-5-20260601")
+
+    def test_launch_refuses_a_fork_it_cannot_pin(self):
+        root, frozen = self.prepare(seats=[{"id": "skeptic", "persona": "quinn-t-shun"}])
+        with self.assertRaisesRegex(ValueError, "must pin to its parent"):
+            round_.launch(root, frozen, frozen["seats"][0], 1, "x", "fork", "s-1")
+
     def test_compaction_is_a_red_flag_not_a_failure(self):
         root, _ = self.prepare(brief={"text": "[[stub:compaction]] Review."})
         round_.run(root)

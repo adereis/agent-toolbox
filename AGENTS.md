@@ -125,9 +125,11 @@ resolves at prepare to the newest version the harness's own catalog lists
 frozen with the family recorded beside it, so a release needs no change
 here. Do not add a list of model versions to the engine; where a harness
 has no catalog, as Claude Code has none, pass its own alias through and
-let the receipt verify what was served. The first answered turn records
-that version in the seat's state, and every resumed turn names it exactly,
-because an alias on resume would follow a release mid-run.
+let the receipt verify what was served. The seat's first turn whose
+stream names a served model records that version in its state, whether
+the turn answered or a quota cut it partway, and every resumed turn
+names it exactly, because an alias on resume would follow a release
+mid-run. `launch` refuses a fork, which would need its parent's version.
 
 Codex reaches the engine without the plugin: `tools/install.py` links
 `bin/convene` onto `PATH` as the `convene` command and links the plugin's
