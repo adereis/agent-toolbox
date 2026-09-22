@@ -141,5 +141,28 @@ class PluginTests(unittest.TestCase):
             self.assertIn(seat["persona"], known)
 
 
+class CommandHelpTests(unittest.TestCase):
+    def test_every_subcommand_says_what_it_does(self):
+        """argparse lists a subcommand's purpose only when it was given `help`.
+
+        Without it the verb still works and still appears in the terse
+        `{prepare,run,...}` line, which is how three convene verbs went
+        undescribed: invisible to the author, total to a reader who has only
+        `--help`, which is often an agent arriving through a coding session.
+        """
+        import ast
+        import subprocess
+
+        tracked = subprocess.run(["git", "-C", str(REPO), "ls-files", "*.py"],
+                                 capture_output=True, text=True, check=True).stdout.split()
+        bare = [f"{name}:{node.lineno}"
+                for name in tracked
+                for node in ast.walk(ast.parse((REPO / name).read_text(encoding="utf-8")))
+                if isinstance(node, ast.Call)
+                and getattr(node.func, "attr", "") == "add_parser"
+                and not any(k.arg == "help" for k in node.keywords)]
+        self.assertEqual(bare, [])
+
+
 if __name__ == "__main__":
     unittest.main()
