@@ -58,11 +58,10 @@ def catalog(harness, components):
                 result["skills/whats-new/references/workflow.md"] = REPO / "skills/whats-new/SKILL.md"
                 # The convene operator procedure is authored inside the plugin
                 # (an installed plugin may not reach outside its root) and
-                # linked from here, so Codex reads the same text.
-                result["skills/convene/SKILL.md"] = CONVENE_SKILL / "SKILL.md"
-                result["skills/convene/agents/openai.yaml"] = REPO / "harnesses/codex/skills/convene/agents/openai.yaml"
-                for reference in sorted((CONVENE_SKILL / "references").glob("*.md")):
-                    result[f"skills/convene/references/{reference.name}"] = reference
+                # linked as a directory: Codex follows directory symlinks but
+                # its skill scan skips a symlinked SKILL.md. Keep the policy
+                # and references beside the authoritative regular file.
+                result["skills/convene"] = CONVENE_SKILL
         elif component == "profiles":
             if harness != "codex":
                 raise ValueError(f"{component} is not available for {harness}")
@@ -133,8 +132,8 @@ def install_roots(plans, apply=False):
     for root, relative, source in entries:
         if Path(relative).is_absolute() or ".." in Path(relative).parts:
             raise ValueError(f"Destination must remain under the installation root: {relative}")
-        if not source.is_file():
-            raise ValueError(f"Missing source file: {source}")
+        if not (source.is_file() or source.is_dir()):
+            raise ValueError(f"Missing source file or directory: {source}")
         statuses[root, relative] = link_status(root, relative, source)
         print(f"{statuses[root, relative]:8} {root / relative}")
     if "conflict" in statuses.values():

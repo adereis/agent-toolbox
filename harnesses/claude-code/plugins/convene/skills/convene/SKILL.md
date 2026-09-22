@@ -1,6 +1,6 @@
 ---
 name: convene
-description: Operator procedure for convene runs: multi-seat panels over independent native CLI sessions with declared personas, isolation tiers and receipts. Read before driving `convene`; the commands invoke it.
+description: "Operator procedure for convene runs: multi-seat panels over independent native CLI sessions with declared personas, isolation tiers and receipts. Read before driving `convene`; the commands invoke it."
 disable-model-invocation: true
 ---
 
@@ -46,9 +46,10 @@ operator may be any of them.
 6. **Read the board.** `convene board NAME`, then follow
    [reading a board](references/reading-a-board.md). Read every post
    whole. The engine never summarizes.
-7. **Synthesize.** Follow [synthesis](references/synthesis.md). Write
-   `synthesis.md` into the export directory and cite seats by id.
-8. **Export and report.** `convene export NAME DIR`. Report to the user:
+7. **Export and synthesize.** `convene export NAME DIR` creates the export;
+   DIR must be absent or empty. Then follow [synthesis](references/synthesis.md).
+   Write `synthesis.md` into that directory and cite seats by id.
+8. **Report.** Report to the user:
    the synthesis, then the receipts (served model per seat, isolation
    tier, tool calls, usage) and every red flag verbatim. Offer
    `convene prune NAME` once the export is in hand: it removes the

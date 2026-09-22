@@ -1,2 +1,1 @@
-policy:
-  allow_implicit_invocation: false
+../../../../claude-code/plugins/convene/skills/convene/agents/openai.yaml

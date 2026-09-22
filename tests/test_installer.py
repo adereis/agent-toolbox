@@ -284,14 +284,54 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual((result, err), (0, ""))
         skill = self.root / ".agents/skills/convene"
         plugin = REPO / "harnesses/claude-code/plugins/convene/skills/convene"
+        self.assertTrue(skill.is_symlink())
+        self.assertEqual(skill.resolve(), plugin)
+        # Codex follows directory symlinks but omits file symlinks in its
+        # inventory. Checking only Path.is_file() hid the live loading defect.
+        discovered = {entry.name for entry in os.scandir(skill)
+                      if entry.is_file(follow_symlinks=False)}
+        self.assertIn("SKILL.md", discovered)
         self.assertEqual((skill / "SKILL.md").resolve(), plugin / "SKILL.md")
         self.assertEqual((skill / "references/synthesis.md").resolve(), plugin / "references/synthesis.md")
+        self.assertEqual((skill / "agents/openai.yaml").resolve(), plugin / "agents/openai.yaml")
         self.assertIn("allow_implicit_invocation: false", (skill / "agents/openai.yaml").read_text())
         text = (skill / "SKILL.md").read_text()
         self.assertIn("`convene` on PATH", text, "the shared procedure names the command for every harness")
         self.assertIn("harnesses/claude-code/plugins/convene/bin/convene", text)
         self.assertFalse((self.root / ".claude/skills/convene").exists(),
                          "Claude Code gets the skill from the plugin, not the installer")
+
+    def test_directory_link_conflict_preserves_existing_skill(self):
+        skill = self.root / ".agents/skills/convene"
+        skill.mkdir(parents=True)
+        custom = skill / "SKILL.md"
+        custom.write_text("Local custom workflow")
+        result, _, err = self.run_cli(
+            "--harness", "codex", "--scope", "user", "--component", "skills",
+            "--component", "commands", "--apply")
+        self.assertEqual(result, 1)
+        self.assertIn("Existing files differ", err)
+        self.assertEqual(custom.read_text(), "Local custom workflow")
+        self.assertFalse((self.root / ".local/bin/convene").exists())
+
+    def test_directory_link_rollback_preserves_source_contents(self):
+        source = self.root / "source"
+        source.mkdir()
+        marker = source / "SKILL.md"
+        marker.write_text("Authoritative workflow")
+        original = os.symlink
+
+        def fail_second(src, name, *, dir_fd):
+            if name == "second":
+                raise OSError("Synthetic link failure")
+            return original(src, name, dir_fd=dir_fd)
+
+        target = self.root / "install"
+        with patch.object(installer.os, "symlink", side_effect=fail_second):
+            with self.assertRaisesRegex(OSError, "Synthetic link failure"):
+                self.install(target, {"first": source, "second": marker}, True)
+        self.assertFalse((target / "first").is_symlink())
+        self.assertEqual(marker.read_text(), "Authoritative workflow")
 
     def test_commands_exclude_agent_invoked_and_sourced_scripts(self):
         """A skill reads whats-new by path; the memory library is sourced, never run."""

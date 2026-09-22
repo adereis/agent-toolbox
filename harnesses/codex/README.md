@@ -269,12 +269,16 @@ convene doctor
 
 `commands` puts `convene` on `PATH` (a symlink to the plugin's `bin/convene`,
 whose shim resolves the engine through the link). `skills` links the
-plugin's operator procedure as the `convene` skill, explicit invocation
-only, with its references beside it, so a Codex session follows the same
-text a Claude Code session does. Ask Codex to "use the convene skill to
-review HEAD~3..HEAD"; the procedure names the command, the plan template
-and the receipts to report. Seats keep their own isolation regardless of
+plugin's entire operator skill directory, including its references and
+explicit invocation policy. Codex 0.155.1 displays it as `convene:convene`
+in the skill selector. Invoke `$convene:convene`, or ask Codex to "use the
+convene skill to review HEAD~3..HEAD". The procedure names the command,
+the plan template and the receipts to report. Seats keep their own isolation regardless of
 which harness operates them.
+
+The directory link matters: this Codex version skips file symlinks during
+skill discovery. See the [installation guide](../../docs/installation.md#plugins)
+if an earlier installation conflicts with the directory link.
 
 ## Tmux status display
 

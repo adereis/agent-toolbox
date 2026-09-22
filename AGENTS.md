@@ -89,7 +89,10 @@ Codex reaches the engine without the plugin: `tools/install.py` links
 `bin/convene` onto `PATH` as the `convene` command and links the plugin's
 `skills/convene/` as a Codex skill. The plugin's `SKILL.md` is the one
 authoritative operator procedure; `harnesses/codex/skills/convene/` holds
-symlinks into it, never a copy. Antigravity seats are audited, not
+symlinks into it, never a copy. Install that skill as a directory link;
+Codex's discovery skips symlinked `SKILL.md` files. Keep `agents/openai.yaml`
+inside the shared skill so its explicit invocation policy survives native
+path resolution. Antigravity seats are audited, not
 confined: the adapter rejects tool sets it cannot enforce and checks the
 transcript instead, and it has no private-home tier.
 

@@ -232,13 +232,40 @@ while it runs.
 `commands` (`python3 tools/install.py --harness codex --scope user
 --component skills --component commands --apply`), `convene` on `PATH`.
 
+**Discovery:** check the installed skill in Codex's skill selector or
+through the app-server `skills/list` method with `forceReload = true`.
+Codex 0.155.1 exposes it as `convene:convene`. The installed
+`~/.agents/skills/convene` must be a directory symlink containing a regular
+`SKILL.md`, references, and `agents/openai.yaml`. File symlinks at
+`SKILL.md` are silently skipped by this version's scan.
+
 **Action:** in a Codex session in this repository, ask it to use the
 convene skill to review `HEAD~1..HEAD` with one cheap Claude seat and one
 cheap Codex seat. Expected: Codex reads `~/.agents/skills/convene/SKILL.md`
 and its references, runs `convene doctor`, writes a plan from the
-template, runs it, reads the board, writes a synthesis, exports, and
+template, runs it, reads the board, exports, writes a synthesis, and
 reports every red flag. The receipts must show the seats on their own
 harness homes, not Codex's session store: no new files under the
 operator's `~/.codex/sessions/` from the seats. `agents/openai.yaml` must
 keep the skill explicit-invocation only: a plain "review this commit"
 request must not trigger it.
+
+**Observed on Linux, 2026-09-21:** Codex 0.155.1 discovered the installed
+directory link through `skills/list` without errors. All five relative
+reference links resolved. The existing explicit invocation policy was
+retained; no interface fields were needed. The native loader accepted the
+shared Claude frontmatter field `disable-model-invocation`. The generic
+skill-creator validator rejects that extension, so native discovery and
+YAML parsing were checked separately.
+
+A panel over `HEAD~1..HEAD`, scoped to installation and the operator
+procedure, completed with Claude `haiku` (served
+`claude-haiku-4-5-20251001`) and Codex `gpt-5.5`, both at low effort.
+Both receipts attested enforced isolation, intact inputs, no compaction,
+and no red flags. Their native transcripts remained under the run's
+private homes; neither seat's session appeared in the operator's Codex
+session store. Two earlier broad-review attempts timed out on Haiku at
+60 and 180 seconds with `Claude did not complete: no result row`; their
+Codex seats completed. The successful smoke check is not full review
+coverage. A fresh plain-request implicit-invocation check was not run;
+the policy file and native loader were checked directly.

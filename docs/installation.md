@@ -126,6 +126,16 @@ Codex does not load Claude Code plugins. It reaches the same engine
 directly: the `commands` component puts `convene` on `PATH`, and the Codex
 `skills` component links the plugin's operator procedure as the `convene`
 skill, so a Codex session drives the engine the way `/convene:panel` does.
+The installed `skills/convene` entry is a directory symlink. Codex 0.155.1
+discovers the regular `SKILL.md` inside it and exposes it as
+`convene:convene`, using the plugin namespace. Its references and explicit
+invocation policy live in that same shared directory.
+
+If an earlier installation left a real `~/.agents/skills/convene`
+directory containing individual file links, the installer reports a
+conflict. Inspect that directory, move it to a backup under `~/tmp`, and
+rerun the installer. It does not replace an existing directory or discard
+local edits. The same rule applies to project-scope installations.
 
 `tools/install.py` does not manage plugins and has no `plugin` component.
 Claude Code discovers plugins only through its own registry
