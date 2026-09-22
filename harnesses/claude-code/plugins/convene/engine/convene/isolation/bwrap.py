@@ -182,13 +182,21 @@ class Enforced:
         virtual_harness_home = home / harness.home_name
         virtual_workspace = home / WORKSPACE_NAME
         workspace, project_root = Path(workspace), Path(project_root)
-        excluded = excluded_mounts()
         skip = (Path("/dev"), Path("/proc"))
         # Probed here, not at prepare: the cheap jail depends on what is
         # mounted at this moment, and the receipt must name what this launch
         # actually used rather than what an earlier probe predicted.
-        whole_root = probe_root_bind(excluded, skip=skip)
+        whole_root = probe_root_bind(excluded_mounts(), skip=skip)
         root_strategy = "root-bind" if whole_root else "enumerated"
+        # Read the table again after the probe, never before it. The probe
+        # answers one question — can this machine bind `/` at all — and can
+        # take seconds; a mount appearing while it ran would otherwise be
+        # missing from the list this jail is built from, and the root bind
+        # would import it uncovered. Reading last leaves only the gap between
+        # here and bwrap's own clone, which this cannot close: a mount landing
+        # inside that gap is still imported. Closing it needs the enumeration
+        # to happen inside a private mount namespace.
+        excluded = excluded_mounts()
         jail = [BWRAP, "--die-with-parent"]
         for triple in (root_tmpfs(excluded, skip=skip) if whole_root
                        else root_binds(excluded, skip=skip)):

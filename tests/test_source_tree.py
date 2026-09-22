@@ -34,6 +34,25 @@ def names(table):
     return found
 
 
+class PluginReleaseTests(unittest.TestCase):
+    def test_plugin_version_matches_its_marketplace_entry(self):
+        """A half-bumped version ships nothing and says it succeeded.
+
+        `claude plugin update` compares declared versions, not commits, so a
+        plugin whose manifest and marketplace entry disagree is either never
+        re-copied or copied under a version its own manifest denies.
+        """
+        manifest = json.loads((REPO / ".claude-plugin/marketplace.json").read_text())
+        for entry in manifest["plugins"]:
+            with self.subTest(plugin=entry["name"]):
+                source = (REPO / entry["source"]).resolve()
+                own = json.loads((source / ".claude-plugin/plugin.json").read_text())
+                self.assertEqual(entry["version"], own["version"],
+                                 f"{entry['name']}: marketplace says {entry['version']}, "
+                                 f"its manifest says {own['version']}")
+                self.assertEqual(entry["name"], own["name"])
+
+
 class DocumentationLinkTests(unittest.TestCase):
     def test_relative_links_resolve_in_an_uninstalled_checkout(self):
         """An agent reads a skill from the checkout before anything is installed."""

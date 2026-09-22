@@ -164,9 +164,28 @@ class BwrapArgvTests(unittest.TestCase):
         self.assertLess(len(cheap), 5)
 
     def test_a_failing_probe_falls_back_to_enumerating_the_root(self):
-        """An automount that resolves at home fails on another network."""
-        with patch.object(bwrap.shutil, "which", return_value=None):
-            self.assertFalse(bwrap.probe_root_bind([Path("/nas")]))
+        """An automount that resolves at home fails on another network.
+
+        Asserted through `wrap`, not on the probe alone: the point is that a
+        failing probe changes the jail that gets built.
+        """
+        fake = self.box.root / "nas-fixture"
+        fake.mkdir(parents=True, exist_ok=True)
+        for ok, strategy, wants_tmpfs in ((True, "root-bind", True),
+                                          (False, "enumerated", False)):
+            with self.subTest(probe=ok), \
+                 patch.object(bwrap, "probe_root_bind", return_value=ok), \
+                 patch.object(bwrap, "excluded_mounts", return_value=[fake]):
+                launch = self.wrap()
+                argv = launch.argv
+                self.assertEqual(launch.attestation["root_strategy"], strategy)
+                joined = " ".join(argv)
+                self.assertEqual(f"--tmpfs {fake}" in joined, wants_tmpfs,
+                                 "the cover belongs to the root-bind strategy only")
+                self.assertEqual("--bind / /" in joined, wants_tmpfs,
+                                 "only the cheap strategy binds / whole")
+                self.assertNotIn(f"--bind {fake} {fake}", joined,
+                                 "neither strategy binds the excluded mount itself")
 
     def test_launcher_paths_follow_intermediate_links(self):
         real = self.box.root / "opt/app-1.0/bin"

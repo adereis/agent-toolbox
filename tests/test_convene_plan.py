@@ -97,10 +97,19 @@ class PlanTests(unittest.TestCase):
                                ("agy", "gemini-3.1-pro")):
             with self.subTest(harness=name):
                 self.assertEqual(harnesses.get(name).default_model, expected)
-        # End to end, where the plan names no model at any level.
-        root, frozen = self.prepare(self.box.plan(model=None, seats=[
-            {"id": "a", "persona": "sec-urity", "harness": "claude"}]))
-        self.assertEqual(frozen["seats"][0]["model"], "opus")
+        # Stated as an invariant, not as a list: a harness added later that
+        # forgets it would pass `None` to a CLI as the string "None".
+        for name, harness in harnesses.registry().items():
+            with self.subTest(harness=name):
+                self.assertIsNotNone(harness.default_model,
+                                     f"{name} must name the model a seat gets by default")
+        # End to end, where the plan names no model at any level, for each
+        # harness whose catalog the sandbox can stand in for.
+        for name, expected in (("claude", "opus"), ("codex", "gpt-5.6-terra")):
+            with self.subTest(harness=name):
+                root, frozen = self.prepare(self.box.plan(model=None, seats=[
+                    {"id": "a", "persona": "sec-urity", "harness": name}]))
+                self.assertEqual(frozen["seats"][0]["model"], expected)
 
     def test_every_harness_can_take_raw_arguments_from_the_plan(self):
         """`agy` is a first-class harness, so `agy_args` must reach the seat."""

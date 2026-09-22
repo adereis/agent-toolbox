@@ -56,6 +56,10 @@ class Sandbox:
              "supported_reasoning_levels": [{"effort": e} for e in ("low", "medium", "high")]},
             {"slug": "gpt-5.6-sol", "context_window": 272000, "max_context_window": 872000,
              "supported_reasoning_levels": [{"effort": e} for e in ("low", "medium", "high", "xhigh")]},
+            # The Codex default, so a seat that names no model can be prepared
+            # here the way a real one is rather than only asserted as a string.
+            {"slug": "gpt-5.6-terra", "context_window": 272000, "max_context_window": 872000,
+             "supported_reasoning_levels": [{"effort": e} for e in ("low", "medium", "high", "xhigh")]},
         ]}))
         self.project = self.root / "project"
         self.make_project()

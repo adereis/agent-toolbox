@@ -341,8 +341,14 @@ def run_round(root, n, *, jobs=None, timeout=None):
                 event(root, round=n, seat=seat["id"], event="stopped", error=str(exc))
                 return seat["id"], f"stopped: {exc}"
 
-        with ThreadPoolExecutor(max_workers=max(1, jobs)) as pool:
-            futures = [pool.submit(task, s) for s in plan["seats"] if s["id"] in speaking]
+        # One worker per speaking seat, because a seat waiting on its harness
+        # gate holds its thread. Sizing the pool by `jobs` lets the seats
+        # submitted first fill it and block, leaving a seat of another
+        # harness queued behind a gate it never contends for. The gates are
+        # what limit concurrency; the pool only has to not get in their way.
+        acting = [s for s in plan["seats"] if s["id"] in speaking]
+        with ThreadPoolExecutor(max_workers=max(1, len(acting))) as pool:
+            futures = [pool.submit(task, s) for s in acting]
             for future in futures:
                 name, outcome = future.result()
                 results[name] = outcome

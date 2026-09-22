@@ -103,9 +103,14 @@ def render(data):
         lines.append(f"{'✓' if reason is None else '✗'} isolation {name}" +
                      ("" if reason is None else f": {reason}"))
     if data.get("excluded_mounts"):
-        # Either strategy keeps these out of reach: the cheap jail covers each
-        # with an empty tmpfs, the fallback omits it from the reassembled root.
-        lines.append("  network and automount filesystems unreachable in every jail: "
+        # Only the enforced tier excludes anything. `private-home` and `none`
+        # give the seat the real root, so claiming containment for "every
+        # jail" would be false exactly where it matters: on a machine with no
+        # bwrap, where the tier that excludes these cannot run at all.
+        where = ("the enforced jail" if data["tiers"].get("enforced") is None
+                 else "the enforced jail, which is unavailable here")
+        lines.append(f"  network and automount filesystems unreachable in {where}"
+                     " (other tiers give the seat the real root): "
                      + ", ".join(data["excluded_mounts"]))
     bad = any(not e["installed"] or any(not p["ok"] for p in e["probes"])
               for e in data["harnesses"].values())
