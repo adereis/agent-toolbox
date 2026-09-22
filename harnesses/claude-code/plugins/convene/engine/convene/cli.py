@@ -173,6 +173,20 @@ def dispatch(args):
                 print(f"  {seat['id']}: {seat['harness']}/{seat['model']} effort={seat['effort']} "
                       f"tools={seat['tools']} isolation={seat['isolation']} "
                       f"workspace={seat['workspace']}{doors}")
+            per = frozen.get("per_harness")
+            print(f"  {frozen['jobs']} seat(s) at once, at most {per} per harness")
+            delta = frozen.get("delta") or {}
+            if delta.get("kind") == "range":
+                commits = delta.get("commits") or []
+                print(f"  range {delta.get('spec')}: {len(commits)} commit(s)")
+                for line in commits:
+                    sha, _, subject = line.partition(" ")
+                    print(f"    {sha[:9]} {subject}")
+                # A..B is left-exclusive, so the commit a user names as A is
+                # not reviewed. Saying which one it is turns a silent
+                # off-by-one into something visible before the run starts.
+                if delta.get("base"):
+                    print(f"    base, not reviewed: {delta['base'][:9]}")
             if frozen["config_sources"]:
                 print("  defaults from: " + ", ".join(frozen["config_sources"]))
             print(f"next: convene run {frozen['name']}")

@@ -29,6 +29,9 @@ operator may be any of them.
 3. **Choose seats.** Follow [choosing seats](references/choosing-seats.md).
    Persona × harness × model. When independence from your own judgment
    matters, at least one seat runs on a different harness than you do.
+   `convene personas` lists every persona with its id and one line of
+   what it reviews; read it rather than inventing an id, because a plan
+   naming one that does not exist fails at prepare.
    Resolve what the user called a model into what its CLI accepts before
    you put it anywhere: `opus-5` is a name for `claude-opus-5`, and
    `convene prepare` refuses a string no catalog recognizes rather than
@@ -52,7 +55,17 @@ operator may be any of them.
 
 5. **Prepare and run.** `convene prepare PLAN --range A..B` freezes the
    plan and stages every seat's materials; it prints the resolved
-   isolation tier per seat. `convene run NAME` plays rounds and promotes
+   isolation tier per seat, how many seats run at once, and the commits
+   the range actually covers. Read that list before running: `A..B`
+   excludes `A`, so the commit a user names first is not reviewed, and
+   prepare names it as the base for exactly that reason.
+
+   Start the run in the background, not in the foreground. A round takes
+   minutes — seats answer in single-digit minutes each — and a foreground
+   `convene run` blocks you from reporting progress or taking a correction
+   until it returns. Launch it in the background and watch it with
+   `convene follow NAME`, which streams events as rounds open and seats
+   answer. `convene run NAME` plays rounds and promotes
    the board after each, stopping when the phases are done, when an
    unphased room converges, or when a quota stop holds a round. Seats
    run sequentially by default because seats sharing one account hit

@@ -1,6 +1,9 @@
 # Choosing seats
 
 A seat is persona × harness × model × tools. Choose each on purpose.
+`convene personas` prints every persona id with what it reviews, and
+`convene doctor --no-probes` prints the harnesses installed here; take
+both from the commands rather than from memory.
 
 **Persona.** `convene personas list` prints the catalog. The starter set
 covers a skeptic (`quinn-t-shun`), an adversary (`ada-versary`), a

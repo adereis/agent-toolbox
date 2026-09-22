@@ -145,9 +145,22 @@ def _seat(item, defaults, project_root, plan_dir, environ=None):
     if seat["tools"] not in TOOL_SETS:
         raise ValueError(f"seat {seat['id']!r}: tools must be one of {', '.join(TOOL_SETS)}")
     if seat["tools"] not in harness.tool_sets:
-        raise ValueError(f"seat {seat['id']!r}: {seat['harness']} cannot confine a seat to "
-                         f"tools = \"{seat['tools']}\"; it supports {', '.join(harness.tool_sets)} "
-                         "and its tool use is audited from the transcript instead")
+        if "tools" in item:
+            # Asked for by name on this seat: refuse rather than quietly give
+            # the seat something wider than the plan spelled out.
+            raise ValueError(f"seat {seat['id']!r}: {seat['harness']} cannot confine a seat to "
+                             f"tools = \"{seat['tools']}\"; it supports "
+                             f"{', '.join(harness.tool_sets)} and its tool use is audited from "
+                             "the transcript instead")
+        # Inherited from the plan's default, which a mixed panel writes once
+        # for every seat. Widen to what this harness can actually do so one
+        # audited seat does not block the run, and record the widening: it is
+        # more permission than the plan asked for, and a receipt that did not
+        # say so would be claiming a confinement nobody enforced.
+        seat["tools_relaxed"] = {"requested": seat["tools"], "used": harness.tool_sets[0],
+                                 "why": f"{seat['harness']} enforces no narrower tool set; "
+                                        "its tool use is audited from the transcript"}
+        seat["tools"] = harness.tool_sets[0]
     if seat["visibility"] not in VISIBILITY:
         raise ValueError(f"seat {seat['id']!r}: visibility must be one of {', '.join(VISIBILITY)}")
     if seat["workspace"] not in WORKSPACES:

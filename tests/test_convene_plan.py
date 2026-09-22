@@ -111,6 +111,22 @@ class PlanTests(unittest.TestCase):
                     {"id": "a", "persona": "sec-urity", "harness": name}]))
                 self.assertEqual(frozen["seats"][0]["model"], expected)
 
+    def test_an_audited_harness_widens_an_inherited_tool_set_and_says_so(self):
+        """A review panel writes `tools = "read"` once, for every seat."""
+        root, frozen = self.prepare(self.box.plan(tools="read", seats=[
+            {"id": "a", "persona": "sec-urity", "harness": "agy",
+             "model": "gemini-3.1-pro", "isolation": "none"}]))
+        seat = frozen["seats"][0]
+        self.assertEqual(seat["tools"], "write")
+        self.assertEqual(seat["tools_relaxed"]["requested"], "read")
+        self.assertEqual(seat["tools_relaxed"]["used"], "write")
+        # Named on the seat it is refused, because widening past what the
+        # plan spelled out for this seat is not a default to be corrected.
+        with self.assertRaisesRegex(ValueError, "cannot confine a seat"):
+            self.prepare(self.box.plan(seats=[
+                {"id": "a", "persona": "sec-urity", "harness": "agy",
+                 "model": "gemini-3.1-pro", "isolation": "none", "tools": "read"}]))
+
     def test_every_harness_can_take_raw_arguments_from_the_plan(self):
         """`agy` is a first-class harness, so `agy_args` must reach the seat."""
         for harness in ("claude", "codex", "agy"):

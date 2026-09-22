@@ -40,10 +40,20 @@ class AntigravityTests(unittest.TestCase):
                                  "isolation": "none"}])
 
     def test_only_write_tools_and_no_private_home(self):
+        # Inherited from the plan's default, as a review panel writes it for
+        # every seat: widened to what agy can enforce, and recorded.
+        root, frozen = self.prepare(seats=[{"id": "g", "persona": "quinn-t-shun",
+                                            "harness": "agy",
+                                            "model": "gemini-3.8-flash-low", "effort": "low",
+                                            "isolation": "none"}])
+        seat = frozen["seats"][0]
+        self.assertEqual(seat["tools"], "write")
+        self.assertEqual(seat["tools_relaxed"]["requested"], "read")
+        # Named on the seat itself, it is still refused.
         with self.assertRaisesRegex(ValueError, "cannot confine a seat to tools = \"read\""):
             self.prepare(seats=[{"id": "g", "persona": "quinn-t-shun", "harness": "agy",
                                  "model": "gemini-3.8-flash-low", "effort": "low",
-                                 "isolation": "none"}])
+                                 "tools": "read", "isolation": "none"}])
         with self.assertRaisesRegex(ValueError, "no private-home tier.*enforced.*none"):
             self.prepare(seats=[{"id": "g", "persona": "quinn-t-shun", "harness": "agy",
                                  "model": "gemini-3.8-flash-low", "effort": "low",

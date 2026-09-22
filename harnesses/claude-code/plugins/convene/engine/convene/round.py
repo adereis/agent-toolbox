@@ -225,6 +225,10 @@ def launch(root, plan, seat, n, prompt, mode, session_id, *, timeout=None):
         flags.append("no isolation: the seat ran in the operator's own harness home")
     if not intact:
         flags.append("the seat's materials changed during the turn")
+    if seat.get("tools_relaxed"):
+        widened = seat["tools_relaxed"]
+        flags.append(f"tools widened from {widened['requested']!r} to {widened['used']!r}: "
+                     + widened["why"])
     if seat.get("grants"):
         flags.append("granted on purpose: " + ", ".join(seat["grants"]))
     if seat.get("args"):
