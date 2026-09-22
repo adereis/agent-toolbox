@@ -91,6 +91,9 @@ def follow(root, seat, harness, *, record=None, thinking=False, width=88, poll=1
            out=sys.stdout, once=False):
     """Print a seat's stream as it grows; return when the turn's receipt lands."""
     record = Path(record) if record else latest_record(root, seat)
+    if not record.is_dir():
+        raise ValueError(f"{seat} has no turn record at {record}; "
+                         "use `convene status` to check which turns have started")
     events = record / "events.jsonl"
     seen = 0
     buffer = b""

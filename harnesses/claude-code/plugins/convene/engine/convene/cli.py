@@ -97,7 +97,8 @@ def main(argv=None):
     p = sub.add_parser("follow", help="print a seat's stream as it grows, until its turn ends")
     p.add_argument("run")
     p.add_argument("seat")
-    p.add_argument("--round", dest="round_number", type=int, default=None)
+    p.add_argument("--round", dest="round_number", type=int, default=None,
+                   help="follow a turn that has started (default: latest turn)")
     p.add_argument("--thinking", action="store_true", help="show reasoning too")
     p.add_argument("--width", type=int, default=88)
 
@@ -225,7 +226,7 @@ def dispatch(args):
         root, plan = runs.load(runs.resolve(args.run, project), verify=False)
         seat = round_.seat_named(plan, args.seat)
         record = (root / "records" / seat["id"] / f"r{args.round_number:03d}"
-                  if args.round_number else None)
+                  if args.round_number is not None else None)
         try:
             follow_.follow(root, seat["id"], seat["harness"], record=record,
                            thinking=args.thinking, width=args.width)

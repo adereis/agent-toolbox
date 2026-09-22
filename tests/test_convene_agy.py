@@ -199,3 +199,20 @@ class FollowTests(unittest.TestCase):
         self.assertIn("-- done", text)
         with self.assertRaisesRegex(ValueError, "no turn yet"):
             follow.latest_record(root, "nobody")
+
+    def test_explicit_missing_round_fails_without_waiting(self):
+        import contextlib
+        import io
+        from convene import follow
+        from convene.cli import main
+        root, _ = plan.prepare(self.box.plan(), project_root=self.box.project,
+                               range_spec="HEAD~1..HEAD")
+        round_.run(root)
+        for number in (0, 2, 99):
+            error = io.StringIO()
+            with self.subTest(round=number), contextlib.redirect_stderr(error), \
+                 patch.object(follow.time, "sleep", side_effect=AssertionError("unexpected wait")):
+                result = main(["follow", str(root), "skeptic", "--round", str(number)])
+            self.assertEqual(result, 1)
+            self.assertIn(f"r{number:03d}", error.getvalue())
+            self.assertIn("convene status", error.getvalue())

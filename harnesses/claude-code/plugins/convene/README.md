@@ -123,6 +123,9 @@ the operator still reads the attempts sealed first.
 
 `convene follow NAME SEAT` tails a running seat: what it says, which tools
 it calls, and its stderr when the turn ends; `--thinking` adds reasoning.
+Use `--round N` for a specific turn that has started. A missing turn fails
+immediately with a pointer to `convene status`; it does not wait for a
+future round.
 
 `convene --help` lists every verb. Runs live under
 `$XDG_STATE_HOME/agent-toolbox/convene/<project-key>/<run>/` (default
