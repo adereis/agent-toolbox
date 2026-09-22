@@ -7,7 +7,7 @@ from pathlib import Path
 
 from convene_support import PLUGIN, Sandbox  # noqa: F401  (sets sys.path)
 
-from convene import instruments, personas, plan, runs
+from convene import harnesses, instruments, personas, plan, runs
 from convene.presets import panel
 from convene.storage import read
 
@@ -89,6 +89,18 @@ class PlanTests(unittest.TestCase):
                     self.prepare(self.box.plan(seats=[
                         {"id": "a", "persona": "sec-urity", "harness": "claude",
                          "model": bogus}]))
+
+    def test_a_seat_without_a_model_takes_its_own_harness_default(self):
+        """One default across harnesses would hand `opus` to Gemini."""
+        self.assertIsNone(plan.DEFAULTS["model"], "no cross-harness model default")
+        for name, expected in (("claude", "opus"), ("codex", "gpt-5.6-terra"),
+                               ("agy", "gemini-3.1-pro")):
+            with self.subTest(harness=name):
+                self.assertEqual(harnesses.get(name).default_model, expected)
+        # End to end, where the plan names no model at any level.
+        root, frozen = self.prepare(self.box.plan(model=None, seats=[
+            {"id": "a", "persona": "sec-urity", "harness": "claude"}]))
+        self.assertEqual(frozen["seats"][0]["model"], "opus")
 
     def test_every_harness_can_take_raw_arguments_from_the_plan(self):
         """`agy` is a first-class harness, so `agy_args` must reach the seat."""

@@ -57,7 +57,7 @@ persona = "quinn-t-shun"
 id = "maintainer"
 persona = "connie-tinuity"
 harness = "codex"
-model = "gpt-5.5"
+model = "gpt-5.6-terra"
 
 [[seats]]
 id = "security"

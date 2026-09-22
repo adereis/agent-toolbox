@@ -31,6 +31,8 @@ FORBIDDEN_DELEGATION = re.compile(r"invoke_subagent|send_message|schedule", re.I
 class Antigravity(Harness):
     name = "agy"
     home_name = ".gemini"
+    # What a seat gets when the plan names no model.
+    default_model = "gemini-3.1-pro"
     home_variable = ""  # nothing relocates it; only the jail can give it a private home
     efforts = ("low", "medium", "high")
     capabilities = Capabilities(resume=True, fork=False, json_schema=False,

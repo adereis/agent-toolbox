@@ -20,6 +20,8 @@ NO_TOOLS = ["-c", "features.shell_tool=false", "-c", "features.unified_exec=fals
 class Codex(Harness):
     name = "codex"
     home_name = ".codex"
+    # What a seat gets when the plan names no model.
+    default_model = "gpt-5.6-terra"
     home_variable = "CODEX_HOME"
     efforts = ("low", "medium", "high", "xhigh", "max", "ultra")
     capabilities = Capabilities(resume=True, fork=True, json_schema=False,

@@ -29,7 +29,7 @@ SEAT_FIELDS = ("harness", "model", "effort", "tools", "isolation", "visibility",
 # Doors, opened explicitly: named grants, raw harness arguments and
 # environment names passed through. Closed by default at every level.
 ACCESS_FIELDS = ("grants", "claude_args", "codex_args", "agy_args", "env")
-DEFAULTS = {"harness": "claude", "model": "opus", "effort": "high", "tools": "read",
+DEFAULTS = {"harness": "claude", "model": None, "effort": "high", "tools": "read",
             "isolation": "strongest", "visibility": "board", "workspace": "none",
             "compaction": "forbid", "rounds": 1, "jobs": None, "per_harness": 2,
             "post_length": 400,
@@ -135,6 +135,10 @@ def _seat(item, defaults, project_root, plan_dir, environ=None):
         seat[key] = item.get(key, defaults[key])
     seat.update(_access(item, defaults, seat))
     harness = harnesses.get(seat["harness"])
+    if seat["model"] is None:
+        # A single default across harnesses would hand `opus` to Gemini; each
+        # harness names the model a seat gets when the plan names none.
+        seat["model"] = harness.default_model
     harness.check_args(seat)
     if not harness.installed():
         raise ValueError(f"seat {seat['id']!r}: {seat['harness']} is not on PATH")

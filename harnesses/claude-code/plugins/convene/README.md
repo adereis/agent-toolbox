@@ -68,7 +68,7 @@ In Claude Code:
 
 ```
 /convene:panel HEAD~3..HEAD
-/convene:panel HEAD seat=codex/gpt-5.5 seat=claude/opus --persona sec-urity --persona quinn-t-shun
+/convene:panel HEAD seat=codex/gpt-5.6-terra seat=claude/opus --persona sec-urity --persona quinn-t-shun
 /convene:room Add a --json flag to the session browser that prints what --list prints
 /convene:fanout seats=3 Implement --json for the session browser; verify with the existing tests
 /convene:status
@@ -109,7 +109,7 @@ A fanout is read sealed:
 ```bash
 $convene seal NAME                   # sealed/r001/{A,B,C}/{post.md,report.md,changes.patch}
 $EDITOR ~/.local/state/agent-toolbox/convene/*/NAME/sealed/r001/judgment.md
-$convene unseal NAME                 # prints A = two (codex/gpt-5.5), ...
+$convene unseal NAME                 # prints A = two (codex/gpt-5.6-terra), ...
 $convene board NAME                  # attributed from here on
 ```
 

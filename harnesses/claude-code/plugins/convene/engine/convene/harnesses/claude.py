@@ -97,6 +97,8 @@ KEYCHAIN_HINT = 'security find-generic-password -s "Claude Code-credentials" -w'
 class Claude(Harness):
     name = "claude"
     home_name = ".claude"
+    # What a seat gets when the plan names no model.
+    default_model = "opus"
     home_variable = "CLAUDE_CONFIG_DIR"
     efforts = ("low", "medium", "high", "xhigh", "max")
     capabilities = Capabilities(resume=True, fork=True, json_schema=True,

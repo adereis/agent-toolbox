@@ -100,6 +100,11 @@ def model_matches(expected, actual):
 class Harness:
     """Base class; subclasses fill the methods the engine calls."""
 
+    # The model a seat gets when the plan names none. Every harness sets it;
+    # there is no cross-harness default, because a model id means nothing
+    # outside the catalog that lists it.
+    default_model = None
+
     # Flags the engine owns, or that open a door a grant names. A seat's raw
     # `args` may not carry them: an engine-owned flag would be passed twice
     # with the last one winning, and a door flag would open the door without
