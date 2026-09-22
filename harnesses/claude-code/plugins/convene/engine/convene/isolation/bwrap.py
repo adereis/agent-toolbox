@@ -82,6 +82,49 @@ def root_binds(excluded, root=Path("/"), skip=()):
     return out
 
 
+def root_tmpfs(excluded, root=Path("/"), skip=()):
+    """Binds that reassemble `/` by binding it whole and blanking what is out.
+
+    The cheap counterpart to `root_binds`. One `--bind / /` carries the
+    whole filesystem and each excluded mount is covered by an empty tmpfs,
+    so a seat sees a directory with nothing in it where the NAS would be.
+    That is the same containment `root_binds` achieves by leaving the entry
+    out, in a handful of arguments instead of one per entry along the way.
+
+    It is not always available: binding `/` applies mount flags recursively,
+    and a stale or slow automount underneath makes the whole bind fail. Ask
+    `probe_root_bind` first and fall back to `root_binds` when it says no.
+    """
+    out = [("--bind", str(root), str(root))]
+    for mount in excluded:
+        if mount == root:
+            continue
+        if any(s == mount or s in mount.parents for s in skip):
+            # Replaced wholesale later anyway, as `/proc` is by `--proc`.
+            continue
+        out.append(("--tmpfs", str(mount)))
+    return out
+
+
+def probe_root_bind(excluded, skip=(), timeout=30):
+    """Whether this machine can bind `/` whole right now.
+
+    Run before every jail rather than cached, because the answer follows the
+    network: an automount that resolves at home fails on another network,
+    and a run prepared in one place may be played in another.
+    """
+    if shutil.which(BWRAP) is None:
+        return False
+    argv = [BWRAP, "--die-with-parent"]
+    for item in root_tmpfs(excluded, skip=skip):
+        argv += list(item)
+    argv += ["--dev-bind", "/dev", "/dev", "--proc", "/proc", "/bin/true"]
+    try:
+        return subprocess.run(argv, capture_output=True, timeout=timeout).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
 def launcher_paths(link, hops=10):
     """Every directory needed to follow a launcher's symlink chain.
 
@@ -140,8 +183,15 @@ class Enforced:
         virtual_workspace = home / WORKSPACE_NAME
         workspace, project_root = Path(workspace), Path(project_root)
         excluded = excluded_mounts()
+        skip = (Path("/dev"), Path("/proc"))
+        # Probed here, not at prepare: the cheap jail depends on what is
+        # mounted at this moment, and the receipt must name what this launch
+        # actually used rather than what an earlier probe predicted.
+        whole_root = probe_root_bind(excluded, skip=skip)
+        root_strategy = "root-bind" if whole_root else "enumerated"
         jail = [BWRAP, "--die-with-parent"]
-        for triple in root_binds(excluded, skip=(Path("/dev"), Path("/proc"))):
+        for triple in (root_tmpfs(excluded, skip=skip) if whole_root
+                       else root_binds(excluded, skip=skip)):
             jail += list(triple)
         jail += ["--dev-bind", "/dev", "/dev", "--proc", "/proc"]
         blanked = [str(home) if b == "$HOME" else b for b in BLANKED]
@@ -192,6 +242,12 @@ class Enforced:
             "backend_version": version(), "blanked": blanked,
             "read_only_binds": [t for _, t in read_only],
             "excluded_mounts": [str(e) for e in excluded],
+            "root_strategy": root_strategy,
+            "root_strategy_note":
+                "bound / whole and covered every excluded mount with an empty tmpfs"
+                if whole_root else
+                "bound / entry by entry, leaving every excluded mount out, because "
+                "binding / whole failed here",
             "writable": [str(virtual_workspace)], "read_only_in_workspace":
             [str(virtual_workspace / n) for n in ("materials", "START.md", "board")],
             "harness_home": str(virtual_harness_home), "harness_home_source": str(private),

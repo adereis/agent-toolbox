@@ -89,6 +89,16 @@ time and the resolved tier is frozen. A run never claims more than it
 enforced. Run state lives under `$XDG_STATE_HOME/agent-toolbox/convene`,
 never inside the project, and credentials never enter a record.
 
+The jail assembles its root one of two ways and says which in the receipt.
+Binding `/` whole and covering each excluded mount with an empty tmpfs is
+preferred and costs a handful of arguments; reassembling `/` entry by entry
+is the fallback, because binding `/` applies mount flags recursively and a
+stale automount underneath fails the whole bind. Probe before every launch
+rather than caching the answer: an automount that resolves on one network
+fails on another, and a run prepared in one place may be played in another.
+Containment is identical either way and the attestation names the strategy
+that ran, never the one a probe predicted.
+
 Seats are closed by default and opened only on purpose. A new capability
 (a tool, a server, a setting source) is a named grant in
 `harnesses.GRANTS`, mapped per harness, accepted by that harness's receipt

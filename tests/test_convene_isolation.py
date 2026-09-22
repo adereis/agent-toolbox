@@ -149,6 +149,25 @@ class BwrapArgvTests(unittest.TestCase):
         self.assertIn(("--ro-bind", str(fake / "vmlinuz"), str(fake / "vmlinuz")), binds)
         self.assertEqual(bwrap.root_binds([], fake), [("--bind", str(fake), str(fake))])
 
+    def test_whole_root_strategy_blanks_what_it_cannot_leave_out(self):
+        """The cheap jail keeps containment: excluded mounts become empty."""
+        fake = self.box.root / "cheaproot"
+        (fake / "usr").mkdir(parents=True)
+        excluded = [fake / "nas", Path("/proc/sys/fs/binfmt_misc")]
+        cheap = bwrap.root_tmpfs(excluded, root=fake, skip=(Path("/proc"),))
+        self.assertEqual(cheap[0], ("--bind", str(fake), str(fake)))
+        self.assertIn(("--tmpfs", str(fake / "nas")), cheap)
+        # `--proc /proc` replaces the whole tree later, so blanking a mount
+        # inside it would be a wasted argument.
+        self.assertNotIn(("--tmpfs", "/proc/sys/fs/binfmt_misc"), cheap)
+        # The point of the strategy: a handful of arguments, not one per entry.
+        self.assertLess(len(cheap), 5)
+
+    def test_a_failing_probe_falls_back_to_enumerating_the_root(self):
+        """An automount that resolves at home fails on another network."""
+        with patch.object(bwrap.shutil, "which", return_value=None):
+            self.assertFalse(bwrap.probe_root_bind([Path("/nas")]))
+
     def test_launcher_paths_follow_intermediate_links(self):
         real = self.box.root / "opt/app-1.0/bin"
         real.mkdir(parents=True)
@@ -190,6 +209,12 @@ class RealJailTests(unittest.TestCase):
                 self.assertIn("SECRET=no", answer)
                 self.assertTrue(got["isolation"]["enforced"])
                 self.assertEqual(got["isolation"]["tier"], "enforced")
+                # The receipt names the root strategy this launch used, not
+                # the one an earlier probe predicted: the cheap jail depends
+                # on what is mounted now, and a run can move between networks.
+                self.assertIn(got["isolation"]["root_strategy"],
+                              ("root-bind", "enumerated"))
+                self.assertTrue(got["isolation"]["root_strategy_note"])
                 self.assertTrue(list((root / "homes/s/claude/projects").rglob("*.jsonl")),
                                 "the seat's session landed in its private home")
 
