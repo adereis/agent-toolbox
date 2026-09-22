@@ -103,7 +103,9 @@ def render(data):
         lines.append(f"{'✓' if reason is None else '✗'} isolation {name}" +
                      ("" if reason is None else f": {reason}"))
     if data.get("excluded_mounts"):
-        lines.append("  network and automount filesystems left out of every jail: "
+        # Either strategy keeps these out of reach: the cheap jail covers each
+        # with an empty tmpfs, the fallback omits it from the reassembled root.
+        lines.append("  network and automount filesystems unreachable in every jail: "
                      + ", ".join(data["excluded_mounts"]))
     bad = any(not e["installed"] or any(not p["ok"] for p in e["probes"])
               for e in data["harnesses"].values())
