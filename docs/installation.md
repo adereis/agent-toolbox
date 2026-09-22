@@ -141,9 +141,28 @@ local edits. The same rule applies to project-scope installations.
 `tools/install.py` does not manage plugins and has no `plugin` component.
 Claude Code discovers plugins only through its own registry
 (`~/.claude/plugins/installed_plugins.json`), and an installer writing there
-would be a second source of truth for the same state. Update an installed
-plugin with `claude plugin update convene@agent-toolbox`; remove it with
-`claude plugin uninstall convene@agent-toolbox`.
+would be a second source of truth for the same state. Remove an installed
+plugin with `claude plugin uninstall convene@agent-toolbox`.
+
+Updating a plugin is a separate step, because a plugin does not track the
+checkout the way installed components do. The installer creates symlinks, so
+`git pull` changes what a skill or script does immediately. A plugin is
+copied into `~/.claude/plugins/cache/` and pinned to the commit it came from,
+so the same pull leaves it running the old code until you update it:
+
+```bash
+claude plugin update convene@agent-toolbox
+```
+
+The update applies after Claude Code restarts. `/sync` performs this step
+for every plugin in the marketplace manifest, which is the reason to sync
+rather than to pull alone. Check what a plugin costs every session, and what
+it is currently pinned to, with:
+
+```bash
+claude plugin details convene@agent-toolbox
+claude plugin list --json
+```
 
 To remove an installation, remove only its symlinks; remove any hook or
 statusline registration before removing the script it runs. The installer

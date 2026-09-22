@@ -77,7 +77,12 @@ python3 tools/install.py --harness codex --scope user \
 
 Add `--apply` to create the links. Existing conflicting files are preserved.
 See [installation](docs/installation.md) for scope, components, configuration,
-and removal. `/sync` in Claude Code wraps this same installer.
+and removal.
+
+`/sync` in Claude Code wraps this same installer and additionally updates the
+plugins listed in the marketplace manifest. Prefer it to a bare `git pull`:
+installed components are symlinks and follow the checkout immediately, while
+a plugin is a pinned copy that stays on its old commit until it is updated.
 
 `scripts` links every harness utility where a skill can reach it by path.
 `commands` puts the ones you run yourself on your `PATH` in `~/.local/bin`,
