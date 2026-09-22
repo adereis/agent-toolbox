@@ -46,6 +46,7 @@ if scenario == "quota-refused":
           "usage": {"output_tokens": 0}}})
     sys.exit(1)
 tool = {"path-violation": ("read_file", {"file_path": "/etc/passwd"}),
+        "relative-path-violation": ("read_file", {"file_path": "../outside"}),
         "web": ("search_web", {"query": "x"}), "tools": ("read_file", {"file_path": os.path.join(os.getcwd(), "materials/diff.patch")})}.get(scenario)
 if tool:
     emit({"event": "step", "conversation_id": sid, "step_update": {"step_type": "tool", "state": "ACTIVE",

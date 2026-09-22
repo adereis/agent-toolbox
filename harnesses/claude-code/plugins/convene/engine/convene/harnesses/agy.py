@@ -11,6 +11,7 @@ seat's private directory. `private-home` is refused by name.
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -164,8 +165,9 @@ class Antigravity(Harness):
         """What a flag cannot enforce here, the transcript is checked for."""
         launch = read(record / "launch.json") if (record / "launch.json").exists() else {}
         attestation = launch.get("isolation") or {}
-        allowed = [Path(p) for p in (attestation.get("chdir"), launch.get("cwd"),
-                                     attestation.get("repository_read_only")) if p]
+        cwd = attestation.get("chdir") or launch.get("cwd")
+        allowed = [Path(os.path.normpath(p)) for p in
+                   (cwd, attestation.get("repository_read_only")) if p]
         for call in calls:
             name = call["name"]
             if FORBIDDEN_DELEGATION.search(name):
@@ -176,11 +178,17 @@ class Antigravity(Harness):
                 raise RuntimeError(f"network tool use violates the declared policy: {name}")
             params = call["parameters"] if isinstance(call["parameters"], dict) else {}
             for key, value in params.items():
-                if (isinstance(value, str) and ("path" in key.lower() or "file" in key.lower())
-                        and value.startswith("/")):
-                    path = Path(value)
-                    if attestation.get("tier") == "enforced":
-                        continue  # the jail settles it; nothing else was reachable
+                if isinstance(value, str) and ("path" in key.lower() or "file" in key.lower()):
+                    path = Path(value).expanduser()
+                    if not path.is_absolute():
+                        if not cwd:
+                            raise RuntimeError("agy path audit has no declared working directory")
+                        path = Path(cwd) / path
+                    # The jail also exposes runtime paths such as /etc; its
+                    # presence does not make every filesystem call in scope.
+                    # Normalize lexically in the seat's namespace, not via
+                    # resolve() in the operator's different mount namespace.
+                    path = Path(os.path.normpath(path))
                     if not any(path == root or root in path.parents for root in allowed):
                         raise RuntimeError(f"agy reached a path outside the declared workspace: {value}")
 

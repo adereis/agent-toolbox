@@ -1,6 +1,7 @@
 """The Antigravity adapter against its stub: audited tools, no private home."""
 
 import os
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -8,7 +9,7 @@ from convene_support import Sandbox
 
 from convene import harnesses, isolation, plan, round as round_
 from convene.isolation import bwrap
-from convene.storage import read
+from convene.storage import read, write
 
 
 class AntigravityTests(unittest.TestCase):
@@ -102,6 +103,39 @@ class AntigravityTests(unittest.TestCase):
         got = read(root / "records/g/r001/receipt.json")
         self.assertTrue(got["compaction_observed"])
         self.assertIn("compaction observed", " ".join(got["red_flags"]))
+
+    def test_path_audit_applies_in_the_seats_namespace_on_every_tier(self):
+        record = self.box.root / "record"
+        work = self.box.root / "work"
+        virtual = Path("/home/fictitious-reviewer/workspace")
+        harness = harnesses.get("agy")
+        seat = {"tools": "write", "grants": []}
+        for tier in ("none", "enforced"):
+            cwd = virtual if tier == "enforced" else work
+            write(record / "launch.json", {
+                "cwd": str(work), "isolation": {
+                    "tier": tier, "chdir": str(cwd),
+                    "repository_read_only": str(self.box.project),
+                },
+            })
+            for value in ("materials/diff.patch", "materials/../START.md",
+                          str(cwd / "outbox/report.md"), str(self.box.project / "app.py")):
+                with self.subTest(tier=tier, allowed=value):
+                    harness._audit(seat, record, [
+                        {"name": "read_file", "parameters": {"file_path": value}}])
+            for value in ("/etc/fictitious-outside", "../outside", "~/private",
+                          str(cwd / "../outside"), str(cwd) + "-sibling/file"):
+                with self.subTest(tier=tier, rejected=value):
+                    with self.assertRaisesRegex(RuntimeError, "outside the declared workspace"):
+                        harness._audit(seat, record, [
+                            {"name": "read_file", "parameters": {"file_path": value}}])
+
+    def test_relative_path_escape_fails_the_completed_receipt(self):
+        root, _ = self.prepare(brief={"text": "[[stub:relative-path-violation]] Review."})
+        round_.run(root)
+        got = read(root / "records/g/r001/receipt.json")
+        self.assertEqual(got["status"], "failed")
+        self.assertIn("outside the declared workspace: ../outside", got["error"])
 
     def test_enforced_jail_argv_binds_the_gemini_home_and_credentials(self):
         box = Sandbox(self, fake_bwrap=True)

@@ -52,8 +52,12 @@ harnesses you seat: `claude`, `codex` and/or `agy` on `PATH`, logged in. The
 Antigravity (`agy`) is the least confinable seat: it has no tool
 allow-list, no setting-source switch, no context ceiling and nothing that
 relocates its home. An `agy` seat therefore always runs with `tools =
-"write"`, its filesystem and network use are audited from the transcript
-and fail the receipt when they leave the declared workspace, compaction is
+"write"`. Its declared file/path arguments and network tools are audited
+from the transcript. Path checks apply on every tier, including enforced
+isolation, against the seat's working directory and any declared read-only
+repository. Relative paths and `..` are normalized before checking.
+This checks tool arguments; it is not a trace of filesystem access inside
+shell commands or through symlinks. Compaction is
 detected rather than prevented (the plan records `compaction = "detected"`),
 and its only tiers are `enforced` (the jail binds a private `~/.gemini`)
 and `none`; `private-home` is refused by name.
