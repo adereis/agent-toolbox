@@ -34,8 +34,7 @@ def run_probe(name, probe):
     prints `Invalid setting source: bogus` and still exits 0."""
     argv = [name, *probe.args]
     if probe.offline and sys.platform.startswith("linux") and shutil.which(bwrap.BWRAP):
-        argv = [bwrap.BWRAP, "--bind", "/", "/", "--dev-bind", "/dev", "/dev", "--proc",
-                "/proc", "--unshare-net", *argv]
+        argv = bwrap.offline_jail() + argv
     try:
         result = subprocess.run(argv, capture_output=True, text=True, timeout=120,
                                 stdin=subprocess.DEVNULL)
@@ -80,7 +79,8 @@ def report(*, probes=True, project_root=None):
     for name, tier in isolation.tiers().items():
         out["tiers"][name] = tier.available()
     if sys.platform.startswith("linux"):
-        out["excluded_mounts"] = [str(e) for e in bwrap.excluded_mounts()]
+        out["jail_root"] = [str(t) for t in bwrap.bound_trees(bwrap.system_root())]
+        out["bus_proxy"] = shutil.which(bwrap.BUS_PROXY)
     return out
 
 
@@ -102,16 +102,18 @@ def render(data):
     for name, reason in data["tiers"].items():
         lines.append(f"{'✓' if reason is None else '✗'} isolation {name}" +
                      ("" if reason is None else f": {reason}"))
-    if data.get("excluded_mounts"):
-        # Only the enforced tier excludes anything. `private-home` and `none`
-        # give the seat the real root, so claiming containment for "every
-        # jail" would be false exactly where it matters: on a machine with no
-        # bwrap, where the tier that excludes these cannot run at all.
+    if data.get("jail_root"):
+        # Only the enforced tier has a root of its own. `private-home` and
+        # `none` give the seat the real root, so say where this applies.
         where = ("the enforced jail" if data["tiers"].get("enforced") is None
                  else "the enforced jail, which is unavailable here")
-        lines.append(f"  network and automount filesystems unreachable in {where}"
-                     " (other tiers give the seat the real root): "
-                     + ", ".join(data["excluded_mounts"]))
+        lines.append(f"  root of {where}: " + ", ".join(data["jail_root"])
+                     + " read-only; nothing else exists inside (other tiers give the "
+                     "seat the real root)")
+        proxy = data.get("bus_proxy")
+        lines.append(f"  {bwrap.BUS_PROXY} {proxy}" if proxy else
+                     f"  {bwrap.BUS_PROXY} missing: an agy seat cannot use the enforced "
+                     "jail (Fedora: dnf install xdg-dbus-proxy)")
     bad = any(not e["installed"] or any(not p["ok"] for p in e["probes"])
               for e in data["harnesses"].values())
     return "\n".join(lines), bad

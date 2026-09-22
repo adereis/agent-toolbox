@@ -60,7 +60,12 @@ This checks tool arguments; it is not a trace of filesystem access inside
 shell commands or through symlinks. Compaction is
 detected rather than prevented (the plan records `compaction = "detected"`),
 and its only tiers are `enforced` (the jail binds a private `~/.gemini`)
-and `none`; `private-home` is refused by name.
+and `none`; `private-home` is refused by name. Its token lives in the login
+keyring, so the enforced jail runs `xdg-dbus-proxy` (Fedora: `dnf install
+xdg-dbus-proxy`) filtered to `org.freedesktop.secrets` and binds only that
+socket; the receipt flags it, because the secrets service exposes every
+secret the keyring holds. Without the proxy, `enforced` is unavailable for
+`agy` and `strongest` resolves to `none`.
 
 ## Use
 
@@ -142,13 +147,19 @@ attention. The isolation tier hides it from the seat's hands:
 
 | Tier | Platform | What the OS enforces | Attestation |
 |---|---|---|---|
-| `enforced` | Linux with `bwrap` | home blanked; only the private harness home, the launcher, credentials and the workspace bound back; repository read-only when `workspace = "repo-ro"` | `enforced: true` |
+| `enforced` | Linux with `bwrap` | root is an allow-list of system trees bound read-only (`/usr`, `/etc`, `/opt`, `/var/lib`, `/sys`); home blanked; only the private harness home, the launcher, credentials and the workspace bound back; own pid/ipc/uts namespaces, minimal `/dev`, no `/run/user` and no session bus; repository read-only when `workspace = "repo-ro"` | `enforced: true` |
 | `private-home` | Linux, macOS | private `HOME`, `CLAUDE_CONFIG_DIR`/`CODEX_HOME`, environment allow-list, neutral working directory | `advisory: true`; a tool given an absolute path can open it |
 | `none` | any | nothing; the seat runs in the operator's own harness home | `enforced: false` |
 
 `isolation = "strongest"` resolves at prepare time to the first available
 tier, and the resolved tier is frozen into the plan and stamped on every
 receipt. A run never claims more than it enforced.
+
+What the enforced jail does not cut off is the network, which a seat needs
+for its provider: anything listening on this machine, such as a container
+socket or a local MCP server, is reachable from inside. The receipt's
+`isolation` object lists the trees bound read-only, the namespaces, and a
+`session_bus` entry that is `null` unless a bus was proxied in.
 
 Credentials: a Claude seat receives only the short-lived access token from
 `~/.claude/.credentials.json` as `CLAUDE_CODE_OAUTH_TOKEN`; the refresh

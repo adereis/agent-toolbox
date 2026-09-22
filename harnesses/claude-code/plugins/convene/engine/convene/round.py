@@ -184,8 +184,12 @@ def launch(root, plan, seat, n, prompt, mode, session_id, *, timeout=None):
     timed_out = False
     try:
         with (record / "events.jsonl").open("xb") as out, (record / "stderr.log").open("xb") as err:
-            proc = subprocess.Popen(launched.argv, stdin=subprocess.PIPE, stdout=out, stderr=err,
-                                    cwd=launched.cwd, env=launched.env, start_new_session=True)
+            try:
+                proc = subprocess.Popen(launched.argv, stdin=subprocess.PIPE, stdout=out,
+                                        stderr=err, cwd=launched.cwd, env=launched.env,
+                                        start_new_session=True, pass_fds=launched.pass_fds)
+            finally:
+                launched.release()
             event(root, round=n, seat=name, event="running", pid=proc.pid,
                   process_identity=platform.process_identity(proc.pid))
             try:
@@ -223,6 +227,10 @@ def launch(root, plan, seat, n, prompt, mode, session_id, *, timeout=None):
         flags.append("isolation is advisory (private-home): the OS did not enforce it")
     if launched.attestation.get("tier") == "none":
         flags.append("no isolation: the seat ran in the operator's own harness home")
+    bus = launched.attestation.get("session_bus")
+    if bus:
+        flags.append("session bus proxied into the jail for " + ", ".join(bus["names"])
+                     + ": the operator's login keyring is readable by the seat")
     if not intact:
         flags.append("the seat's materials changed during the turn")
     if seat.get("tools_relaxed"):

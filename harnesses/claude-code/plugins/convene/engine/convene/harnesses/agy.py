@@ -38,6 +38,10 @@ class Antigravity(Harness):
     capabilities = Capabilities(resume=True, fork=False, json_schema=False,
                                 system_prompt=False, window_pinned=False)
     tool_sets = ("write",)
+    # Its token lives in the login keyring, reached over the session bus.
+    # The jail proxies this one name in, which still exposes every secret
+    # the keyring holds, so the receipt flags it.
+    bus_names = ("org.freedesktop.secrets",)
     reserved = {
         "--model": (None, "set model on the seat"), "--effort": (None, "set effort on the seat"),
         "--conversation": (None, "the engine owns sessions"),

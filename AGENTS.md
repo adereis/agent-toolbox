@@ -89,15 +89,26 @@ time and the resolved tier is frozen. A run never claims more than it
 enforced. Run state lives under `$XDG_STATE_HOME/agent-toolbox/convene`,
 never inside the project, and credentials never enter a record.
 
-The jail assembles its root one of two ways and says which in the receipt.
-Binding `/` whole and covering each excluded mount with an empty tmpfs is
-preferred and costs a handful of arguments; reassembling `/` entry by entry
-is the fallback, because binding `/` applies mount flags recursively and a
-stale automount underneath fails the whole bind. Probe before every launch
-rather than caching the answer: an automount that resolves on one network
-fails on another, and a run prepared in one place may be played in another.
-Containment is identical either way and the attestation names the strategy
-that ran, never the one a probe predicted.
+The jail is an allow-list all the way down, and the root is no exception.
+It binds a fixed set of system trees read-only at their own paths (`/usr`,
+`/etc`, and `/opt`, `/var/lib`, `/sys`, `/nix`, `/snap` where present) and
+nothing else, so the operator's home, network shares and removable media
+never exist inside and no mount table is read. Do not reintroduce a
+deny-list of filesystem types or a whole-root bind: every earlier repair
+to the root (enumerating `/` around a stale share, probing before each
+launch, re-reading the table after the probe) was a consequence of that
+shape, and inverting it removed the class. A CLI that needs a tree outside
+the list fails loudly at launch; add the tree to the list, do not bind `/`.
+
+The seat runs in its own pid, ipc, uts and cgroup namespaces with bwrap's
+minimal `/dev`, and `/run/user/<uid>` is never bound: the session bus there
+lets `systemd --user` start a process outside any sandbox, which is a full
+escape for a seat with a shell. A harness that must reach a bus name
+declares it in `bus_names`; the jail runs `xdg-dbus-proxy` filtered to
+those names, binds only the proxy's socket, ties the proxy's lifetime to
+the jail through `--sync-fd`, and the receipt reports the opened door as a
+red flag. Without the proxy the enforced tier is unavailable to that
+harness rather than quietly less enforced.
 
 Seats are closed by default and opened only on purpose. A new capability
 (a tool, a server, a setting source) is a named grant in

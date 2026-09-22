@@ -164,7 +164,11 @@ directory for the access token and find nothing.
 brief asking the seat to report what is in its `HOME`, whether it can read
 this checkout's `AGENTS.md` by absolute path, and which tools it has.
 Expected: an empty home apart from the harness's own directory, the read
-fails, no `mcp__*` or web tools. Repeat with `isolation = "private-home"`:
+fails, no `mcp__*` or web tools. Ask it also to list `/` and `/run/user`
+and to run `systemd-run --user --wait --pipe ls`: the root holds only the
+system trees the receipt's `root_read_only` names, `/run/user` does not
+exist, and the `systemd-run` fails for want of a bus. Repeat with
+`isolation = "private-home"`:
 the read succeeds, and the receipt's red flags say `isolation is advisory`.
 
 **Quota hold:** only when a quota window is genuinely exhausted, run a
@@ -210,7 +214,9 @@ refuse until `judgment.md` has text, then print `A = <seat> (<harness>/
 ## IT-12: Convene Antigravity seat
 
 **Prerequisites:** `agy` logged in (`~/.gemini/oauth_creds.json`), Linux
-with `bwrap`. One seat on the cheapest Flash tier `agy models` lists.
+with `bwrap` and `xdg-dbus-proxy`, run from a desktop session (the
+keyring is reached over the session bus). One seat on the cheapest Flash
+tier `agy models` lists.
 
 **Doctor:** `convene doctor` must list `agy` with a version and
 `credentials present`, and its `--model` probe `✓` (this probe reaches the
@@ -221,8 +227,10 @@ validating flags).
 `isolation = "enforced"`. Expected: `prepare` prints the effort variant
 slug (`gemini-3.8-flash-low`); the receipt's `model` equals it,
 `filesystem` says audited, `tool_calls` counts the transcript's tool
-steps; the native transcript is under the run's `homes/<seat>/agy/`.
-Set `isolation = "private-home"` and confirm `prepare` refuses naming
+steps; the native transcript is under the run's `homes/<seat>/agy/`; the
+receipt's `isolation.session_bus.names` is `["org.freedesktop.secrets"]`
+and its red flags say the session bus was proxied in. Set `isolation =
+"private-home"` and confirm `prepare` refuses naming
 `enforced` and `none`. Follow the seat with `convene follow NAME SEAT`
 while it runs.
 

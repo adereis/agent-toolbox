@@ -1,9 +1,10 @@
 """Isolation tiers: how far the OS, not the prompt, keeps a seat away from
 the operator's state and the project.
 
-- ``enforced``: a bubblewrap jail (Linux). The home is blanked and only the
-  seat's private harness home, the harness launcher and the declared
-  workspace are bound back. A `Read` of an absolute path fails.
+- ``enforced``: a bubblewrap jail (Linux). The root is an allow-list of
+  system trees bound read-only, the home is blanked, and only the seat's
+  private harness home, the harness launcher and the declared workspace
+  are bound back. A `Read` of an absolute path fails.
 - ``private-home``: portable. The seat gets a private HOME and harness state
   directory and a neutral working directory, and the harness flags remove
   project instructions and MCP servers. Advisory: the OS does not stop a
@@ -17,6 +18,7 @@ never claims more than it enforced.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 
 TIERS = ("enforced", "private-home", "none")
@@ -29,6 +31,15 @@ class Launch:
     env: dict
     cwd: str
     attestation: dict = field(default_factory=dict)
+    # Descriptors the launched process must inherit (a jail's `--sync-fd`).
+    # The launcher calls `release()` once the process holds them, so the
+    # tier's own copy does not keep a helper alive past the seat.
+    pass_fds: tuple = ()
+
+    def release(self):
+        for fd in self.pass_fds:
+            os.close(fd)
+        self.pass_fds = ()
 
 
 def tiers():
@@ -49,6 +60,11 @@ def unavailable(name, harness=None):
     reason = get(name).available()
     if reason:
         return reason
+    if name == "enforced" and harness is not None and harness.bus_names:
+        from convene.isolation import bwrap
+        reason = bwrap.bus_proxy_missing()
+        if reason:
+            return f"{harness.name} needs the session bus for {', '.join(harness.bus_names)}; {reason}"
     if name == "private-home" and harness is not None and not harness.home_variable:
         return (f"{harness.name} has no variable that relocates its home, so there is no "
                 "private-home tier for it; use \"enforced\" (Linux, bubblewrap) or \"none\"")

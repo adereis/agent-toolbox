@@ -127,6 +127,10 @@ class Harness:
     home_name = ""       # the directory name of the harness's own state dir
     home_variable = ""   # the environment variable that relocates it
     efforts: tuple = ()
+    # Session-bus names the CLI must reach to run at all. The enforced jail
+    # never binds the raw bus; it proxies exactly these names in and reports
+    # the opened door as a red flag. Empty for a CLI that needs none.
+    bus_names: tuple = ()
 
     def installed(self):
         return shutil.which(self.name)

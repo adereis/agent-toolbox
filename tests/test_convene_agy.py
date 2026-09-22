@@ -1,8 +1,9 @@
 """The Antigravity adapter against its stub: audited tools, no private home."""
 
 import os
-from pathlib import Path
+import shutil
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from convene_support import Sandbox
@@ -153,16 +154,42 @@ class AntigravityTests(unittest.TestCase):
         (box.home / ".gemini/oauth_creds.json").write_text("{}")
         work = box.root / "work"
         work.mkdir()
+        tier = isolation.get("enforced")
         with patch.object(bwrap.sys, "platform", "linux"):
-            launched = isolation.get("enforced").wrap(["agy"], harness=harnesses.get("agy"),
-                                                       seat_home=box.root / "seat", workspace=work,
-                                                       project_root=box.project, repo_ro=False)
+            launched = tier.wrap(["agy"], harness=harnesses.get("agy"), seat_home=box.root / "seat",
+                                 workspace=work, project_root=box.project, repo_ro=False)
         argv = launched.argv
         private = argv.index(str(box.root / "seat/agy"))
         self.assertEqual(argv[private + 1], f"{box.home}/.gemini")
         creds = argv.index(str(box.home / ".gemini/oauth_creds.json"))
         self.assertEqual(argv[creds - 1], "--ro-bind")
         self.assertNotIn("CLAUDE_CONFIG_DIR", launched.env)
+        # The keyring arrives through a filtered proxy, never the raw bus.
+        runtime = f"/run/user/{os.getuid()}"
+        sync = argv.index("--sync-fd")
+        self.assertEqual(launched.pass_fds, (int(argv[sync + 1]),))
+        socket = Path(argv[argv.index(f"{runtime}/bus") - 1])
+        self.assertTrue(str(socket).startswith(str(box.root / "run")), socket)
+        self.assertTrue(socket.exists(), "the proxy listens before the jail starts")
+        self.assertEqual(launched.env["DBUS_SESSION_BUS_ADDRESS"], f"unix:path={runtime}/bus")
+        self.assertEqual(launched.attestation["session_bus"],
+                         {"names": ["org.freedesktop.secrets"], "proxy": "xdg-dbus-proxy",
+                          "filtered": True})
+        tier.finish(harnesses.get("agy"), box.root / "seat")
+        self.assertFalse(socket.parent.exists(), "finish reaps the proxy and its socket directory")
+        self.assertEqual(launched.pass_fds, (), "finish released the pipe a launch never took")
+
+    def test_enforced_jail_needs_the_bus_proxy_for_agy(self):
+        agy = harnesses.get("agy")
+        real = shutil.which
+        def which(name, *args, **kwargs):
+            return None if name == "xdg-dbus-proxy" else real(name, *args, **kwargs)
+        with patch.object(bwrap.sys, "platform", "linux"), \
+             patch.object(bwrap.shutil, "which", side_effect=which):
+            with self.assertRaisesRegex(ValueError, "xdg-dbus-proxy"):
+                isolation.resolve("enforced", agy)
+            self.assertEqual(isolation.resolve("strongest", agy), "none")
+            self.assertEqual(isolation.resolve("enforced", harnesses.get("claude")), "enforced")
 
 
 if __name__ == "__main__":

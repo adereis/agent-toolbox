@@ -33,7 +33,12 @@ class Sandbox:
         self.home.mkdir()
         (self.home / "tmp").mkdir()
         self.state = self.root / "state"
+        (self.root / "run").mkdir()
         env = {"HOME": str(self.home), "XDG_STATE_HOME": str(self.state),
+               # A private runtime directory and a bus address the fake proxy
+               # never dials, so no test touches the operator's session bus.
+               "XDG_RUNTIME_DIR": str(self.root / "run"),
+               "DBUS_SESSION_BUS_ADDRESS": f"unix:path={self.root}/run/no-such-bus",
                "PATH": (f"{FAKE_BWRAP}:" if fake_bwrap else "") + f"{STUBS}:{os.environ.get('PATH', '')}",
                "SECRET_FROM_OPERATOR": "must-not-leak", "TERM": "dumb", "LANG": "C.UTF-8"}
         for name in ("CLAUDE_CONFIG_DIR", "CODEX_HOME", "CLAUDE_CODE_OAUTH_TOKEN",

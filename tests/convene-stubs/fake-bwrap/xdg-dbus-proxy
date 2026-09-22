@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""A stand-in `xdg-dbus-proxy`: listens on the socket path, signals readiness
+on `--fd`, and exits when every reader of that pipe is gone, as the real one
+does. It proxies nothing."""
+import os
+import select
+import socket
+import sys
+
+args = sys.argv[1:]
+fd = int(next(a for a in args if a.startswith("--fd="))[5:])
+path = next(a for a in args if not a.startswith("--") and not a.startswith("unix:"))
+listener = socket.socket(socket.AF_UNIX)
+listener.bind(path)
+os.write(fd, b"\0")
+watch = select.poll()
+watch.register(fd, select.POLLERR | select.POLLHUP)
+watch.poll()
+os.unlink(path)

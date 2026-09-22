@@ -2,6 +2,8 @@
 
 import contextlib
 import io
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -62,7 +64,22 @@ class BwrapArgvTests(unittest.TestCase):
         home = str(self.box.home)
         self.assertEqual(argv[0], "bwrap")
         self.assertIn("--die-with-parent", argv)
+        joined = " ".join(argv)
+        for flag in ("--unshare-pid", "--unshare-ipc", "--unshare-uts", "--unshare-cgroup-try"):
+            self.assertIn(flag, argv)
+        self.assertIn("--ro-bind /usr /usr", joined)
+        self.assertIn("--ro-bind /etc /etc", joined)
+        self.assertNotIn("--bind / /", joined, "the root is an allow-list, never bound whole")
+        self.assertIn("--dev /dev", joined)
+        self.assertNotIn("--dev-bind", argv, "the host's devices stay out")
+        self.assertNotIn("/run/user", joined, "the runtime directory and its bus stay out")
+        self.assertNotIn("--sync-fd", argv, "a claude seat proxies no bus")
+        self.assertEqual(launched.pass_fds, ())
+        self.assertIsNone(launched.attestation["session_bus"])
+        self.assertEqual(launched.attestation["namespaces"], ["pid", "ipc", "uts", "cgroup"])
+        self.assertIn("/usr", launched.attestation["root_read_only"])
         tmpfs = argv.index("--tmpfs")
+        self.assertEqual(argv[tmpfs - 2:tmpfs], ["--size", str(bwrap.TMPFS_BYTES)])
         self.assertEqual(argv[tmpfs + 1], home)
         private = argv.index(str(self.box.root / "seat-home/claude"))
         self.assertEqual(argv[private - 1], "--bind")
@@ -113,79 +130,73 @@ class BwrapArgvTests(unittest.TestCase):
         isolation.get("enforced").finish(harness, self.box.root / "seat-home")
         self.assertTrue((private / "auth.json").exists(), "a written file is kept visible")
 
-    def test_project_outside_the_home_is_blanked_unless_repo_ro(self):
+    def test_project_inside_a_bound_tree_is_blanked_unless_repo_ro(self):
+        """A project under `/opt` would stay readable through the `/opt` bind."""
         outside = self.box.root / "elsewhere"
         outside.mkdir()
         launched = self.wrap(repo_ro=False, project=outside)
-        self.assertIn(str(outside), launched.attestation["blanked"])
-        self.assertIsNone(launched.attestation["repository_read_only"])
-        launched = self.wrap(repo_ro=True, project=outside)
-        self.assertNotIn(str(outside), launched.attestation["blanked"])
+        self.assertNotIn(str(outside), launched.attestation["blanked"],
+                         "outside every bound tree there is nothing to cover")
+        self.assertNotIn(str(outside), " ".join(launched.argv))
+        with patch.object(bwrap, "OPTIONAL_TREES", (str(outside.parent),)):
+            launched = self.wrap(repo_ro=False, project=outside)
+            self.assertIn(str(outside), launched.attestation["blanked"])
+            self.assertIsNone(launched.attestation["repository_read_only"])
+            launched = self.wrap(repo_ro=True, project=outside)
+            self.assertNotIn(str(outside), launched.attestation["blanked"])
+            self.assertEqual(launched.attestation["repository_read_only"], str(outside))
 
-    def test_network_mounts_are_left_out_of_the_root(self):
-        table = self.box.root / "mounts"
-        table.write_text("rootfs / ext4 rw 0 0\n/etc/auto.nas /nas autofs rw 0 0\n"
-                         "//srv/home /nas/me cifs rw 0 0\nsrv:/x /mnt/share\\040two nfs4 rw 0 0\n"
-                         "tmpfs /tmp tmpfs rw 0 0\n")
-        excluded = bwrap.excluded_mounts(table)
-        self.assertEqual(excluded, [Path("/nas"), Path("/mnt/share two"), Path("/nas/me")])
+    def test_system_root_is_an_allow_list_of_host_trees(self):
         fake = self.box.root / "fakeroot"
-        for name in ("usr", "etc", "mnt/share two", "mnt/other", "nas/me", "home"):
+        for name in ("usr/bin", "etc", "opt", "var/lib", "var/mnt", "home/me", "nas",
+                     "run/systemd/resolve", "lib32"):
             (fake / name).mkdir(parents=True)
         (fake / "bin").symlink_to("usr/bin")
-        (fake / "vmlinuz").write_text("")
-        import socket
-        listener = socket.socket(socket.AF_UNIX)
-        self.addCleanup(listener.close)
-        listener.bind(str(fake / "mnt/bus"))
-        binds = bwrap.root_binds([fake / "nas", fake / "mnt/share two"], fake)
-        self.assertIn(("--bind", str(fake / "mnt/bus"), str(fake / "mnt/bus")), binds,
-                      "sockets are bound too; the session bus is how agy reaches its keyring")
-        self.assertNotIn(str(fake / "nas"), [b[1] for b in binds])
-        self.assertIn(("--bind", str(fake / "mnt/other"), str(fake / "mnt/other")), binds)
-        self.assertNotIn(("--bind", str(fake / "mnt"), str(fake / "mnt")), binds)
-        self.assertIn(("--bind", str(fake / "usr"), str(fake / "usr")), binds)
-        self.assertIn(("--symlink", "usr/bin", str(fake / "bin")), binds)
-        self.assertIn(("--ro-bind", str(fake / "vmlinuz"), str(fake / "vmlinuz")), binds)
-        self.assertEqual(bwrap.root_binds([], fake), [("--bind", str(fake), str(fake))])
+        (fake / "run/systemd/resolve/stub-resolv.conf").write_text("nameserver 127.0.0.53\n")
+        (fake / "etc/resolv.conf").symlink_to("../run/systemd/resolve/stub-resolv.conf")
+        triples = bwrap.system_root(fake)
+        bound = [t[1] for t in triples if t[0] == "--ro-bind"]
+        self.assertEqual(bound[:2], [str(fake / "usr"), str(fake / "etc")])
+        self.assertIn(str(fake / "opt"), bound)
+        self.assertIn(str(fake / "var/lib"), bound)
+        self.assertIn(str(fake / "lib32"), bound, "a real directory alias is bound")
+        self.assertIn(("--symlink", "usr/bin", str(fake / "bin")), triples)
+        self.assertIn(str(fake / "run/systemd/resolve/stub-resolv.conf"), bound,
+                      "the resolver's real file comes along or nothing resolves")
+        for absent in ("home", "nas", "var/mnt", "var", "run"):
+            self.assertNotIn(str(fake / absent), bound)
+        self.assertTrue(all(t[1] == t[2] for t in triples if t[0] == "--ro-bind"),
+                        "every tree is bound at its own path")
+        self.assertTrue(bwrap.visible(fake / "opt/src/thing", bwrap.bound_trees(triples)))
+        self.assertFalse(bwrap.visible(fake / "home/me/thing", bwrap.bound_trees(triples)))
 
-    def test_whole_root_strategy_blanks_what_it_cannot_leave_out(self):
-        """The cheap jail keeps containment: excluded mounts become empty."""
-        fake = self.box.root / "cheaproot"
-        (fake / "usr").mkdir(parents=True)
-        excluded = [fake / "nas", Path("/proc/sys/fs/binfmt_misc")]
-        cheap = bwrap.root_tmpfs(excluded, root=fake, skip=(Path("/proc"),))
-        self.assertEqual(cheap[0], ("--bind", str(fake), str(fake)))
-        self.assertIn(("--tmpfs", str(fake / "nas")), cheap)
-        # `--proc /proc` replaces the whole tree later, so blanking a mount
-        # inside it would be a wasted argument.
-        self.assertNotIn(("--tmpfs", "/proc/sys/fs/binfmt_misc"), cheap)
-        # The point of the strategy: a handful of arguments, not one per entry.
-        self.assertLess(len(cheap), 5)
+    def test_system_root_names_a_missing_required_tree(self):
+        fake = self.box.root / "bare"
+        (fake / "etc").mkdir(parents=True)
+        with self.assertRaisesRegex(RuntimeError, "usr is missing"):
+            bwrap.system_root(fake)
 
-    def test_a_failing_probe_falls_back_to_enumerating_the_root(self):
-        """An automount that resolves at home fails on another network.
+    def test_resolver_inside_etc_needs_no_extra_bind(self):
+        fake = self.box.root / "etcroot"
+        (fake / "etc").mkdir(parents=True)
+        (fake / "etc/resolv.real").write_text("")
+        (fake / "etc/resolv.conf").symlink_to("resolv.real")
+        self.assertEqual(bwrap.resolver_paths(fake / "etc/resolv.conf", fake), [])
+        (fake / "etc/dangling").symlink_to("../run/gone")
+        self.assertEqual(bwrap.resolver_paths(fake / "etc/dangling", fake), [])
+        (fake / "home/me").mkdir(parents=True)
+        (fake / "home/me/resolv.conf").write_text("")
+        (fake / "etc/stray").symlink_to("../home/me/resolv.conf")
+        with self.assertRaisesRegex(RuntimeError, "outside /etc and /run"):
+            bwrap.resolver_paths(fake / "etc/stray", fake)
 
-        Asserted through `wrap`, not on the probe alone: the point is that a
-        failing probe changes the jail that gets built.
-        """
-        fake = self.box.root / "nas-fixture"
-        fake.mkdir(parents=True, exist_ok=True)
-        for ok, strategy, wants_tmpfs in ((True, "root-bind", True),
-                                          (False, "enumerated", False)):
-            with self.subTest(probe=ok), \
-                 patch.object(bwrap, "probe_root_bind", return_value=ok), \
-                 patch.object(bwrap, "excluded_mounts", return_value=[fake]):
-                launch = self.wrap()
-                argv = launch.argv
-                self.assertEqual(launch.attestation["root_strategy"], strategy)
-                joined = " ".join(argv)
-                self.assertEqual(f"--tmpfs {fake}" in joined, wants_tmpfs,
-                                 "the cover belongs to the root-bind strategy only")
-                self.assertEqual("--bind / /" in joined, wants_tmpfs,
-                                 "only the cheap strategy binds / whole")
-                self.assertNotIn(f"--bind {fake} {fake}", joined,
-                                 "neither strategy binds the excluded mount itself")
+    def test_offline_jail_shares_the_seats_root(self):
+        argv = bwrap.offline_jail(self.box.home)
+        joined = " ".join(argv)
+        self.assertIn("--unshare-net", argv)
+        self.assertIn("--ro-bind /usr /usr", joined)
+        self.assertIn(f"--bind {self.box.home} {self.box.home}", joined)
+        self.assertNotIn("--bind / /", joined)
 
     def test_launcher_paths_follow_intermediate_links(self):
         real = self.box.root / "opt/app-1.0/bin"
@@ -226,14 +237,18 @@ class RealJailTests(unittest.TestCase):
                 self.assertIn(expect, answer)
                 self.assertIn(f"CWD={self.box.home}/workspace", answer)
                 self.assertIn("SECRET=no", answer)
+                self.assertIn("RUNTIME=no", answer, "no /run/user, so no session bus to escape by")
+                entries = set(re.search(r"ROOT=(\S+)", answer).group(1).split(","))
+                self.assertLessEqual(entries, {"bin", "dev", "etc", "home", "lib", "lib32",
+                                               "lib64", "libx32", "nix", "opt", "proc", "run",
+                                               "sbin", "snap", "sys", "tmp", "usr", "var"},
+                                     entries)
+                pids = int(re.search(r"PIDS=(\d+)", answer).group(1))
+                self.assertLess(pids, 16, "a private pid namespace shows the seat only")
                 self.assertTrue(got["isolation"]["enforced"])
                 self.assertEqual(got["isolation"]["tier"], "enforced")
-                # The receipt names the root strategy this launch used, not
-                # the one an earlier probe predicted: the cheap jail depends
-                # on what is mounted now, and a run can move between networks.
-                self.assertIn(got["isolation"]["root_strategy"],
-                              ("root-bind", "enumerated"))
-                self.assertTrue(got["isolation"]["root_strategy_note"])
+                self.assertIn("/usr", got["isolation"]["root_read_only"])
+                self.assertIsNone(got["isolation"]["session_bus"])
                 self.assertTrue(list((root / "homes/s/claude/projects").rglob("*.jsonl")),
                                 "the seat's session landed in its private home")
 
@@ -261,6 +276,62 @@ class RealJailWorktreeTests(unittest.TestCase):
         self.assertEqual(got["isolation"]["worktree_git"][0], str(self.box.project / ".git"))
         round_.prune(root)
         self.assertNotIn("work/d/repo", self.box.git("worktree", "list"))
+
+
+# Captured before any Sandbox replaces them: the one test that dials the
+# operator's real bus needs the real address back.
+HOST_BUS = {k: os.environ[k] for k in ("XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS")
+            if k in os.environ}
+
+
+def host_bus_answers(name):
+    """Whether the operator's session bus has `name` and dbus-send can reach it."""
+    if not (shutil.which("dbus-send") and os.environ.get("DBUS_SESSION_BUS_ADDRESS")):
+        return False
+    done = subprocess.run(["dbus-send", "--session", "--print-reply", f"--dest={name}",
+                           "/", "org.freedesktop.DBus.Peer.Ping"], capture_output=True, timeout=30)
+    return done.returncode == 0
+
+
+@unittest.skipUnless(sys.platform.startswith("linux") and shutil.which("/usr/bin/bwrap")
+                     and shutil.which("xdg-dbus-proxy") and host_bus_answers("org.freedesktop.secrets"),
+                     "needs the real bubblewrap, xdg-dbus-proxy and a session bus with a keyring")
+class RealBusProxyTests(unittest.TestCase):
+    """The proxied bus lets exactly the granted name through."""
+
+    def test_secrets_reachable_and_systemd_refused_inside_the_jail(self):
+        box = Sandbox(self)
+        (box.home / ".gemini").mkdir()
+        (box.home / ".gemini/oauth_creds.json").write_text("{}")
+        # The host bus, not the sandbox's dead address: this test dials it.
+        with patch.dict(os.environ, HOST_BUS):
+            work = box.root / "work"
+            work.mkdir()
+            harness = harnesses.get("agy")
+            tier = isolation.get("enforced")
+            ping = ("dbus-send --session --print-reply --dest={} / org.freedesktop.DBus.Peer.Ping "
+                    ">/dev/null 2>&1; echo {}=$?")
+            script = "; ".join([ping.format("org.freedesktop.secrets", "SECRETS"),
+                                ping.format("org.freedesktop.systemd1", "SYSTEMD"),
+                                "ls /run/user/*/ | tr '\\n' ' '"])
+            launched = tier.wrap(["/bin/sh", "-c", script], harness=harness,
+                                 seat_home=box.root / "seat", workspace=work,
+                                 project_root=box.project, repo_ro=False)
+            try:
+                proc = subprocess.Popen(launched.argv, env=launched.env, cwd=launched.cwd,
+                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                        pass_fds=launched.pass_fds, start_new_session=True)
+            finally:
+                launched.release()
+            out, err = proc.communicate(timeout=60)
+            tier.finish(harness, box.root / "seat")
+        text = out.decode()
+        self.assertIn("SECRETS=0", text, (text, err.decode()))
+        self.assertIn("SYSTEMD=1", text, "the filter refuses every name but the granted one")
+        self.assertEqual(text.strip().splitlines()[-1].strip(), "bus",
+                         "the runtime directory holds the proxied socket and nothing else")
+        self.assertEqual(launched.attestation["session_bus"]["names"], ["org.freedesktop.secrets"])
+        self.assertIsNone(tier._buses.get(str(box.root / "seat")), "finish reaped the proxy")
 
 
 class PlatformTests(unittest.TestCase):

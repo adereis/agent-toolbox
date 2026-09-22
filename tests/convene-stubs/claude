@@ -103,7 +103,10 @@ if scenario == "canary":
     text = (f"HOME={os.environ.get('HOME')} CWD={os.getcwd()} "
             f"READ={'ok' if os.path.exists(probe) else 'fail'} "
             f"TOKEN={'yes' if os.environ.get('CLAUDE_CODE_OAUTH_TOKEN') else 'no'} "
-            f"SECRET={'yes' if os.environ.get('SECRET_FROM_OPERATOR') else 'no'}")
+            f"SECRET={'yes' if os.environ.get('SECRET_FROM_OPERATOR') else 'no'} "
+            f"ROOT={','.join(sorted(os.listdir('/')))} "
+            f"RUNTIME={'yes' if os.path.exists('/run/user') else 'no'} "
+            f"PIDS={sum(1 for e in os.listdir('/proc') if e.isdigit())}")
     if os.path.isdir("repo"):
         import subprocess
         with open(os.path.join("repo", "STUB-NOTE.md"), "w") as note:
