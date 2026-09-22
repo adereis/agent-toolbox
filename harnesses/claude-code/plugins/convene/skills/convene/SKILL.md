@@ -76,7 +76,9 @@ operator may be any of them.
    `convene continue NAME SEAT`, then `convene promote NAME N`, then
    `convene run NAME` for the rest. `promote NAME N --absent` gives up
    on the stopped seat instead, and says so on the board. A note the
-   room should read before round N goes in `chair/rNNN.md`.
+   room should read before round N goes in `chair/rNNN.md`. The last
+   line of the output names this same next command, computed from the
+   run's own state; report it, and run it only when asked.
 7. **Read the board.** `convene board NAME`, then follow
    [reading a board](references/reading-a-board.md). Read every post
    whole. The engine never summarizes.

@@ -106,6 +106,14 @@ $convene extend NAME 6               # more rounds than the plan declared
 $convene prune NAME                  # remove worktrees and private homes; records stay
 ```
 
+`convene status` reads the records and changes nothing. Its header counts
+published rounds against the budget, reports the room's novelty once there
+are two rounds to compare, and counts the red flags marked `!` below it.
+Each seat then reports how many of the rounds its phase lets it speak in it
+answered, one line per turn, holding only the fields that turn's receipt
+recorded. The last line names the command to run next. `convene status
+--help` reads a worked example line by line.
+
 An operator note for the next round goes in `chair/rNNN.md` inside the run
 directory; every acting seat reads it that round and the digest records it.
 

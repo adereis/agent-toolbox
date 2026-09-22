@@ -25,18 +25,59 @@ convene: multi-seat panels over native coding-agent CLIs.
   follow RUN SEAT [--round N] [--thinking]    tail a seat's turn as it runs
   seal RUN [--round N]                        letter a blind round's drafts for reading
   unseal RUN [--round N]                      print the key, once judgment.md is written
-  status RUN                                  what each seat did, with red flags
-  board RUN [--round N] [--raw]               the published posts, attributed
+  status [RUN]                                what each seat did, and what to do next
+  board [RUN] [--round N] [--raw]             the published posts, attributed
   export RUN DIR                              copy board and receipts out
-  usage RUN                                   tokens and cost per seat
+  usage [RUN]                                 tokens and cost per seat
   runs                                        this project's runs, oldest first
   personas [list|show ID]                     the persona catalog
   doctor [--no-probes]                        harnesses, credentials, tiers, flags
 
 RUN is a run name under this project's state directory, or a path.
+Where it is written [RUN] it may be left out and the latest run is used.
+This list names each verb's common options; `convene VERB --help` gives
+that verb's own help in full, and `convene status --help` reads a status
+line by line.
+
 State lives under $XDG_STATE_HOME/agent-toolbox/convene (default
 ~/.local/state), never inside the project. --project DIR names the
 project when it is not the current directory's git checkout.
+"""
+
+
+STATUS_HELP = """\
+What a run has done so far, read from its records; it changes nothing.
+
+Every line is evidence, not a claim, and the last line is the command to
+type next. A worked example:
+
+  Review the jail change  [panel, 2026-09-21-panel-review]
+    /home/you/.local/state/agent-toolbox/convene/<key>/<run>
+    rounds: 2 of 4 published (1-2)      two rounds are on the board
+    novelty: r001 100%, r002 41%        how much round 2 added to round 1
+    red flags: 1 (marked ! below)       count of the ! lines further down
+    HELD: round 3 waiting on skeptic (provider quota; resets 14:20Z)
+  - skeptic (Quinn T. Shun): answered 1 of 2 rounds, r002 quota
+      codex/gpt-5.6-terra effort=high tools=read isolation=enforced ...
+      r001: answered, served gpt-5.6-terra, 47.2s, 25 tool calls, tier enforced
+      r002: quota
+  next: convene continue <run> skeptic once the window resets, ...
+
+A seat's counts run over the rounds its phase lets it speak in; a seat
+that only listens in a round owes no turn there. A turn prints only the
+fields its receipt holds, so a failed turn is short and says why.
+
+A red flag is a fact about how the turn ran, never a judgment of what the
+seat wrote: no isolation, an advisory tier, a door opened by a grant, a
+context compacted mid-turn, materials changed under the seat. Repeat them
+verbatim when reporting; none of them invalidates a post by itself.
+
+In a blind run every duration and tool count is withheld until `convene
+unseal`, because those numbers are near-unique per seat and would be the
+identity key by arithmetic.
+
+--json prints the same state plus the session ids, the seat attempts and
+the last eight trail rows.
 """
 
 
@@ -47,7 +88,8 @@ def main(argv=None):
     parser.add_argument("--json", action="store_true", help="machine-readable output where supported")
     # Accepted after the verb too, which is where a hand types it.
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--json", action="store_true", dest="json_after")
+    common.add_argument("--json", action="store_true", dest="json_after",
+                        help="machine-readable output where supported")
     sub = parser.add_subparsers(dest="command", required=True, parser_class=lambda **kw:
                                 argparse.ArgumentParser(parents=[common], **kw))
 
@@ -112,9 +154,16 @@ def main(argv=None):
     p.add_argument("run")
     p.add_argument("--round", dest="round_number", type=int, default=None)
 
-    for name in ("status", "usage"):
-        p = sub.add_parser(name)
-        p.add_argument("run", nargs="?", default=None, help="default: the latest run")
+    p = sub.add_parser("status", help="what each seat did, with red flags and the next step",
+                       description=STATUS_HELP,
+                       formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("run", nargs="?", default=None, help="default: the latest run")
+
+    p = sub.add_parser("usage", help="tokens and cost per seat",
+                       description="Per-seat token counts and estimated cost, summed over every "
+                                   "turn that reported usage. Cost is 'unknown' where the harness "
+                                   "priced nothing. Refused until a blind run is unsealed.")
+    p.add_argument("run", nargs="?", default=None, help="default: the latest run")
 
     p = sub.add_parser("board", help="print the published board")
     p.add_argument("run", nargs="?", default=None)
@@ -127,7 +176,10 @@ def main(argv=None):
 
     sub.add_parser("runs", help="list this project's runs")
 
-    p = sub.add_parser("personas")
+    p = sub.add_parser("personas", help="list the persona catalog, or show one persona's prompt",
+                       description="With no action, list every persona this project can seat, as "
+                                   "id@revision followed by its label and description. `show ID` "
+                                   "prints that persona's prompt as a seat receives it.")
     p.add_argument("action", nargs="?", default="list", choices=("list", "show"))
     p.add_argument("persona", nargs="?", default=None)
 
