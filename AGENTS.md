@@ -110,6 +110,28 @@ the jail through `--sync-fd`, and the receipt reports the opened door as a
 red flag. Without the proxy the enforced tier is unavailable to that
 harness rather than quietly less enforced.
 
+The jail's invariants, each asserted by the test of the same label in
+`tests/test_convene_isolation.py` (`JailInvariantTests`):
+
+- **J1 root.** The root is the allow-list of system trees, read-only.
+  `/` is never bound whole and no mount table is read.
+- **J2 home.** `$HOME`, `/tmp` and `/var/tmp` are size-capped tmpfs. The
+  private harness home, launcher, credentials and workspace are bound
+  back after them, and the writable workspace is the last bind.
+- **J3 bus.** `/run/user/<uid>` is never bound from the host. A declared
+  bus name arrives only through `xdg-dbus-proxy --filter`, whose socket
+  lives exactly as long as the jail through `--sync-fd`.
+- **J4 process.** The seat has its own pid, ipc, uts and cgroup
+  namespaces, dies with its parent, and gets bwrap's minimal `/dev`,
+  never the host's.
+- **J5 receipt.** The receipt names the root, the namespaces and any
+  proxied bus this launch used, and a proxied bus is a red flag.
+- **J6 refusal.** A jail that cannot be built as specified is refused by
+  name (a missing required tree, a missing proxy), never built weaker.
+
+quirework's `providers/blind.py` is the same jail. A change to one of
+these invariants belongs in both, even while the code stays duplicated.
+
 Seats are closed by default and opened only on purpose. A new capability
 (a tool, a server, a setting source) is a named grant in
 `harnesses.GRANTS`, mapped per harness, accepted by that harness's receipt

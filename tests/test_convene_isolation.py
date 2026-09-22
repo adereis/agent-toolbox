@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from convene_support import STUBS, Sandbox
+from convene_support import REPO, STUBS, Sandbox
 
 from convene import doctor, harnesses, isolation, platform, plan, round as round_
 from convene.harnesses import claude as claude_, codex as codex_
@@ -332,6 +332,128 @@ class RealBusProxyTests(unittest.TestCase):
                          "the runtime directory holds the proxied socket and nothing else")
         self.assertEqual(launched.attestation["session_bus"]["names"], ["org.freedesktop.secrets"])
         self.assertIsNone(tier._buses.get(str(box.root / "seat")), "finish reaped the proxy")
+
+
+class JailInvariantTests(unittest.TestCase):
+    """One test per invariant AGENTS.md lists for the jail, by label.
+
+    The list is the contract a reviewer reads and quirework's copy of the
+    jail follows; these keep it true here.
+    """
+
+    LABELS = ("J1", "J2", "J3", "J4", "J5", "J6")
+
+    def setUp(self):
+        self.box = Sandbox(self, fake_bwrap=True)
+
+    def wrap(self, harness_name="claude"):
+        harness = harnesses.get(harness_name)
+        if harness_name == "agy":
+            (self.box.home / ".gemini").mkdir(exist_ok=True)
+            (self.box.home / ".gemini/oauth_creds.json").write_text("{}")
+        work = self.box.root / f"work-{harness_name}"
+        (work / "materials").mkdir(parents=True, exist_ok=True)
+        (work / "START.md").write_text("x")
+        tier = isolation.get("enforced")
+        with patch.object(bwrap.sys, "platform", "linux"):
+            launched = tier.wrap([harness_name], harness=harness,
+                                 seat_home=self.box.root / f"seat-{harness_name}",
+                                 workspace=work, project_root=self.box.project, repo_ro=True)
+        return tier, harness, launched
+
+    def test_every_listed_invariant_has_a_test(self):
+        listed = re.findall(r"\*\*(J\d+) ", (REPO / "AGENTS.md").read_text())
+        self.assertEqual(tuple(listed), self.LABELS)
+        for label in self.LABELS:
+            self.assertTrue(hasattr(self, f"test_{label.lower()}"), label)
+
+    def test_j1(self):
+        _, _, launched = self.wrap()
+        joined = " ".join(launched.argv)
+        self.assertNotIn("--bind / /", joined)
+        self.assertIn("--ro-bind /usr /usr", joined)
+        self.assertIn("--ro-bind /etc /etc", joined)
+        self.assertNotIn("/proc/self/mounts", Path(bwrap.__file__).read_text())
+
+    def test_j2(self):
+        _, harness, launched = self.wrap()
+        argv = launched.argv
+        home = str(self.box.home)
+        blank = argv.index(home)
+        self.assertEqual(argv[blank - 3: blank], ["--size", str(bwrap.TMPFS_BYTES), "--tmpfs"])
+        for target in ("/tmp", "/var/tmp"):
+            at = argv.index(target)
+            self.assertEqual(argv[at - 3: at],
+                             ["--size", str(bwrap.TMPFS_BYTES), "--tmpfs"], target)
+        private = argv.index(str(self.box.root / "seat-claude/claude"))
+        workspace = argv.index(launched.attestation["writable"][0])
+        self.assertLess(blank, private)
+        self.assertLess(private, workspace)
+        binds = [i for i, a in enumerate(argv) if a == "--bind"]
+        self.assertEqual(argv[binds[-1] + 2], launched.attestation["writable"][0],
+                         "the writable workspace is the last bind")
+
+    def test_j3(self):
+        _, _, launched = self.wrap()
+        self.assertNotIn("/run/user", " ".join(launched.argv))
+        tier, harness, launched = self.wrap("agy")
+        try:
+            argv = launched.argv
+            runtime = f"/run/user/{os.getuid()}"
+            socket = argv[argv.index(f"{runtime}/bus") - 1]
+            self.assertFalse(socket.startswith("/run/user/"), "the host bus is never bound")
+            self.assertIn("--sync-fd", argv)
+            proxy = tier._buses[str(self.box.root / "seat-agy")]["process"].args
+            self.assertIn("--filter", proxy)
+            self.assertIn("--talk=org.freedesktop.secrets", proxy)
+        finally:
+            tier.finish(harness, self.box.root / "seat-agy")
+
+    def test_j4(self):
+        _, _, launched = self.wrap()
+        argv = launched.argv
+        for flag in ("--unshare-pid", "--unshare-ipc", "--unshare-uts",
+                     "--unshare-cgroup-try", "--die-with-parent"):
+            self.assertIn(flag, argv)
+        self.assertIn("--dev", argv)
+        self.assertNotIn("--dev-bind", argv)
+
+    def test_j5(self):
+        _, _, launched = self.wrap()
+        got = launched.attestation
+        self.assertIn("/usr", got["root_read_only"])
+        self.assertEqual(got["namespaces"], ["pid", "ipc", "uts", "cgroup"])
+        self.assertIsNone(got["session_bus"])
+        # Through a real launch, so the red flag is checked where it is made.
+        (self.box.home / ".gemini").mkdir(exist_ok=True)
+        (self.box.home / ".gemini/oauth_creds.json").write_text("{}")
+        with patch.object(bwrap.sys, "platform", "linux"):
+            root, _ = plan.prepare(self.box.plan(seats=[
+                {"id": "g", "persona": "quinn-t-shun", "harness": "agy",
+                 "model": "gemini-3.8-flash", "effort": "low", "tools": "write",
+                 "isolation": "enforced"}]), project_root=self.box.project,
+                range_spec="HEAD~1..HEAD")
+            round_.run_round(root, 1)
+        got = read(root / "records/g/r001/receipt.json")
+        self.assertEqual(got["isolation"]["session_bus"]["names"],
+                         ["org.freedesktop.secrets"])
+        self.assertTrue(any("session bus proxied" in f for f in got["red_flags"]),
+                        got["red_flags"])
+
+    def test_j6(self):
+        bare = self.box.root / "bare"
+        (bare / "etc").mkdir(parents=True)
+        with self.assertRaisesRegex(RuntimeError, "usr is missing"):
+            bwrap.system_root(bare)
+        real = shutil.which
+
+        def which(name, *args, **kwargs):
+            return None if name == bwrap.BUS_PROXY else real(name, *args, **kwargs)
+
+        with patch.object(bwrap.sys, "platform", "linux"), \
+             patch.object(bwrap.shutil, "which", side_effect=which):
+            with self.assertRaisesRegex(ValueError, "xdg-dbus-proxy"):
+                isolation.resolve("enforced", harnesses.get("agy"))
 
 
 class PlatformTests(unittest.TestCase):
