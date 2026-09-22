@@ -34,7 +34,7 @@ project-specific skill installation. This installer does not change
 
 | Component | Claude Code | Codex | Installation behavior |
 |-----------|-------------|-------|-----------------------|
-| `skills` | Yes | Yes | Installs `teach` and `adopt-baseline` with native explicit-invocation metadata and the configuration-aware `whats-new` release digest; for Codex also the `convene` operator procedure, linked from the plugin |
+| `skills` | Yes | Yes | Installs `teach` with native explicit-invocation metadata and the configuration-aware `whats-new` release digest; for Codex also the `convene` operator procedure, linked from the plugin |
 | `scripts` | Yes | Yes | Links harness utilities under `<root>/scripts/` |
 | `hooks` | Yes | Unavailable | Links the remaining hook scripts; registration is manual |
 | `settings` | Yes | Unavailable | Links statusline scripts at the Claude configuration root |
@@ -80,8 +80,9 @@ retired components are excluded from the installer.
 
 Instruction modules are inert until an instruction file adopts them. The
 installer never edits `AGENTS.md`, `CLAUDE.md`, or user-level instructions;
-the [baseline adoption workflow](../skills/adopt-baseline/SKILL.md) performs
-that merge and reports what it changed.
+the [baseline adoption prompt](../prompts/adopt-baseline.md) performs that
+merge and reports what it changed. It ships as a prompt so that a workflow run
+twice a year costs nothing in the sessions that never run it.
 
 Put the utilities you run yourself on your `PATH` with the `commands`
 component. It links them into `~/.local/bin` under the name their own help

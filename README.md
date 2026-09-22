@@ -58,9 +58,8 @@ learning who wrote what.
 | Statusline and quota display | Claude Code | [Settings](harnesses/claude-code/settings/README.md) |
 | Hooks | Claude Code | [Hooks](harnesses/claude-code/hooks/README.md) |
 | Teaching skill | Claude Code and Codex | [Shared workflow](skills/teach/SKILL.md) |
-| Baseline adoption skill | Claude Code and Codex | [Shared workflow](skills/adopt-baseline/SKILL.md) |
 | Release digest skill | Claude Code and Codex | [Shared workflow](skills/whats-new/SKILL.md) |
-| Review and browser verification prompts | Any harness accepting text prompts | [Prompts](prompts/README.md) |
+| Baseline adoption, review, and browser verification prompts | Any harness accepting text prompts | [Prompts](prompts/README.md) |
 | Optional instruction modules | Any harness accepting instruction files | [Instructions](instructions/README.md) |
 | Hook reference examples | Claude Code payloads; not deployed | [Examples](examples/claude-code/hooks/README.md) |
 | Agent configuration examples | Claude Code | [Agents](harnesses/claude-code/agents/README.md) |

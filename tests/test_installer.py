@@ -52,17 +52,21 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse((codex / "settings.json").exists())
         self.assertFalse((claude / "settings.json").exists())
 
-    def test_baseline_skill_shares_one_workflow_across_harnesses(self):
-        claude, codex = self.root / "claude", self.root / "codex"
-        for name, target in (("claude-code", claude), ("codex", codex)):
-            self.install(target, installer.catalog(name, ["skills"]), True)
-            workflow = target / "skills/adopt-baseline/references/workflow.md"
-            self.assertEqual(workflow.resolve(), REPO / "skills/adopt-baseline/SKILL.md")
-            entry = target / "skills/adopt-baseline/SKILL.md"
-            self.assertEqual(entry.resolve(), REPO / "harnesses" / name / "skills/adopt-baseline/SKILL.md")
-        self.assertEqual((codex / "skills/adopt-baseline/agents/openai.yaml").resolve(),
-                         REPO / "harnesses/codex/skills/adopt-baseline/agents/openai.yaml")
-        self.assertFalse((claude / "skills/adopt-baseline/agents").exists())
+    def test_baseline_adoption_is_a_prompt_and_never_a_skill(self):
+        """Adoption runs rarely and rewrites the user's own configuration.
+
+        A skill announces itself in every session that can discover it, so
+        this workflow ships as a prompt: installed as plain text, invoked
+        explicitly, and absent from the skills component for both harnesses.
+        """
+        for name in ("claude-code", "codex"):
+            with self.subTest(harness=name):
+                target = self.root / name
+                self.install(target, installer.catalog(name, ["prompts"]), True)
+                prompt = target / "prompts/adopt-baseline.md"
+                self.assertEqual(prompt.resolve(), REPO / "prompts/adopt-baseline.md")
+                skills = installer.catalog(name, ["skills"])
+                self.assertEqual([p for p in skills if "adopt-baseline" in p], [])
 
     def test_instruction_modules_install_without_touching_policy_files(self):
         for name in ("claude-code", "codex"):

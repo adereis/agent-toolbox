@@ -17,8 +17,9 @@ overwrite `AGENTS.md`, `CLAUDE.md`, or user-level instructions.
 
 Merging shared policy into a global instruction file that also holds personal
 and harness-specific rules requires judgment, so the installer does not
-attempt it. The [baseline adoption workflow](../skills/adopt-baseline/SKILL.md)
-performs that merge and reconciles later drift.
+attempt it. The [baseline adoption prompt](../prompts/adopt-baseline.md)
+performs that merge and reconciles later drift. It is a prompt rather than an
+installed skill, so it costs no session context until you invoke it.
 
 Adoption is not equally enforced across harnesses. Claude Code loads `@path`
 imports with the file that declares them, so an import line makes the module
