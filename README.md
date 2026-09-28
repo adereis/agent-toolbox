@@ -52,7 +52,7 @@ learning who wrote what.
 | Personal context, compaction, and Vim preferences | Codex; bootstrap reference | [Configuration template](examples/codex/README.md) |
 | Keyring-backed API key wrapper | Codex | [Store the key in the keyring](harnesses/codex/README.md#store-the-key-in-the-keyring) |
 | Tmux launcher with backend and status display | Codex | [Tmux status display](harnesses/codex/README.md#tmux-status-display) |
-| Memory export, import, and status | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-memory--memory-portability) |
+| Three-way memory sync across machines | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-memory-sync--memory-portability) |
 | Release digest against local configuration | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-code-whats-newpy) |
 | Release digest against local configuration | Codex | [Release digest](harnesses/codex/README.md#release-digest) |
 | Statusline and quota display | Claude Code | [Settings](harnesses/claude-code/settings/README.md) |

@@ -121,16 +121,14 @@ codex-tmux
 convene doctor
 ```
 
-`commands` withholds two groups on purpose. A skill invokes each `whats-new`
-utility by path and supplies the judgement that utility deliberately omits,
-and its `--commit` flag moves the digest baseline, so running it by hand
-would mark releases read behind the skill's back. The memory scripts resolve
-`claude-memory-lib.sh` relative to `$0` and need their siblings in a single
-directory. Reach both groups through their installed `scripts` path:
+`commands` withholds the `whats-new` utilities on purpose. A skill invokes
+each by path and supplies the judgement that utility deliberately omits, and
+its `--commit` flag moves the digest baseline, so running it by hand would
+mark releases read behind the skill's back. Reach them through their
+installed `scripts` path:
 
 ```bash
 python3 ~/.claude/scripts/claude-code-whats-new.py
-~/.claude/scripts/claude-memory-status.sh
 ```
 
 ## Plugins

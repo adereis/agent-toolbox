@@ -16,9 +16,7 @@ COMPONENTS = ("skills", "scripts", "hooks", "settings", "prompts", "instructions
 # Utilities a person runs at a shell prompt, installed without their extension.
 # The whats-new scripts are deliberately absent: a skill invokes them by path
 # and interprets output they withhold judgement on, and a stray --commit would
-# move the digest baseline out from under that skill. The memory scripts are
-# absent because they resolve their library through "$0" and need their
-# siblings, including the library itself, in the same directory.
+# move the digest baseline out from under that skill.
 # Each entry names the installed command and its source, relative to the
 # checkout. `convene` is the engine shipped inside the Claude Code plugin;
 # its shim resolves the engine through the link's real path, so one symlink
@@ -26,6 +24,7 @@ COMPONENTS = ("skills", "scripts", "hooks", "settings", "prompts", "instructions
 COMMANDS = {
     "claude-code": {
         "claude-code-session-resume": "harnesses/claude-code/scripts/claude-code-session-resume.py",
+        "claude-memory-sync": "harnesses/claude-code/scripts/claude-memory-sync.py",
         "convene": "harnesses/claude-code/plugins/convene/bin/convene",
     },
     "codex": {

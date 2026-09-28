@@ -178,8 +178,9 @@ platform and exit non-zero naming the command that works there. Prefer a
 breadcrumb over an untested implementation, because a wrong implementation
 fails in the user's session while a breadcrumb costs them one step.
 
-Add a portable fallback where one is cheap. `file_sha` in
-`claude-memory-lib.sh` tries `sha256sum` and falls back to `shasum -a 256`.
+Add a portable fallback where one is cheap. Convene's `platform.py` reads a
+process start time from `/proc` on Linux and asks `ps` on macOS, and raises
+anywhere else rather than guessing.
 Where no such fallback exists, name the alternative: `codex-api-profile.sh`
 implements the libsecret keyring only and prints the equivalent macOS
 `security` commands when it runs on Darwin.
