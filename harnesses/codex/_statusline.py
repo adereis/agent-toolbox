@@ -27,6 +27,8 @@ def load_prices(path=PRICES):
     for model, rates in data["models"].items():
         for key in ("input", "cached_input", "cache_write", "output", "long_context_after"):
             value = rates[key]
+            if key == "cache_write" and value is None:
+                continue  # Some published rate cards do not state this rate.
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
                 raise ValueError(f"Invalid {key} price for {model}")
     return data["models"]
@@ -47,9 +49,13 @@ def estimate(usage, model, tier, prices):
     if cached + writes > inputs:
         raise ValueError("cached reads and writes exceed input tokens")
     rates = prices[model]
+    if writes and rates["cache_write"] is None:
+        raise ValueError(f"no published cache-write rate bundled for {model}")
     long = inputs > rates["long_context_after"]
     input_cost = sum(Decimal(n) * Decimal(str(rates[k])) for n, k in (
-        (inputs - cached - writes, "input"), (cached, "cached_input"), (writes, "cache_write")))
+        (inputs - cached - writes, "input"), (cached, "cached_input")))
+    if writes:
+        input_cost += Decimal(writes) * Decimal(str(rates["cache_write"]))
     output_cost = outputs * Decimal(str(rates["output"]))
     return ((input_cost * (2 if long else 1) + output_cost * (Decimal("1.5") if long else 1))
             * Decimal(str(multipliers[tier])) / 1_000_000)

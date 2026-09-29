@@ -378,12 +378,13 @@ charges, long-context pricing above 272,000 input tokens, and Standard,
 Fast/Priority, or Flex processing. Reasoning output is already included in
 output tokens and is not charged twice. Resuming starts a fresh estimate.
 
-Bundled rates cover GPT-6 Astra and GPT-5.6 Sol, Terra, and Luna. They were
-checked against [OpenAI pricing](https://developers.openai.com/api/docs/pricing/)
-and the model pages on September 15, 2026. They are a versioned snapshot;
-GPT-5.6 Sol currently has promotional pricing. Unknown models, missing
+Bundled rates cover GPT-6 Astra, GPT-6 Sol, and GPT-5.6 Sol, Terra, and Luna
+from the [OpenAI API pricing page](https://developers.openai.com/api/docs/pricing/).
+GPT-6.1 Sol is priced at $2 input, $0.10 cached input, $2.50 cache writes,
+and $10 output per million tokens. The snapshot was checked on September 29,
+2026. GPT-5.6 Sol currently has promotional pricing. Unknown models, missing
 per-response usage, and unknown service tiers produce `n/a` with a reason.
-They never produce a guessed price or an understated partial total.
+Estimates never show a partial total.
 
 This is the main thread's token estimate. It excludes delegated agents,
 tool fees, regional uplifts, credits, and account-specific discounts.
