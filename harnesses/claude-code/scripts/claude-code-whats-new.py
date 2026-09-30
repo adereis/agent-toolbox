@@ -114,6 +114,28 @@ def read_json(path):
     return data if isinstance(data, dict) else {}
 
 
+def read_settings(paths):
+    """Load each settings file once, however many roles it plays.
+
+    Started from the home directory, the project's .claude/settings.json is
+    the user's own file, and reading it twice doubles every hook and
+    permission rule in it. File identity rather than path equality also
+    covers a .claude directory reached through a symlink.
+    """
+    documents, seen = [], set()
+    for path in paths:
+        try:
+            status = Path(path).stat()
+        except OSError:
+            documents.append(read_json(path))  # Reports what is wrong, or is absent.
+            continue
+        identity = (status.st_dev, status.st_ino)
+        if identity not in seen:
+            seen.add(identity)
+            documents.append(read_json(path))
+    return documents
+
+
 def running_version(claude_dir):
     """Identify the running release, preferring the CLI's own answer."""
     try:
@@ -139,11 +161,11 @@ def fingerprint(claude_dir, project):
     Environment variables contribute their names only. Their values can hold
     credentials and must never reach a digest that gets read back out loud.
     """
-    settings = [read_json(claude_dir / "settings.json"),
-                read_json(claude_dir / "settings.local.json"),
-                read_json(project / ".claude/settings.json"),
-                read_json(project / ".claude/settings.local.json"),
-                read_json("/etc/claude-code/managed-settings.json")]
+    settings = read_settings([claude_dir / "settings.json",
+                              claude_dir / "settings.local.json",
+                              project / ".claude/settings.json",
+                              project / ".claude/settings.local.json",
+                              Path("/etc/claude-code/managed-settings.json")])
 
     def setting(key, default=None):
         for source in reversed(settings):

@@ -277,11 +277,11 @@ class FingerprintTests(unittest.TestCase):
         self.project = self.home / "project"
         self.project.mkdir()
 
-    def probe(self, environ=None):
+    def probe(self, environ=None, project=None):
         with patch.dict(os.environ, environ or {}, clear=True), \
              patch.object(digest, "running_version", return_value=("2.1.10", [])):
             os.environ["HOME"] = str(self.home)
-            return digest.fingerprint(self.claude, self.project)
+            return digest.fingerprint(self.claude, project or self.project)
 
     def test_settings_sources_combine_without_one_hiding_another(self):
         found = self.probe()
@@ -292,6 +292,17 @@ class FingerprintTests(unittest.TestCase):
         self.assertEqual(found["mcp"], ["notes"])
         self.assertEqual(found["output_style"], "Explanatory")
         self.assertTrue(found["statusline"])
+
+    def test_the_home_directory_as_project_counts_user_settings_once(self):
+        found = self.probe(project=self.home)
+        self.assertEqual(found["rules"]["allow"], 3)
+        self.assertEqual(found["hooks"], ["PreToolUse[Bash]"])
+
+    def test_a_project_linked_to_the_user_settings_counts_them_once(self):
+        (self.project / ".claude").symlink_to(self.claude)
+        found = self.probe()
+        self.assertEqual(found["rules"]["allow"], 3)
+        self.assertEqual(found["hooks"], ["PreToolUse[Bash]"])
 
     def test_environment_values_never_appear_only_their_names(self):
         found = self.probe({"ANTHROPIC_API_KEY": "sk-secret-value", "PATH": "/usr/bin"})
