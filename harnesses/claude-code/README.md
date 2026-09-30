@@ -21,6 +21,13 @@ and reports the releases published since its last digest against this
 machine's configuration. Installing it without the `scripts` component leaves
 the skill without the utility it drives.
 
+The skill runs in a forked Sonnet sub-agent at high effort, so the raw
+digest and the workflow never enter the calling session; only the finished
+report comes back. The sub-agent cannot see the conversation, which is why
+the skill asks for the whole question as its argument. It also advances the
+baseline just before returning the report rather than after it is read;
+`--since` the version the report names brings that digest back.
+
 Plugins under `plugins/` are installed with Claude Code's own plugin
 commands, not with the installer; the repository root is a local
 marketplace. See the [installation notes](../../docs/installation.md#plugins).
