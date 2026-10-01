@@ -50,11 +50,15 @@ search terms may have missed an earlier name for the same thing.
   look, not proof of impact. Read the bullet before asserting it applies.
 - Untagged bullets are not noise. A capability that did not exist cannot match
   a setting, so genuinely new features often carry no configuration tag.
-- Check what you can read before handing the user a check. The environment
-  block summarizes the configuration; when an item turns on a detail it only
-  counts, such as whether any of the allow rules names a given tool, read the
-  configuration files and say what you found. Quote rules and names, never a
-  credential or an environment variable's value.
+- Settle an item's condition before handing the user a check. Look first in
+  the environment block, and read the condition in the bullet itself: an
+  entry that applies "when telemetry is off" does not apply where telemetry
+  is on. When the block cannot decide it, check narrowly: count or match the
+  one detail, such as the rules naming one tool, and never print a settings
+  file or its values. Those can hold credentials, and a harness's own
+  permission checks may refuse a broad read. When even a narrow check is not
+  possible, name the detail that decides the item instead of telling the
+  user to look.
 - The terminal is identified from the variables it sets for itself, not from
   `TERM`, which a wrapper or profile may rewrite. When the environment block
   reports that `TERM` does not name the detected terminal, say so: it is a
