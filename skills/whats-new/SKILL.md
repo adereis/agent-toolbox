@@ -19,7 +19,9 @@ deliberately does not decide what matters. That judgement is the task.
    it is the evidence for every claim about relevance.
 3. Sort the bullets into three groups, most consequential first:
    - **Act on this** — behavior that changed under an existing setting, or a
-     new option worth adopting given how this machine is configured.
+     new option worth adopting given how this machine is configured. Each
+     entry asks the user to do or decide something. An item that changes
+     nothing here belongs under Worth knowing, or nowhere.
    - **Fixed for you** — bugs this configuration was plausibly hitting.
    - **Worth knowing** — new capability that touches the user's workflow
      without needing a decision.
@@ -48,6 +50,11 @@ search terms may have missed an earlier name for the same thing.
   look, not proof of impact. Read the bullet before asserting it applies.
 - Untagged bullets are not noise. A capability that did not exist cannot match
   a setting, so genuinely new features often carry no configuration tag.
+- Check what you can read before handing the user a check. The environment
+  block summarizes the configuration; when an item turns on a detail it only
+  counts, such as whether any of the allow rules names a given tool, read the
+  configuration files and say what you found. Quote rules and names, never a
+  credential or an environment variable's value.
 - The terminal is identified from the variables it sets for itself, not from
   `TERM`, which a wrapper or profile may rewrite. When the environment block
   reports that `TERM` does not name the detected terminal, say so: it is a
