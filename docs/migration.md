@@ -32,8 +32,9 @@ python3 tools/install.py --harness codex --scope user \
 Check the removal against your own `~/bin` before running it; the installer
 never deletes files it did not create. If both directories are on your
 `PATH`, confirm with `type -a <command>` that no stale entry remains. The
-`whats-new` and memory utilities never belonged on `PATH`; run them from
-their installed `scripts` directory instead.
+`whats-new` utilities never belonged on `PATH`; run them from their
+installed `scripts` directory instead. `claude-memory-sync` does belong
+there, and the `commands` component installs it.
 
 ## Retired hooks
 
