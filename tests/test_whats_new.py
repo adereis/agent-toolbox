@@ -309,6 +309,32 @@ class FingerprintTests(unittest.TestCase):
         self.assertIn("ANTHROPIC_API_KEY", found["env"])
         self.assertNotIn("sk-secret-value", json.dumps(found))
 
+    def test_rules_are_counted_by_tool_without_their_specifiers(self):
+        (self.claude / "settings.local.json").write_text(json.dumps({"permissions": {
+            "allow": ["Bash(ls:*)", "mcp__notes__search", "mcp__notes__write(draft)"],
+            "deny": ["Read(~/private-example/**)"]}}))
+        found = self.probe()
+        self.assertEqual(found["rule_tools"]["allow"], {"Bash": 2, "WebFetch": 1, "mcp__notes": 2})
+        text = "\n".join(digest.describe(found))
+        self.assertIn("5 allow (Bash 2, mcp__notes 2, WebFetch 1), 1 deny (Read 1)", text)
+        for specifier in ("git:*", "ls:*", "private-example", "draft"):
+            self.assertNotIn(specifier, text)
+
+    def test_a_telemetry_opt_out_is_read_from_the_shell_or_settings_and_settings_win(self):
+        found = self.probe()
+        self.assertEqual(found["telemetry_off"], [])
+        self.assertIn("telemetry=not opted out", "\n".join(digest.describe(found)))
+
+        found = self.probe({"CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "true"})
+        self.assertIn("telemetry=opted out by CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+                      "\n".join(digest.describe(found)))
+
+        (self.claude / "settings.local.json").write_text(json.dumps({"env": {"DISABLE_TELEMETRY": "1"}}))
+        self.assertEqual(self.probe()["telemetry_off"], ["DISABLE_TELEMETRY"])
+
+        (self.claude / "settings.local.json").write_text(json.dumps({"env": {"DISABLE_TELEMETRY": "0"}}))
+        self.assertEqual(self.probe({"DISABLE_TELEMETRY": "1"})["telemetry_off"], [])
+
     def test_variables_a_session_injects_are_not_reported_as_configuration(self):
         found = self.probe({"CLAUDE_CODE_SESSION_ID": "abc", "CLAUDE_PID": "1",
                             "CLAUDE_CODE_USE_VERTEX": "1"})

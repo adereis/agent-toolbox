@@ -103,13 +103,21 @@ packument; every other window works without them.
 **Correlation.** The digest prints an `## Environment` block — settings,
 permission rules, hooks, plugins, MCP servers, statusline, skills, agents,
 terminal, and platform — and tags each bullet with the signals it matched.
+Permission rules are counted per tool (`173 allow (Bash 156, Read 14, ...)`),
+never with their specifiers, so a reader can tell whether any rule names a
+tool a release changed without opening the settings. The session line says
+whether `DISABLE_TELEMETRY` or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
+opts out of telemetry, from the shell or a settings `env` block, because
+several entries apply only when telemetry is off.
 `[-]` marks an entry no signal matched, which includes genuinely new features,
 so knobs and commands that did not exist are tagged unconditionally rather
 than disappearing under `--relevant-only`. The `## Unmatched` line states how
 many `[-]` entries the window holds, beside the withheld count and before the
 first bullet, even when `--relevant-only` hides them; `--json` carries the
 same number as `unmatched`. Environment variables contribute
-their names only; values may hold credentials and are never printed.
+their names only; values may hold credentials and are never printed. The two
+telemetry opt-outs are the one exception read for a value, and only to decide
+whether they are set.
 
 The terminal is identified from the variables it sets for itself
 (`KITTY_WINDOW_ID`, `WEZTERM_PANE`, `GHOSTTY_RESOURCES_DIR`, and so on),

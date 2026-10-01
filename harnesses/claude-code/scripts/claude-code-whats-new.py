@@ -101,6 +101,12 @@ RUNTIME_ENV = re.compile(
     r"|CODE_(SESSION_ID|ENTRYPOINT|EXECPATH|CHILD_SESSION|SESSION_ATTENDED"
     r"|MESSAGING_[A-Z_]+|3P_PROBE_[A-Z_]+))$")
 
+# The changelog conditions some behavior on telemetry being off, separately
+# from Bedrock, Vertex, and Foundry. Either variable turns it off when truthy,
+# whether the shell sets it or a settings file's `env` block does.
+TELEMETRY_OPT_OUTS = ("DISABLE_TELEMETRY", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC")
+TRUTHY = {"1", "true", "yes", "on"}
+
 
 def read_json(path):
     """Load a settings document, treating anything unusable as absent."""
@@ -155,11 +161,30 @@ def running_version(claude_dir):
     return (installed[-1] if installed else None), installed
 
 
+def rule_tool(rule):
+    """Name the tool a permission rule governs, never the rule's specifier.
+
+    A specifier can name paths and commands; the tool name cannot, and it is
+    what settles whether any rule touches a tool a release changed. MCP rules
+    are grouped by server, which the environment block already names.
+    """
+    tool = str(rule).split("(", 1)[0].strip()
+    return "__".join(tool.split("__")[:2]) if tool.startswith("mcp__") else tool
+
+
+def tally(counts):
+    """List names by descending count, breaking ties alphabetically."""
+    return ", ".join(f"{name} {count}"
+                     for name, count in sorted(counts.items(), key=lambda item: (-item[1], item[0])))
+
+
 def fingerprint(claude_dir, project):
     """Describe the configuration that decides whether a change matters here.
 
     Environment variables contribute their names only. Their values can hold
     credentials and must never reach a digest that gets read back out loud.
+    The telemetry opt-outs are the one exception read for a value, and only
+    to decide whether they are set.
     """
     settings = read_settings([claude_dir / "settings.json",
                               claude_dir / "settings.local.json",
@@ -174,11 +199,25 @@ def fingerprint(claude_dir, project):
         return default
 
     rules = {kind: 0 for kind in ("allow", "deny", "ask")}
+    rule_tools = {kind: {} for kind in rules}
     for source in settings:
         permissions = source.get("permissions")
         if isinstance(permissions, dict):
             for kind in rules:
-                rules[kind] += len(permissions.get(kind) or [])
+                entries = permissions.get(kind) or []
+                rules[kind] += len(entries)
+                for entry in entries if isinstance(entries, list) else []:
+                    tool = rule_tool(entry)
+                    rule_tools[kind][tool] = rule_tools[kind].get(tool, 0) + 1
+
+    def opted_out(name):
+        """Resolve a variable as the session sees it: settings override the shell."""
+        value = os.environ.get(name)
+        for source in settings:
+            env = source.get("env")
+            if isinstance(env, dict) and name in env:
+                value = env[name]
+        return str(value or "").strip().lower() in TRUTHY
     default_mode = ""
     for source in settings:
         permissions = source.get("permissions")
@@ -233,6 +272,8 @@ def fingerprint(claude_dir, project):
         "theme": setting("theme", ""),
         "default_mode": default_mode,
         "rules": rules,
+        "rule_tools": rule_tools,
+        "telemetry_off": [name for name in TELEMETRY_OPT_OUTS if opted_out(name)],
         "model": model,
         "effort": setting("effortLevel", ""),
         "thinking": bool(setting("alwaysThinkingEnabled")),
@@ -310,7 +351,14 @@ def digest(releases, marks, filtering=True):
 
 def describe(marks):
     """Summarize the configuration the tags were derived from."""
-    rules = ", ".join(f"{count} {kind}" for kind, count in marks["rules"].items() if count)
+    kinds = []
+    for kind, count in marks["rules"].items():
+        if count:
+            tools = tally(marks["rule_tools"][kind])
+            kinds.append(f"{count} {kind}" + (f" ({tools})" if tools else ""))
+    rules = ", ".join(kinds)
+    telemetry = (f"opted out by {', '.join(marks['telemetry_off'])}"
+                 if marks["telemetry_off"] else "not opted out")
     lines = [
         f"platform     : {marks['platform']}"
         + (", IDE extension present" if marks["ide"] else ", no IDE extension"),
@@ -330,7 +378,8 @@ def describe(marks):
         f"session      : autoCompact={'on' if marks['auto_compact'] else 'off'}, "
         f"remoteControl={'on' if marks['remote_control'] else 'off'}, "
         f"notifications={'on' if marks['notifications'] else 'off'}, "
-        f"attribution={'configured' if marks['attribution'] else 'default'}",
+        f"attribution={'configured' if marks['attribution'] else 'default'}, "
+        f"telemetry={telemetry}",
         f"hooks        : {', '.join(marks['hooks']) or 'none'}",
         f"plugins      : {', '.join(marks['plugins']) or 'none'}",
         f"mcp servers  : {', '.join(marks['mcp']) or 'none'}",
