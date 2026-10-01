@@ -105,7 +105,10 @@ permission rules, hooks, plugins, MCP servers, statusline, skills, agents,
 terminal, and platform — and tags each bullet with the signals it matched.
 `[-]` marks an entry no signal matched, which includes genuinely new features,
 so knobs and commands that did not exist are tagged unconditionally rather
-than disappearing under `--relevant-only`. Environment variables contribute
+than disappearing under `--relevant-only`. The `## Unmatched` line states how
+many `[-]` entries the window holds, beside the withheld count and before the
+first bullet, even when `--relevant-only` hides them; `--json` carries the
+same number as `unmatched`. Environment variables contribute
 their names only; values may hold credentials and are never printed.
 
 The terminal is identified from the variables it sets for itself

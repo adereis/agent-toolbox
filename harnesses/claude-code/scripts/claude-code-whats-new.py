@@ -342,8 +342,17 @@ def describe(marks):
     return lines
 
 
+def unmatched(window):
+    """Count the bullets no signal matched, whether or not they are shown."""
+    return sum(not bullet["tags"] for release in window for bullet in release["bullets"])
+
+
 def render(window, marks, dropped, dates, header, relevant_only):
-    """Print the digest: provenance, environment, withheld counts, then bullets."""
+    """Print the digest: provenance, environment, both counts, then bullets.
+
+    Both counts lead the bullets so a reader paging through a long digest has
+    the exact numbers before its first page ends, and never has to tally them.
+    """
     out = [header, "", "## Environment", *describe(marks), "",
            f"## Signals watched: {', '.join(tag for tag, _ in matchers(marks))}"]
     if dropped:
@@ -351,19 +360,18 @@ def render(window, marks, dropped, dates, header, relevant_only):
         out += ["", f"## Withheld: {total} bullet(s) belonging to another host or platform"]
         out += [f"  {count:4d}  {reason}" for reason, count in sorted(dropped.items())]
         out += ["  Add --no-filter to include them."]
-    hidden = 0
+    unread = unmatched(window)
+    out += ["", f"## Unmatched: {unread} bullet(s) matched no signal for this setup, marked [-]"]
+    if relevant_only and unread:
+        out += ["  Not shown because of --relevant-only; re-run without it to read them."]
     for release in window:
         shown = [b for b in release["bullets"] if b["tags"] or not relevant_only]
-        hidden += len(release["bullets"]) - len(shown)
         if not shown:
             continue
         out += ["", f"## {release['version']}  {day(dates.get(release['version']))}"]
         for bullet in shown:
             tags = ",".join(bullet["tags"]) if bullet["tags"] else "-"
             out.append(f"[{tags}] {safe_text(bullet['text'])}")
-    if relevant_only and hidden:
-        out += ["", f"## Not shown: {hidden} bullet(s) matched no signal for this setup.",
-                "  Re-run without --relevant-only to read them."]
     print("\n".join(out))
 
 
@@ -506,7 +514,7 @@ def main(argv=None):
     if args.json:
         print(json.dumps({"window": {"from": oldest, "to": newest, "count": len(window)},
                           "source": source, "baseline": baseline, "environment": marks,
-                          "withheld": dropped, "releases": tagged,
+                          "withheld": dropped, "unmatched": unmatched(tagged), "releases": tagged,
                           "dates": {v: day(d) for v, d in dates.items()
                                     if any(v == r["version"] for r in window)}},
                          indent=2, sort_keys=True, default=str))

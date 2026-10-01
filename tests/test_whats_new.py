@@ -376,6 +376,20 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("Not shown", out)
 
+    def test_the_unmatched_count_is_printed_not_left_to_the_reader(self):
+        _, out, _ = self.run_tool("--releases", "3")
+        untagged = sum(line.startswith("[-] ") for line in out.splitlines())
+        self.assertGreater(untagged, 0)
+        self.assertIn(f"## Unmatched: {untagged} bullet(s)", out)
+        self.assertLess(out.index("## Unmatched:"), out.index("[-] "))
+
+        _, hidden, _ = self.run_tool("--releases", "3", "--relevant-only")
+        self.assertIn(f"## Unmatched: {untagged} bullet(s)", hidden)
+        self.assertNotIn("[-] ", hidden)
+
+        _, raw, _ = self.run_tool("--releases", "3", "--json")
+        self.assertEqual(json.loads(raw)["unmatched"], untagged)
+
     def test_a_date_window_without_dates_explains_the_alternative(self):
         code, _, err = self.run_tool("--days", "30")
         self.assertEqual(code, 1)
