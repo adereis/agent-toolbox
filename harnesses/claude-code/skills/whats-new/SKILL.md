@@ -25,7 +25,9 @@ shared modules under `tools/`.
 
 A window of a few releases prints more than one command result can show.
 Save the utility's output to a file in a private directory, made with
-`mktemp -d` inside `~/tmp` when it exists and inside `$HOME` otherwise. Read
+`mktemp -d` inside `~/tmp` when it exists and inside `$HOME` otherwise. Each
+command runs in a fresh shell, so reuse the path `mktemp` printed; never
+record it in a file of your own, which a concurrent run would share. Read
 that file with the Read tool, using `offset` and `limit`, until you reach its
 last line. Do not page with `cut`, `head -c` or `grep -v`: a cut line loses
 the end of its bullet, and the `[-]` lines hold the new features the workflow
@@ -51,10 +53,12 @@ A sub-agent cannot act after its final message, so this replaces the
 workflow's rule to advance the baseline after presenting. For a window
 report, commit as the last step before writing the report: rerun the same
 arguments with `--commit`, piped through `grep '^# Baseline'` so the digest
-is not printed a second time. The baseline therefore moves before the user
-reads the digest. That is recoverable, because the state keeps the last five
-baselines. End the report by naming the version the baseline moved from, so
-the user can re-read this digest later with `--since` that version.
+is not printed a second time. Pipe standard output only: the utility reports
+failures on standard error, and `2>&1` would send them into the grep and out
+of sight. The baseline therefore moves before the user reads the digest.
+That is recoverable, because the state keeps the last five baselines. End
+the report by naming the version the baseline moved from, so the user can
+re-read this digest later with `--since` that version.
 
 State lives in `~/.local/state/agent-toolbox/claude-code-whats-new.json` and
 keeps the last five baselines. The changelog and release dates are cached
