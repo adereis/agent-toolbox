@@ -19,15 +19,22 @@ checkout-relative paths, aliases, or symlinks you maintain.
 
 Earlier instructions told you to symlink a session utility into `~/bin`
 yourself. The `commands` component now owns that job and installs into
-`~/.local/bin` without the file extension. Remove the hand-made links so one
-tool cannot answer to two names:
+`~/.local/bin` without the file extension. Install the replacements first,
+then remove the hand-made links so one tool cannot answer to two names:
 
 ```bash
-rm -f ~/bin/claude-code-session-resume.py ~/bin/codex-code-session-resume.py
-rm -f ~/bin/codex-api-profile.sh ~/bin/codex-tmux.py
+python3 tools/install.py --harness claude-code --scope user \
+  --component commands --apply
 python3 tools/install.py --harness codex --scope user \
   --component commands --apply
+rm -f ~/bin/claude-code-session-resume.py ~/bin/codex-code-session-resume.py
+rm -f ~/bin/codex-api-profile.sh ~/bin/codex-tmux.py
 ```
+
+Both harnesses are installed because the links being removed span both. Run
+the installer before the removal so no utility is unreachable in between; a
+hand-made link can be the only copy of a command on a machine whose harness
+was never synced.
 
 Check the removal against your own `~/bin` before running it; the installer
 never deletes files it did not create. If both directories are on your
