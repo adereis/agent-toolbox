@@ -21,11 +21,17 @@ deliberately does not decide what matters. That judgement is the task.
    - **Act on this** — behavior that changed under an existing setting, or a
      new option worth adopting given how this machine is configured. Each
      entry asks the user to do or decide something. An item that changes
-     nothing here belongs under Worth knowing, or nowhere.
+     nothing here belongs under Worth knowing, or nowhere; an entry whose own
+     text says it changes nothing, or probably does not apply, fails that
+     test.
    - **Fixed for you** — bugs this configuration was plausibly hitting.
    - **Worth knowing** — new capability that touches the user's workflow
      without needing a decision.
-   Omit a group that has no entries rather than padding it.
+   An empty Act on this is a good outcome, not a gap to fill. When nothing
+   qualifies, keep the heading with the single line "Nothing here needs a
+   decision.", because whether anything needs doing is the first thing the
+   user asks. Omit the other groups when they have no entries rather than
+   padding them.
 4. Name the release for each item, and say *why* it applies here, citing the
    configuration: "you run `defaultMode: auto`", not "this may affect you".
 5. Close with the counts the utility reported: bullets withheld as belonging
