@@ -23,6 +23,16 @@ Run the utility from `~/.claude/scripts/claude-code-whats-new.py`, or from
 installed. It needs the checkout intact either way, because it imports the
 shared modules under `tools/`.
 
+A window of a few releases prints more than one command result can show.
+Save the utility's output to a file in a private directory, made with
+`mktemp -d` inside `~/tmp` when it exists and inside `$HOME` otherwise. Read
+that file with the Read tool, using `offset` and `limit`, until you reach its
+last line. Do not page with `cut`, `head -c` or `grep -v`: a cut line loses
+the end of its bullet, and the `[-]` lines hold the new features the workflow
+says to read. The counts come before the first bullet: `## Unmatched`
+always, and `## Withheld` when anything was withheld. Remove the directory
+before writing the report.
+
 Interpret the request:
 
 | The user asked | Command |
