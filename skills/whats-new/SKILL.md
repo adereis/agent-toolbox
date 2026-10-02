@@ -17,13 +17,20 @@ deliberately does not decide what matters. That judgement is the task.
 2. Read the `## Environment` block before the bullets. It states the settings,
    hooks, plugins, MCP servers, and platform the tags were derived from, and
    it is the evidence for every claim about relevance.
-3. Sort the bullets into three groups, most consequential first:
+3. Sort the bullets into four groups, most consequential first:
    - **Act on this** — behavior that changed under an existing setting, or a
      new option worth adopting given how this machine is configured. Each
      entry asks the user to do or decide something. An item that changes
      nothing here belongs under Worth knowing, or nowhere; an entry whose own
      text says it changes nothing, or probably does not apply, fails that
      test.
+   - **Could not check** — an item that would ask for a decision only if one
+     detail of this configuration holds, when neither the environment block
+     nor a narrow check settled that detail. State the detail as a question
+     the user can answer at a glance, such as "does your Bash hook ever
+     return an allow decision?", and say what changes if the answer is yes.
+     An item that depends on an unsettled detail goes here, never under Act
+     on this.
    - **Fixed for you** — bugs this configuration was plausibly hitting.
    - **Worth knowing** — new capability that touches the user's workflow
      without needing a decision.
@@ -63,8 +70,8 @@ search terms may have missed an earlier name for the same thing.
   one detail, such as the rules naming one tool, and never print a settings
   file or its values. Those can hold credentials, and a harness's own
   permission checks may refuse a broad read. When even a narrow check is not
-  possible, name the detail that decides the item instead of telling the
-  user to look.
+  possible, list the item under Could not check, naming the detail that
+  decides it, instead of telling the user to look.
 - The terminal is identified from the variables it sets for itself, not from
   `TERM`, which a wrapper or profile may rewrite. When the environment block
   reports that `TERM` does not name the detected terminal, say so: it is a
