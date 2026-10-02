@@ -64,14 +64,17 @@ search terms may have missed an earlier name for the same thing.
 - Untagged bullets are not noise. A capability that did not exist cannot match
   a setting, so genuinely new features often carry no configuration tag.
 - Settle an item's condition before handing the user a check. Look first in
-  the environment block, and read the condition in the bullet itself: an
-  entry that applies "when telemetry is off" does not apply where telemetry
-  is on. When the block cannot decide it, check narrowly: count or match the
-  one detail, such as the rules naming one tool, and never print a settings
-  file or its values. Those can hold credentials, and a harness's own
-  permission checks may refuse a broad read. When even a narrow check is not
-  possible, list the item under Could not check, naming the detail that
-  decides it, instead of telling the user to look.
+  the environment block, and read the condition in the bullet itself: an entry
+  that applies "when telemetry is off" does not apply where telemetry is on.
+  When the block cannot decide it, check narrowly: one command per question,
+  counting or matching only the detail the item turns on. Never print a
+  settings file or its values, which can hold credentials. Never search
+  permission rules or hooks for entries that would let a command through, such
+  as rules mentioning `sudo` or a redirect: a harness's own permission checks
+  can read that as probing for a way around them and refuse the whole command,
+  every question in it. When even a narrow check is not possible, list the
+  item under Could not check, naming the detail that decides it, instead of
+  telling the user to look.
 - The terminal is identified from the variables it sets for itself, not from
   `TERM`, which a wrapper or profile may rewrite. When the environment block
   reports that `TERM` does not name the detected terminal, say so: it is a
