@@ -103,9 +103,12 @@ packument; every other window works without them.
 **Correlation.** The digest prints an `## Environment` block — settings,
 permission rules, hooks, plugins, MCP servers, statusline, skills, agents,
 terminal, and platform — and tags each bullet with the signals it matched.
-Permission rules are counted per tool (`173 allow (Bash 156, Read 14, ...)`),
-never with their specifiers, so a reader can tell whether any rule names a
-tool a release changed without opening the settings. The session line says
+Permission rules are counted per tool (`173 allow (Bash 156, Read 14, ...;
+whole-tool: WebSearch 1)`), never with their specifiers, so a reader can tell
+whether any rule names a tool a release changed without opening the settings.
+The whole-tool tally counts rules with no specifier, or `*` or `:*` alone,
+because the changelog treats rules covering an entire tool apart from scoped
+ones. The session line says
 whether `DISABLE_TELEMETRY` or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
 opts out of telemetry, from the shell or a settings `env` block, because
 several entries apply only when telemetry is off.

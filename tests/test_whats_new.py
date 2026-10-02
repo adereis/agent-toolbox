@@ -316,9 +316,16 @@ class FingerprintTests(unittest.TestCase):
         found = self.probe()
         self.assertEqual(found["rule_tools"]["allow"], {"Bash": 2, "WebFetch": 1, "mcp__notes": 2})
         text = "\n".join(digest.describe(found))
-        self.assertIn("5 allow (Bash 2, mcp__notes 2, WebFetch 1), 1 deny (Read 1)", text)
+        self.assertIn("5 allow (Bash 2, mcp__notes 2, WebFetch 1; whole-tool: WebFetch 1, mcp__notes 1), "
+                      "1 deny (Read 1; whole-tool: none)", text)
         for specifier in ("git:*", "ls:*", "private-example", "draft"):
             self.assertNotIn(specifier, text)
+
+    def test_only_a_rule_without_a_narrowing_specifier_covers_the_whole_tool(self):
+        for rule in ("Bash", "Bash(*)", "Bash(:*)", "Bash()", " WebSearch "):
+            self.assertTrue(digest.whole_tool(rule), rule)
+        for rule in ("Bash(git:*)", "Bash(ls)", "Read(~/notes/**)", "WebFetch(domain:example.com)"):
+            self.assertFalse(digest.whole_tool(rule), rule)
 
     def test_a_telemetry_opt_out_is_read_from_the_shell_or_settings_and_settings_win(self):
         found = self.probe()

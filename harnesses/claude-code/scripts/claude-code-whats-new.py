@@ -172,6 +172,20 @@ def rule_tool(rule):
     return "__".join(tool.split("__")[:2]) if tool.startswith("mcp__") else tool
 
 
+def whole_tool(rule):
+    """Tell whether a rule covers its whole tool rather than narrowing it.
+
+    The changelog treats such rules apart ("whole-tool `Bash` allow rules"),
+    and a reader cannot tell them from scoped ones by a count alone.
+    """
+    text = str(rule).strip()
+    if "(" not in text:
+        return True
+    specifier = text.split("(", 1)[1]
+    specifier = specifier[:-1] if specifier.endswith(")") else specifier
+    return specifier.strip() in ("", "*", ":*")
+
+
 def tally(counts):
     """List names by descending count, breaking ties alphabetically."""
     return ", ".join(f"{name} {count}"
@@ -200,6 +214,7 @@ def fingerprint(claude_dir, project):
 
     rules = {kind: 0 for kind in ("allow", "deny", "ask")}
     rule_tools = {kind: {} for kind in rules}
+    rule_whole = {kind: {} for kind in rules}
     for source in settings:
         permissions = source.get("permissions")
         if isinstance(permissions, dict):
@@ -209,6 +224,8 @@ def fingerprint(claude_dir, project):
                 for entry in entries if isinstance(entries, list) else []:
                     tool = rule_tool(entry)
                     rule_tools[kind][tool] = rule_tools[kind].get(tool, 0) + 1
+                    if whole_tool(entry):
+                        rule_whole[kind][tool] = rule_whole[kind].get(tool, 0) + 1
 
     def opted_out(name):
         """Resolve a variable as the session sees it: settings override the shell."""
@@ -273,6 +290,7 @@ def fingerprint(claude_dir, project):
         "default_mode": default_mode,
         "rules": rules,
         "rule_tools": rule_tools,
+        "rule_whole": rule_whole,
         "telemetry_off": [name for name in TELEMETRY_OPT_OUTS if opted_out(name)],
         "model": model,
         "effort": setting("effortLevel", ""),
@@ -355,7 +373,8 @@ def describe(marks):
     for kind, count in marks["rules"].items():
         if count:
             tools = tally(marks["rule_tools"][kind])
-            kinds.append(f"{count} {kind}" + (f" ({tools})" if tools else ""))
+            whole = tally(marks["rule_whole"][kind]) or "none"
+            kinds.append(f"{count} {kind}" + (f" ({tools}; whole-tool: {whole})" if tools else ""))
     rules = ", ".join(kinds)
     telemetry = (f"opted out by {', '.join(marks['telemetry_off'])}"
                  if marks["telemetry_off"] else "not opted out")
