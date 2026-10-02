@@ -73,6 +73,14 @@ serialize baseline writes and never regress a recorded release. Only complete
 public release archives may replace the cache. Shared release-window, terminal,
 and baseline primitives stay in `tools/_whats_new.py`.
 
+The Codex digest skill delegates release interpretation to a fresh Luna
+subagent at high effort. The parent supplies the complete report and exact
+utility arguments, checks the claims, and owns the baseline. Keep the
+reader procedure next to the Codex entry point and the shared relevance
+rules in `skills/whats-new/`; install the Codex skill as a directory link
+so its regular `SKILL.md` is discoverable. The utility's skill inventory
+must follow the same entry-point rule as native discovery.
+
 ## Convene plugin
 
 `harnesses/claude-code/plugins/convene/` is a Claude Code plugin and the

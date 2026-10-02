@@ -50,8 +50,9 @@ def catalog(harness, components):
             else:
                 result["skills/teach/SKILL.md"] = REPO / "skills/teach/SKILL.md"
                 result["skills/teach/agents/openai.yaml"] = REPO / "harnesses/codex/skills/teach/agents/openai.yaml"
-                result["skills/whats-new/SKILL.md"] = REPO / "harnesses/codex/skills/whats-new/SKILL.md"
-                result["skills/whats-new/references/workflow.md"] = REPO / "skills/whats-new/SKILL.md"
+                # Codex skips a symlinked SKILL.md. Link the directory so
+                # its regular entry point and reader procedure are discovered.
+                result["skills/whats-new"] = REPO / "harnesses/codex/skills/whats-new"
                 # The convene operator procedure is authored inside the plugin
                 # (an installed plugin may not reach outside its root) and
                 # linked as a directory: Codex follows directory symlinks but

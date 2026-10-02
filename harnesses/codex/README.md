@@ -50,6 +50,22 @@ Invoke `$whats-new` in Codex for the interpreted digest. Keep the checkout
 intact when using installed script symlinks. Project-scope installations
 put both components under `<project>/.agents/`.
 
+The parent session collects the utility report and delegates its reading
+to a fresh Luna subagent at high reasoning effort. It selects Luna from the
+available model catalog rather than inheriting the parent's model. The
+parent checks the digest against the release notes and configuration
+evidence before presenting it and recording the baseline. For example, a
+memory migration belongs under Act on this only when its old setting is
+enabled. An unresolved consequential condition belongs under Could not
+check. If the harness cannot spawn Luna at high effort, the skill reports
+that limitation instead of substituting a different model.
+
+The skill is installed as a directory symlink containing a regular
+`SKILL.md`; Codex skips individual entry-point file symlinks. An earlier
+installation using file links needs the [migration](../../docs/migration.md#codex-release-digest-discovery)
+before reinstalling. Start a fresh session after installation, then invoke
+`$whats-new` or find it in `/skills`. Automatic discovery remains supported.
+
 | Option | Behavior |
 |---|---|
 | `--releases N` | Newest N stable CLI releases |
@@ -90,13 +106,17 @@ complete cache with a visible notice. A partial fetch never replaces it.
 Offline and local-file reports state their snapshot limitation. The utility
 uses GitHub CLI's existing authentication without reading or copying its
 credentials. No Codex credentials, model calls, or harness cache modifications
-are involved. Cached and local-file reports do not require GitHub CLI.
+are involved in the utility. The skill's Luna reading consumes model usage.
+Cached and local-file utility reports do not require GitHub CLI.
 
 The environment block inventories system configuration, user configuration,
 the explicitly selected `<name>.config.toml`, and project layers from the
 Git root to the chosen directory. Project layers require recorded trust in
 the system or user configuration. The closest recorded trust decision wins.
 Settings merge in that order. Hook event names accumulate across layers.
+Skill inventory counts regular entry-point files, including those inside
+directory links. It skips entry-point file links as the native loader does.
+It does not validate frontmatter or resolve whether a skill is enabled.
 Separate profiles require Codex 0.134+; legacy embedded profile tables are
 reported as ignored. The utility never reads `auth.json` or session contents.
 

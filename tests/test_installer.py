@@ -68,6 +68,31 @@ class InstallerTests(unittest.TestCase):
                 skills = installer.catalog(name, ["skills"])
                 self.assertEqual([p for p in skills if "adopt-baseline" in p], [])
 
+    def test_codex_digest_has_a_regular_entry_point_inside_a_directory_link(self):
+        target = self.root / ".agents"
+        self.install(target, installer.catalog("codex", ["skills"]), True)
+        skill = target / "skills/whats-new"
+        self.assertTrue(skill.is_symlink())
+        self.assertFalse((skill / "SKILL.md").is_symlink())
+        self.assertEqual(skill.resolve(), REPO / "harnesses/codex/skills/whats-new")
+        self.assertTrue((skill / "references/reader.md").is_file())
+        self.assertEqual((skill / "references/workflow.md").resolve(),
+                         REPO / "skills/whats-new/SKILL.md")
+
+    def test_old_digest_file_links_are_preserved_as_a_migration_conflict(self):
+        target = self.root / ".agents"
+        skill = target / "skills/whats-new"
+        (skill / "references").mkdir(parents=True)
+        entry = skill / "SKILL.md"
+        entry.symlink_to(REPO / "harnesses/codex/skills/whats-new/SKILL.md")
+        custom = skill / "references/local.md"
+        custom.write_text("Keep local customizations")
+        with self.assertRaisesRegex(ValueError, "Existing files differ"):
+            self.install(target, installer.catalog("codex", ["skills"]), True)
+        self.assertTrue(entry.is_symlink())
+        self.assertEqual(custom.read_text(), "Keep local customizations")
+        self.assertFalse((target / "skills/teach").exists())
+
     def test_instruction_modules_install_without_touching_policy_files(self):
         for name in ("claude-code", "codex"):
             with self.subTest(harness=name):

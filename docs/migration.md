@@ -43,6 +43,30 @@ never deletes files it did not create. If both directories are on your
 installed `scripts` directory instead. `claude-memory-sync` does belong
 there, and the `commands` component installs it.
 
+## Codex release digest discovery
+
+Older installations linked `~/.agents/skills/whats-new/SKILL.md` as a file.
+Codex skips that entry point, so the installer now links the entire skill
+directory. The installer preserves the old directory as a conflict.
+
+Inspect it first. If it is the old directory of file links, move it into a
+private backup and reinstall:
+
+```bash
+mkdir -p ~/tmp
+backup=$(mktemp -d "$HOME/tmp/codex-digest-backup.XXXXXXXX")
+printf '%s\n' "$backup"
+mv ~/.agents/skills/whats-new "$backup/whats-new"
+python3 tools/install.py --harness codex --scope user \
+  --component skills --component scripts --apply
+```
+
+Keep the printed backup path for any local customizations. Apply the same
+procedure to `<project>/.agents/skills/whats-new` for a project installation.
+Start a fresh Codex session and check `/skills` or invoke `$whats-new`.
+The skill uses a fresh Luna subagent at high effort for release reading.
+Its parent checks the report and owns the scoped baseline.
+
 ## Retired hooks
 
 Remove these command registrations from your Claude Code settings before

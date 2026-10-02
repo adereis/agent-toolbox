@@ -336,6 +336,16 @@ enabled = false
             self.write(path, "fictitious skill")
         self.assertEqual(self.fingerprint()["skills"], ["first", "second"])
 
+    def test_skill_inventory_skips_file_links_but_accepts_directory_links(self):
+        sources = self.root / "skill-sources"
+        self.write(sources / "linked-directory/SKILL.md", "fictitious skill")
+        self.write(sources / "linked-file.md", "fictitious skill")
+        installed = self.home / ".agents/skills"
+        (installed / "skipped").mkdir(parents=True)
+        (installed / "skipped/SKILL.md").symlink_to(sources / "linked-file.md")
+        (installed / "discovered").symlink_to(sources / "linked-directory", target_is_directory=True)
+        self.assertEqual(self.fingerprint()["skills"], ["discovered"])
+
     def test_terminal_identity_survives_a_term_override(self):
         with patch.dict(os.environ, {"KITTY_WINDOW_ID": "42", "TERM": "xterm-256color", "TMUX": "fictitious-socket"}):
             marks = self.fingerprint()

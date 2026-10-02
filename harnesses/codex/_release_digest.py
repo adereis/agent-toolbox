@@ -324,7 +324,10 @@ def fingerprint(codex_home, project, profile=None):
         skill_dirs.extend(d / ".agents/skills" for d in chain)
     for directory in skill_dirs:
         if directory.exists():
-            skills.update(p.name for p in directory.iterdir() if (p / "SKILL.md").is_file())
+            # Follow native discovery's entry-point rule: directory links
+            # work, file links are skipped. Presence is not activation.
+            skills.update(p.name for p in directory.iterdir()
+                          if (p / "SKILL.md").is_file() and not (p / "SKILL.md").is_symlink())
     # Only named, non-secret display settings cross this boundary. Never emit
     # raw TOML, hook commands/matchers, provider URLs/headers, or MCP arguments.
     display = {}

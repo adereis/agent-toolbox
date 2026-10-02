@@ -43,6 +43,11 @@ project-specific skill installation. This installer does not change
 | `profiles` | Unavailable | User scope only | Links `subscription.config.toml` and `api.config.toml` directly into the Codex configuration directory |
 | `commands` | Yes | Yes | User scope only; links the utilities you run yourself into `~/.local/bin`, without their file extension, `convene` included |
 
+Codex's `whats-new` skill is linked as a directory so its regular
+`SKILL.md` is discoverable. The skill delegates release reading to Luna at
+high effort, with the parent checking the result. Older individual file
+links require the [release digest migration](migration.md#codex-release-digest-discovery).
+
 ### What a component costs a session
 
 Components differ in whether an agent pays for them when it is doing

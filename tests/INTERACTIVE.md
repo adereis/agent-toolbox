@@ -280,3 +280,72 @@ session store. Two earlier broad-review attempts timed out on Haiku at
 Codex seats completed. The successful smoke check is not full review
 coverage. A fresh plain-request implicit-invocation check was not run;
 the policy file and native loader were checked directly.
+
+## IT-14: Codex release digest with supervised Luna
+
+**Prerequisites:** Linux, Codex logged in, a Luna model with high effort in
+`model/list`, and native subagent spawning. Install skills and scripts with
+the scoped installer. Reader spawning consumes model usage. Report
+preparation and the automated suite do not.
+
+**Discovery:** Query app-server `skills/list` with `forceReload = true` or
+open `/skills` in a fresh session. Expect `whats-new` and no loader errors.
+The installed `~/.agents/skills/whats-new` is a directory link containing a
+regular `SKILL.md`. Follow the migration instructions if the installer
+reports the older real directory of file links as a conflict.
+
+**Synthetic evidence:** Prepare a private directory and four reports:
+
+```bash
+mkdir -p ~/tmp
+evaluation=$(mktemp -d "$HOME/tmp/codex-digest-eval.XXXXXXXX")
+python3 tests/prepare_codex_digest_eval.py "$evaluation/reports"
+```
+
+`cases.json` records each report's exact utility arguments. All versions,
+release notes, settings, and hook data in these cases are fictitious. The
+preparer replaces system config, HOME, terminal evidence, and installed
+version with isolated values. It makes no network or model calls and
+refuses an output path outside `~/tmp` or an existing destination.
+
+**Reader:** Spawn a fresh Luna at high effort without the parent history.
+Give it `references/reader.md`, the shared workflow, one report, its exact
+utility arguments, and a realistic user question. Do not give it the
+expected answer. Keep it read-only and prohibit baseline changes. The parent
+assesses these outcomes against the raw report:
+
+| Case | User question | Checks |
+|---|---|---|
+| disabled | What changed since 9.1.0? | No memory migration; no disabled-hook or telemetry-off fix; deduplicate Vim fixes; include the subagent fix and new capabilities; unknown legacy rule stays unresolved; counts 1 withheld, 3 unmatched |
+| enabled | What changed since 9.1.0? | Memory migration needs action; same condition, deduplication, capability, and count checks |
+| topic | When did helpers or subagents arrive and change? | Dated introduction, rename, and later fix; coverage caveat; no window groups or baseline write |
+| empty | What changed since 9.3.0? | No releases in this snapshot; no claim that the installed CLI is current; zero counts; no baseline write |
+
+Check that the reader distinguishes the selected window from archive
+coverage and does not invent a selection reason from a missing baseline.
+Check the terminal mismatch and file-inventory limitations. Confirm every
+`baseline.json` remains absent. For the parent-check handoff, count only
+`legacy_access` occurrences in the isolated disabled case's rules directory
+in one command, then send the zero result to Luna. Its unresolved migration
+question should disappear. Do not inspect real rules for permissive entries.
+
+**Real archive:** Collect a small window with `--releases 2 --refresh` and
+an isolated XDG cache under the private directory. Do not pass `--commit`.
+Send the entire sanitized report to a fresh Luna reader, then verify claims
+against the report. Optional capabilities with unverified prerequisites
+must not become needless questions. A configuration tag alone is not
+evidence of impact. Never commit the real local inventory as a fixture.
+
+**Observed on Linux, 2026-10-02:** Native Codex 0.160.0 discovery skipped the
+old installed entry-point file link. Synthetic and real-window readings
+were spawned on `gpt-6-luna` with explicit high effort. Initial readings
+invented a window-selection reason and asked about a condition already
+settled by the report. A real-window reading turned optional features into
+questions. The reader was revised and retested on those behaviors. Parent
+supervision also caught a missed enabled-setting fix. These are bounded
+prompt evaluations, not a guarantee for every future release note.
+After migration, native discovery returned the enabled skill with no
+loader errors. The final automated run passed all shell suites and 344
+Python tests. The skill validator and diff whitespace check also passed.
+The public archive fetch covered 0.2.0 through 0.160.0. Tests left the
+real digest baseline unchanged.

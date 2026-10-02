@@ -1,0 +1,23 @@
+[
+  {
+    "tag_name": "rust-v9.3.0",
+    "published_at": "2026-09-30T12:00:00Z",
+    "body": "## New Features\n- Added `/rewind` to restore an earlier conversation turn without leaving the session.\n## Bug Fixes\n- Fixed Vim input losing the draft after leaving scrollback.\n- Fixed telemetry initialization only when telemetry is disabled.\n- Fixed MCP OAuth refresh for an enabled server.\n- Windows: Fixed drive-letter completion.\n## Detailed Changelog\n- Fix Vim draft loss after scrollback.\n- Reduced startup allocations.\n",
+    "draft": false,
+    "prerelease": false
+  },
+  {
+    "tag_name": "rust-v9.2.0",
+    "published_at": "2026-09-25T12:00:00Z",
+    "body": "## Breaking Changes\n- Removed `features.memories`; users who explicitly enable it must migrate to `features.memory_v2`.\n- Removed `sandbox_legacy`; users with an old `legacy_access` permission rule must replace that rule.\n## New Features\n- Renamed helpers to subagents; existing helper sessions resume as subagent sessions.\n## Bug Fixes\n- Fixed PreToolUse hook allow decisions bypassing an ask rule.\n- Fixed subagents reconnecting when the multi_agent feature is enabled.\n",
+    "draft": false,
+    "prerelease": false
+  },
+  {
+    "tag_name": "rust-v9.1.0",
+    "published_at": "2026-09-20T12:00:00Z",
+    "body": "## New Features\n- Introduced helpers for parallel review.\n",
+    "draft": false,
+    "prerelease": false
+  }
+]
