@@ -75,12 +75,30 @@ removes it once its proxy is gone.
 In Claude Code:
 
 ```
-/convene:panel HEAD~3..HEAD
+/convene:panel discuss
+/convene:panel discuss HEAD~3..HEAD
 /convene:panel HEAD seat=codex/terra seat=claude/opus --persona sec-urity --persona quinn-t-shun
 /convene:room Add a --json flag to the session browser that prints what --list prints
 /convene:fanout seats=3 Implement --json for the session browser; verify with the existing tests
 /convene:status
 ```
+
+Start with `discuss` when the run is not settled yet. The operator then
+designs the run with you in conversation and runs nothing until you accept
+the plan. The plan names the range or brief, each seat as `harness/model`
+with its persona, the isolation tier each seat resolves to, the tool set
+and any grants, the round budget, and how many seats run at once. Correct
+any of it by answering, for example by moving a seat to another harness or
+asking for a different persona. Whatever follows `discuss` is a starting
+point, not the whole plan: `/convene:panel discuss HEAD~3..HEAD` fixes the
+range and leaves the seats open. `panel`, `room` and `fanout` all accept it.
+
+A command with no arguments behaves the same as `discuss`. A command that
+names both the work and the seats, like the third line above, runs
+straight away because nothing is left to propose. Anything in between, such
+as a brief with no seats, gets a proposal and a question rather than a run
+filled in from the template's defaults. A run starts several provider
+sessions and spends real quota, so you see the plan before it spends any.
 
 Name a seat's model by its family: `opus`, `fable`, `terra`, `sol`,
 `gemini-pro`, `flash`. `prepare` resolves a family to the newest version
@@ -94,9 +112,9 @@ the version that answered. Every later round of that seat resumes pinned to
 that version, and its receipt shows the pin as `model_pinned`. So an Opus
 released between rounds two and three does not change who is speaking.
 
-The command writes a plan from `templates/panel.toml`, prepares and runs it,
-reads the board, synthesizes, exports, and reports the receipts. The same
-engine runs from a shell:
+Once the plan is agreed, the command writes it from `templates/panel.toml`,
+prepares and runs it, reads the board, synthesizes, exports, and reports
+the receipts. The same engine runs from a shell:
 
 ```bash
 convene=~/.claude/plugins/cache/agent-toolbox/convene/*/bin/convene   # or the checkout's bin/convene
