@@ -205,6 +205,20 @@ class PlanTests(unittest.TestCase):
             with self.subTest(fields=fields), self.assertRaisesRegex(ValueError, message):
                 self.prepare(self.box.plan(**fields))
 
+    def test_a_deliverable_needs_a_seat_that_can_write_files(self):
+        """A read-only seat used to post and silently never write the file."""
+        def seats():
+            return [{"id": "reader", "persona": "quinn-t-shun"},
+                    {"id": "writer", "persona": "archie-tecture", "tools": "write"}]
+        with self.assertRaisesRegex(ValueError, "asks seat 'reader' for notes.md, but tools = "
+                                                "\"read\" cannot write files.*tools = \"write\""):
+            self.prepare(self.box.plan(seats=seats(), phases=[
+                {"name": "notes", "rounds": 1, "deliverable": "notes.md"}]))
+        # A seat the phase leaves out is not asked for the file.
+        _, frozen = self.prepare(self.box.plan(seats=seats(), phases=[
+            {"name": "notes", "rounds": 1, "seats": ["writer"], "deliverable": "notes.md"}]))
+        self.assertEqual(frozen["phases"][0]["deliverable"], "notes.md")
+
     def test_unknown_persona_names_where_it_looked(self):
         with self.assertRaisesRegex(ValueError, "unknown persona 'nobody'.*personas list"):
             self.prepare(self.box.plan(seats=[{"id": "a", "persona": "nobody"}]))

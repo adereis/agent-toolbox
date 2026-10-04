@@ -76,7 +76,9 @@ boards = sorted(os.listdir("board")) if os.path.isdir("board") else []
 if boards:
     text += f"\nI read {boards[-1]}.\n"
 asked = re.search(r"Write the work itself to outbox/(\S+),", prompt)
-if asked:
+# A read-only sandbox refuses every write, so only a workspace-write seat
+# can leave a file behind; a stub that wrote anyway would hide that.
+if asked and sandbox == "workspace-write":
     os.makedirs("outbox", exist_ok=True)
     with open(os.path.join("outbox", asked.group(1)), "w") as made:
         made.write(f"Deliverable {asked.group(1)} from codex.\n")

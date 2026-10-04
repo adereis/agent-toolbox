@@ -51,6 +51,6 @@ Then:
    change in it first, what each other attempt got right, all by letter.
 6. `convene unseal NAME` prints the key. Report the judgment first, as
    written, then the key, then the receipts and every red flag verbatim.
-   With a synthesizer seat, the synthesis is on the board under its post;
+   With a synthesizer seat, the synthesis is its post on the board;
    read it after your own judgment, never before.
 7. `convene export NAME DIR`, then offer `convene prune NAME`.

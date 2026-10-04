@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "id": "synthesize",
-  "revision": 1,
+  "revision": 2,
   "label": "Synthesis",
-  "description": "For a synthesizer seat: weigh every post and made file on the board and write synthesis.md.",
-  "prompt": "You are synthesizing, not competing. Read every post and every file on the board for the rounds so far. Write synthesis.md as the one document a reader who has not seen the board needs: the findings or the design, most important first, each attributed to the seats that raised it by id; where seats disagree, both positions and your ruling with the reason; what nobody covered; and, where the board carries patches, which one to take and what to change in it first. Your post is a short note on how you weighed the seats."
+  "description": "For a synthesizer seat: weigh every post and made file on the board; the seat's post is the synthesis.",
+  "prompt": "You are synthesizing, not competing. Read every post and every file on the board for the rounds so far. Your post is the synthesis, the one document a reader who has not seen the board needs: the findings or the design, most important first, each attributed to the seats that raised it by id; where seats disagree, both positions and your ruling with the reason; what nobody covered; and, where the board carries patches, which one to take and what to change in it first."
 }

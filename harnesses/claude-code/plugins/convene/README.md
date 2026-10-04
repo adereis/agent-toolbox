@@ -164,7 +164,7 @@ Until `unseal`, `board`, `usage` and `export` refuse and say why, and
 near-unique per seat and would be the identity key by arithmetic. The key
 file is written at `seal` and never printed before a judgment is on file.
 A plan may name a seat as the synthesizer (`[synthesis] by = "ID"`): it
-acts alone in one extra round, sees the board, and writes `synthesis.md`;
+acts alone in one extra round, sees the board, and posts the synthesis;
 the operator still reads the attempts sealed first.
 
 `convene follow NAME SEAT` tails a running seat: what it says, which tools

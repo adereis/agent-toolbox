@@ -61,7 +61,10 @@ class RoundTests(unittest.TestCase):
         self.assertEqual(read(root / "board/rounds/r002/digest.json")["order"], ["b", "blind", "a"])
 
     def test_phases_seat_subsets_deliverables_and_instructions(self):
-        root, frozen = self.prepare(rounds=3, phases=[
+        root, frozen = self.prepare(rounds=3, seats=[
+            {"id": "a", "persona": "archie-tecture", "tools": "write"},
+            {"id": "b", "persona": "quinn-t-shun", "harness": "codex", "model": "gpt-5.5",
+             "effort": "low"}], phases=[
             {"name": "discuss", "rounds": 1},
             {"name": "draft", "rounds": 1, "seats": ["a"], "deliverable": "draft.md",
              "instruction": "Draft it now.", "length": 900},

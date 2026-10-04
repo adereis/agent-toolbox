@@ -48,7 +48,7 @@ id = "three"
 persona = "tess-tcase"
 
 # Let a seat synthesize instead of the operator: it acts alone in one
-# extra round, sees the board, and writes synthesis.md.
+# extra round, sees the board, and posts the synthesis.
 # [[seats]]
 # id = "synth"
 # persona = "quinn-t-shun"

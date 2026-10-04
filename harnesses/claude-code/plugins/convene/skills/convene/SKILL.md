@@ -106,7 +106,7 @@ key by arithmetic. Write your judgment to `sealed/rNNN/judgment.md` by
 letter: which attempt to take, what to change in it first, what the
 others got right. Then `convene unseal NAME`, which prints the key. Report
 the judgment as written, then the key, then the receipts. A synthesizer
-seat's `synthesis.md` is on the board; read it after your own judgment.
+seat's synthesis is its post on the board; read it after your own judgment.
 
 ## Red flags you must repeat, never soften
 

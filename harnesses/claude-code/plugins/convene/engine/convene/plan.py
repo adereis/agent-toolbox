@@ -102,6 +102,28 @@ def _phases(supplied, rounds, seat_ids, kind):
     return declared
 
 
+def _check_deliverables(phases, seats):
+    """Refuse a phase that asks a seat for a file it has no way to write.
+
+    Only the write tool set can create a file: Claude's narrower sets lack
+    Write and Codex runs them in a read-only sandbox. Such a seat would
+    answer, post, and leave the file missing, which the board records only
+    as an `unmade` event that nobody reads.
+    """
+    for phase in phases:
+        made = phase.get("deliverable")
+        if not made:
+            continue
+        for seat in seats:
+            if phase.get("seats") and seat["id"] not in phase["seats"]:
+                continue
+            if seat["tools"] != "write":
+                raise ValueError(
+                    f"phase {phase['name']!r} asks seat {seat['id']!r} for {made}, but "
+                    f"tools = \"{seat['tools']}\" cannot write files; give that seat "
+                    "tools = \"write\", or drop the deliverable and let the post carry it")
+
+
 def _names(value, what):
     if isinstance(value, str):
         value = [v.strip() for v in value.split(",") if v.strip()]
@@ -342,8 +364,11 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
     ids = [s["id"] for s in seats]
     declared_by_plan = bool(supplied.get("phases"))
     if synthesizer:
-        # One more round at the end, in which only the synthesizer acts and
-        # writes synthesis.md; every other phase seats everyone else.
+        # One more round at the end, in which only the synthesizer acts; every
+        # other phase seats everyone else. Its post is the synthesis rather
+        # than a note beside a synthesis.md, because a seat on the read tool
+        # set has no way to write a file, and nobody is left in the room for
+        # a note to address.
         declared = supplied.get("phases") or []
         if any(synthesizer in (p.get("seats") or ids) for p in declared):
             raise ValueError(f"the synthesizer {synthesizer!r} may not act in a declared phase")
@@ -355,7 +380,6 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
                          "rounds": rounds, "seats": working}]
         synth = instruments.resolve("synthesize", project_root)
         declared = declared + [{"name": "synthesis", "rounds": 1, "seats": [synthesizer],
-                                "deliverable": "synthesis.md",
                                 "instruction": synth["profile"]["prompt"].strip()}]
         rounds += 1
         supplied = {**supplied, "phases": declared}
@@ -366,6 +390,7 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         for phase in phases:
             if phase.get("seats") != [synthesizer]:
                 phase["deliverable"] = "report.md"
+    _check_deliverables(phases, seats)
     if any(s["workspace"] == "worktree" for s in seats):
         base = workspace.base_commit(project_root)
     else:

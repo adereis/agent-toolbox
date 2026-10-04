@@ -7,8 +7,9 @@
 #   convene prune <name>          # removes worktrees and private homes after export
 #
 # Phases add up to `rounds`. A phase may seat a subset (the rest listen),
-# ask for a deliverable file (written to outbox/NAME beside the post), add
-# an instruction, or set a post length. A worktree seat's changes are
+# ask for a deliverable file (written to outbox/NAME beside the post, so
+# every seat it seats needs tools = "write"), add an instruction, or set a
+# post length. A worktree seat's changes are
 # captured automatically as changes.patch on every round it acts.
 
 schema = 1

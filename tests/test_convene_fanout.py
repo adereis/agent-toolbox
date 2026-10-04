@@ -134,9 +134,9 @@ class FanoutTests(unittest.TestCase):
         self.assertEqual([p["name"] for p in frozen["phases"]], ["attempt", "synthesis"])
         self.assertEqual(frozen["phases"][0]["seats"], ["one", "two"])
         self.assertEqual(frozen["phases"][1], {"name": "synthesis", "rounds": 1, "seats": ["synth"],
-                                               "deliverable": "synthesis.md",
                                                "instruction": frozen["phases"][1]["instruction"]})
         self.assertIn("You are synthesizing", frozen["phases"][1]["instruction"])
+        self.assertIn("Your post is the synthesis", frozen["phases"][1]["instruction"])
         synth = next(s for s in frozen["seats"] if s["id"] == "synth")
         self.assertEqual((synth["visibility"], synth["workspace"], synth["tools"]), ("board", "none", "read"))
         played, why = round_.run(root)
@@ -145,10 +145,13 @@ class FanoutTests(unittest.TestCase):
         prompt = (root / "records/synth/r002/prompt.md").read_text()
         self.assertIn("The others have posted; the latest board is board/round-001/digest.md", prompt)
         self.assertNotIn("joining a room already in progress", prompt)
-        self.assertIn("Write the work itself to outbox/synthesis.md", prompt)
+        # The seat keeps the read tool set, which cannot write a file, so
+        # the synthesis travels as its post rather than as outbox/synthesis.md.
+        self.assertNotIn("outbox/", prompt)
         self.assertTrue((root / "work/synth/board/round-001/digest.md").exists())
         self.assertFalse(list((root / "work/one/board").iterdir()), "attempt seats stay blind")
-        self.assertTrue((root / "board/made/synth/r002/synthesis.md").exists())
+        self.assertTrue(board.post_path(root, "synth", 2).exists())
+        self.assertFalse((root / "board/made/synth").exists())
         self.assertEqual(len(self.box.calls("synth", "claude")), 1)
         self.assertIsNone(round_.status(root)["seats"]["synth"]["joined_late"])
         self.assertEqual(round_.status(root)["withheld"], [1, 2])
