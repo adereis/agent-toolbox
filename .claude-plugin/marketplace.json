@@ -11,7 +11,7 @@
     {
       "name": "convene",
       "description": "Multi-seat panels, rooms and fanouts over native coding-agent CLIs, with isolation tiers and receipts.",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "source": "./harnesses/claude-code/plugins/convene"
     }
   ]
