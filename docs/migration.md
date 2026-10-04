@@ -43,6 +43,16 @@ never deletes files it did not create. If both directories are on your
 installed `scripts` directory instead. `claude-memory-sync` has left
 `PATH` as well; see [Memory sync leaves PATH](#memory-sync-leaves-path).
 
+## Sync command renamed
+
+The project's `/sync` command is now the `/agent-toolbox-sync` skill, at
+`.claude/skills/agent-toolbox-sync/SKILL.md` instead of
+`.claude/commands/sync.md`. A bare `sync` collides with any other tool's
+command of that name, and Claude Code does not document which one wins.
+Run `/agent-toolbox-sync` from the checkout; the old name now reports an
+unknown command. Nothing was installed under the old name, so nothing
+needs removing.
+
 ## Memory sync leaves PATH
 
 The `commands` component used to link `claude-memory-sync` into
@@ -127,10 +137,11 @@ of browser dependencies.
 ## Retired session-resume skill
 
 `session-resume` is still supported, but only as a standalone script. The
-skill wrapper that `/sync` once deployed to `skills/session-resume/` was
-removed in June 2026 because it carried its own copy of the script and drifted
-from it. Remove the installed directory from the Claude configuration scopes
-where you previously installed it, honoring `CLAUDE_CONFIG_DIR` when set:
+skill wrapper that `/sync`, now `/agent-toolbox-sync`, once deployed to
+`skills/session-resume/` was removed in June 2026 because it carried its own
+copy of the script and drifted from it. Remove the installed directory from
+the Claude configuration scopes where you previously installed it, honoring
+`CLAUDE_CONFIG_DIR` when set:
 
 ```bash
 rm -rf ~/.claude/skills/session-resume
@@ -139,7 +150,8 @@ rm -rf ~/.claude/skills/session-resume
 The installer will not report this and cannot clean it up. The catalog no
 longer claims that path, so `link_status` never examines it: whether it holds
 copied files or dangling symlinks, the dry run says nothing while the stale
-skill stays registered. A clean `/sync` is not evidence the directory is gone.
+skill stays registered. A clean `/agent-toolbox-sync` is not evidence the
+directory is gone.
 
 Recognize the obsolete copy by a private `session-resume.py` beside its
 `SKILL.md`, and by the `--skill` flag that copy accepts; the supported script

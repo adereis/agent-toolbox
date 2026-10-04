@@ -195,10 +195,10 @@ means bumping `version` in both its `.claude-plugin/plugin.json` and its
 entry in the root marketplace manifest; `claude plugin tag` validates that
 the two agree. Without that bump no installed copy will ever see the change.
 
-The update applies after Claude Code restarts. `/sync` performs this step
-for every plugin in the marketplace manifest, which is the reason to sync
-rather than to pull alone. Check what a plugin costs every session, and what
-it is currently pinned to, with:
+The update applies after Claude Code restarts. `/agent-toolbox-sync`
+performs this step for every plugin in the marketplace manifest, which is
+the reason to sync rather than to pull alone. Check what a plugin costs
+every session, and what it is currently pinned to, with:
 
 ```bash
 claude plugin details convene@agent-toolbox

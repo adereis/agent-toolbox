@@ -1,3 +1,8 @@
+---
+name: agent-toolbox-sync
+description: Install selected Agent Toolbox components with the deterministic installer and update its Claude Code plugins. Use from a checkout of this repository when asked to sync, install or update the toolbox.
+---
+
 Install selected Agent Toolbox components using the deterministic installer.
 
 Run from this repository. Use the scope and components requested by the
@@ -16,7 +21,7 @@ prompt are things a person opts into rather than receives by default. Name
 what the default omits when reporting a sync, so an omission is a visible
 choice rather than a silent one, and offer the components the user's request
 implies. A user asking for baseline adoption needs `instructions`, since
-[the prompt](../../prompts/adopt-baseline.md) stops when the module is
+[the prompt](../../../prompts/adopt-baseline.md) stops when the module is
 missing.
 
 Weigh scope against session cost before installing. A skill advertises
@@ -39,7 +44,7 @@ same script can be a path the agent reads and a name you type. Do not add
 the `whats-new` utilities or `claude-memory-sync` to `commands`;
 `tools/install.py` records why, and `tests/test_installer.py` enforces it.
 Memory sync runs under an agent following
-[the supervised procedure](../../prompts/sync-memories.md), because its
+[the supervised procedure](../../../prompts/sync-memories.md), because its
 deletions and merges reach every machine.
 
 ## Plugins

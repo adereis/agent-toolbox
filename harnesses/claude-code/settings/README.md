@@ -45,7 +45,7 @@ resets at (`↻14:30`), so the deadline costs no extra width.
 
 **Installation:**
 
-1. Copy `statusline.sh` to `~/.claude/` (or use `/sync`)
+1. Copy `statusline.sh` to `~/.claude/` (or use `/agent-toolbox-sync`)
 2. Make it executable: `chmod +x ~/.claude/statusline.sh`
 3. Add to `~/.claude/settings.json`:
 
