@@ -228,8 +228,23 @@ def _start_text(plan, seat, common, private):
     produce. Deliberately silent about promotion and the controller; a seat
     told it is executing a procedure starts writing like one."""
     others = len(plan["seats"]) - 1
+    synthesizer = (plan.get("synthesis") or {}).get("by")
     text = "{{persona}}\n\n"
-    if plan["kind"] == "panel":
+    if seat["id"] == synthesizer:
+        # Told it was one of the people working the brief, a live synthesizer
+        # set out to fix repo/ itself and posted that attempt instead.
+        text += (f"You are synthesizing what the {others} others convened on the brief below "
+                 "made. Your turn comes after theirs: their posts, with any files and patches, "
+                 "are on the board under board/ in your working directory. You do not carry out "
+                 "the brief yourself; you read what they made and write the one account a reader "
+                 "needs, citing each of them by the id the board shows in parentheses.\n\n")
+        if any(s["workspace"] == "worktree" for s in plan["seats"]):
+            # Without this, a live synthesizer searched for repo/, found none,
+            # and reported the missing checkout as the attempts' failure.
+            text += ("Their checkouts are not available to you, by design: the changes.patch "
+                     "under each post is the record of what that seat changed, committed work "
+                     "included.\n\n")
+    elif plan["kind"] == "panel":
         text += (f"You are one of {others + 1} reviewers convened on the same change. Each "
                  "of you was given the same brief and works independently.\n\n")
     elif seat["visibility"] == "sealed":
@@ -258,9 +273,10 @@ def _start_text(plan, seat, common, private):
         text += ("A checkout of the repository is at repo/ in your working directory. It is "
                  "yours to edit, build and test; whatever you change there is collected "
                  "with your post as a patch.\n\n")
-    if plan.get("instrument") and seat["visibility"] != "sealed":
-        # The judge is told what to produce by its own phase's instruction;
-        # the attempts' instrument would ask it to implement the brief.
+    if plan.get("instrument") and seat["visibility"] != "sealed" and seat["id"] != synthesizer:
+        # The judge and the synthesizer are told what to produce by their own
+        # phase's instruction; the others' instrument would ask them to do
+        # the brief, as a fanout's asks for an implementation report.
         text += "# What to produce\n\n" + plan["instrument"]["profile"]["prompt"].strip() + "\n\n"
     text += ("Your final message each turn is your post. It is what the others and the "
              f"operator read under your name, about {plan['post_length']} words, as finished "

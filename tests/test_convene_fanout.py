@@ -166,6 +166,14 @@ class FanoutTests(unittest.TestCase):
         self.assertIn("Your post is the synthesis", frozen["phases"][1]["instruction"])
         synth = next(s for s in frozen["seats"] if s["id"] == "synth")
         self.assertEqual((synth["visibility"], synth["workspace"], synth["tools"]), ("board", "none", "read"))
+        # A live synthesizer told it was one of the people on the brief, and
+        # handed the attempts' instrument, tried to implement it instead.
+        start = (root / "work/synth/START.md").read_text()
+        self.assertIn("You are synthesizing what the 2 others convened", start)
+        self.assertNotIn("one of 3 people", start)
+        self.assertNotIn("Report what you built", start)
+        self.assertIn("- Connie Tinuity (one)", start, "the roster still names the ids to cite")
+        self.assertIn("Their checkouts are not available to you", start)
         played, why = round_.run(root)
         self.assertEqual(why, "done")
         self.assertEqual([n for n, _ in played], [1, 2])
