@@ -127,12 +127,18 @@ Recognize the obsolete copy by a private `session-resume.py` beside its
 renamed that flag to `--list`. The removed files are preserved in git history
 at `83fbb1c` if you want to compare behavior before deleting.
 
-Keep `claude-code-session-resume.py`, the `scripts` component that installs
-it, and any `~/bin` symlink or alias pointing at it. Those are the supported
-entry points. The script execs `claude --resume` in place, so it must be the
-terminal's foreground process and cannot run from inside a session; that is
-why no skill wraps it. Codex never received this skill, because its session
-browser arrived after the wrapper was removed.
+Keep `claude-code-session-resume.py` and the `scripts` component that
+installs it. On `PATH`, the supported entry point is the
+`claude-code-session-resume` command that the `commands` component links
+into `~/.local/bin`. A `~/bin/claude-code-session-resume.py` link is not
+one to keep: it is the hand-made link that
+[Hand-made PATH symlinks](#hand-made-path-symlinks) replaces, and leaving it
+gives the tool a second name.
+
+The script execs `claude --resume` in place, so it must be the terminal's
+foreground process and cannot run from inside a session; that is why no
+skill wraps it. Codex never received this skill, because its session browser
+arrived after the wrapper was removed.
 
 ## Statusline illustration
 

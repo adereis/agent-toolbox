@@ -15,8 +15,10 @@ prompts, and recognized git commit results from the session; `-v` adds edited fi
 **Run it from a shell, not from inside Claude Code.** When you pick a session it
 `exec`s `claude --resume <id>` in place, so it must be your terminal's foreground
 process — that can't work as a slash command from within a running session
-(and Claude Code's built-in `/resume` already covers the in-session case). A
-shell alias is the natural home, e.g. an alias to this checkout's script or an installed symlink.
+(and Claude Code's built-in `/resume` already covers the in-session case). The
+`commands` component puts it on your `PATH` as `claude-code-session-resume`
+(see [installation](../../../docs/installation.md)); the examples below run it
+from the checkout instead.
 
 Colors are emitted only on a terminal, so `| less` and file redirects stay
 clean (override with `--color always|never`, or honor `NO_COLOR`). Use `--list`
