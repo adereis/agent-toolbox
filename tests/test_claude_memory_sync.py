@@ -36,11 +36,14 @@ class Machine:
         self.portable = portable
         (self.home / "projects").mkdir(parents=True)
         (self.home / ".claude/projects").mkdir(parents=True)
+        self.env = {}
 
     def run(self, *args, stdin=None):
         env = {k: v for k, v in os.environ.items()
-               if k not in ("CLAUDE_MEMORY_DIR", "CLAUDE_PROJECTS_DIR", "CLAUDE_DIR")}
-        env.update(HOME=str(self.home), XDG_STATE_HOME=str(self.home / ".local/state"))
+               if k not in ("CLAUDE_MEMORY_DIR", "CLAUDE_PROJECTS_DIR", "CLAUDE_DIR",
+                            "CLAUDE_CONFIG_DIR")}
+        env.update(HOME=str(self.home), XDG_STATE_HOME=str(self.home / ".local/state"),
+                   **self.env)
         cmd, *rest = args
         proc = subprocess.run([sys.executable, str(SCRIPT), cmd, "--dir", str(self.portable), *rest],
                               env=env, input=stdin, capture_output=True, text=True)
@@ -194,6 +197,48 @@ class DeletionTests(SyncTestCase):
         self.a.write("app", "note.md", "two\n")
         self.assertEqual(self.apply(self.a), (2, {("CONFLICT", "app/memory/note.md")}))
         self.assertEqual(self.a.read("app", "note.md"), "two\n")
+
+    def test_missing_memory_dir_is_held_not_tombstoned(self):
+        self.synced()
+        shutil.rmtree(self.a.mem("app"))
+        self.assertEqual(self.a.lines("status"), (2, [["MISSING", "app"]]))
+        self.assertEqual(self.apply(self.a), (2, {("MISSING", "app")}))
+        self.assertTrue(self.pfile("app", "note.md").exists())
+        self.assertFalse(self.tombstone("app", "note.md").exists())
+        self.assertEqual(self.b.lines("status"), (0, []))
+
+    def test_wrong_claude_dir_tombstones_nothing(self):
+        self.synced()
+        wrong = self.root / "not-claude"
+        wrong.mkdir()
+        self.assertEqual(self.apply(self.a, "--claude-dir", str(wrong)), (2, {("MISSING", "app")}))
+        self.assertFalse(self.tombstone("app", "note.md").exists())
+        self.assertFalse((wrong / "projects").exists())
+
+    def test_missing_project_is_held_whole(self):
+        """A new remote file would recreate the dir and expose the rest as deleted."""
+        self.synced()
+        self.b.write("app", "new.md", "b\n")
+        self.apply(self.b)
+        shutil.rmtree(self.a.mem("app"))
+        self.assertEqual(self.apply(self.a), (2, {("MISSING", "app")}))
+        self.assertFalse(self.a.mem("app").exists())
+
+    def test_missing_project_is_settled_through_resolve(self):
+        self.synced()
+        self.a.write("app", "keep.md", "k\n")
+        self.apply(self.a)
+        shutil.rmtree(self.a.mem("app"))
+        code, _, err = self.a.run("resolve", "--keep", "remote", "app/memory/keep.md")
+        self.assertEqual(code, 1)
+        self.assertIn("app/memory/note.md", err)
+        self.assertFalse(self.a.mem("app").exists())
+        code, out, _ = self.a.run("resolve", "--keep", "local", "app/memory/note.md")
+        self.assertEqual((code, out), (0, "TOMBSTONED\tapp/memory/note.md\n"))
+        code, out, _ = self.a.run("resolve", "--keep", "remote", "app/memory/keep.md")
+        self.assertEqual((code, out), (0, "IMPORTED\tapp/memory/keep.md\n"))
+        self.assertEqual(self.a.read("app", "keep.md"), "k\n")
+        self.assertEqual(self.a.lines("status"), (0, []))
 
     def test_recreating_a_deleted_file_clears_its_tombstone(self):
         self.synced()
@@ -352,6 +397,9 @@ class OperationTests(SyncTestCase):
     def test_adopt_lets_the_first_run_see_a_local_deletion(self):
         self.pfile("app", "old.md").parent.mkdir(parents=True)
         self.pfile("app", "old.md").write_text("old\n")
+        # The store exists here and lacks old.md; with no store at all the
+        # project would be MISSING rather than a deletion.
+        self.a.mem("app").mkdir(parents=True)
         digest = hashlib.sha256(b"old\n").hexdigest()
         self.assertEqual(self.a.lines("status")[1], [["NEW_REMOTE", "app/memory/old.md"]])
         code, out, _ = self.a.run("adopt", stdin=f"app/memory/old.md\t{digest}\n"
@@ -375,6 +423,16 @@ class OperationTests(SyncTestCase):
             code, _, err = self.a.run("apply")
         self.assertEqual(code, 1)
         self.assertIn("another claude-memory-sync is running", err)
+
+    def test_claude_config_dir_is_the_default_claude_dir(self):
+        config = self.root / "custom-config"
+        store = config / "projects" / cms.encode(self.a.home / "projects/app") / "memory"
+        store.mkdir(parents=True)
+        (store / "n.md").write_text("x\n")
+        self.a.env = {"CLAUDE_CONFIG_DIR": str(config)}
+        self.assertEqual(self.a.lines("status"), (2, [["NEW_LOCAL", "app/memory/n.md"]]))
+        self.a.env["CLAUDE_DIR"] = str(self.a.home / ".claude")
+        self.assertEqual(self.a.lines("status"), (0, []))
 
     def test_bases_are_isolated_per_portable_dir(self):
         self.a.write("app", "n.md", "x\n")

@@ -247,7 +247,7 @@ These are the subcommands the agent runs:
 ```bash
 sync=~/.claude/scripts/claude-memory-sync.py
 python3 "$sync" status    # read-only; exit 2 when work is pending
-python3 "$sync" apply     # everything except CONFLICT / ALIASED
+python3 "$sync" apply     # everything except CONFLICT / ALIASED / MISSING
 python3 "$sync" resolve --keep local  foo/memory/user_role.md
 python3 "$sync" resolve --keep remote foo/memory/user_role.md
 ```
@@ -265,7 +265,7 @@ git -C ~/.claude/memory-sync add -A && git -C ~/.claude/memory-sync commit -m "S
 |------|---------|---------|
 | `--dir` | `CLAUDE_MEMORY_DIR` | `~/.claude/memory-sync` (must exist) |
 | `--projects-dir` | `CLAUDE_PROJECTS_DIR` | `~/projects` |
-| `--claude-dir` | `CLAUDE_DIR` | `~/.claude` |
+| `--claude-dir` | `CLAUDE_DIR`, then `CLAUDE_CONFIG_DIR` | `~/.claude` |
 | `--state-dir` | `XDG_STATE_HOME` | `~/.local/state/agent-toolbox/claude-memory` |
 | `--backup-dir` | — | `<state-dir>/<key>/backups` |
 | `--allow PREFIX` | — | sync only slugs equal to or nested under PREFIX |
@@ -295,6 +295,22 @@ alone, because syncing two live copies would undo deletions made in either.
 `claude-memory-sync link-aliases` merges them into the conventional
 directory and replaces the others with symlinks to it; it refuses, listing
 the files, when anything other than `MEMORY.md` differs.
+
+### Missing Memory Directories
+
+A project whose memory directory has disappeared from disk, while files
+this machine synced from it remain in the portable directory, is reported
+as `MISSING`, and `apply` leaves the whole project alone. Read file by file,
+every memory in it would be `DELETED_LOCAL`, and the tombstones would delete
+it on every machine. A vanished directory is far more often a wrong
+`--claude-dir` or `--projects-dir`, a moved checkout, or a cleaned-up
+`~/.claude/projects` than a decision to delete everything in it.
+
+Correct the arguments when they are wrong. Otherwise settle the files with
+`resolve`: `--keep local` deletes a file everywhere, and `--keep remote`
+restores it. Restoring recreates the directory, which would expose any file
+left out as a deletion, so `--keep remote` refuses unless it names every
+remaining file; delete the unwanted ones first.
 
 ---
 

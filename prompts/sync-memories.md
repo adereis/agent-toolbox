@@ -25,11 +25,13 @@ Read its `--help`, including the decision table. Settle the arguments once
 and pass the same ones to every invocation: the portable directory (`--dir`,
 default `$CLAUDE_MEMORY_DIR` or `~/.claude/memory-sync`), `--claude-dir`,
 `--projects-dir`, and any `--allow` or `--skip` the user named. Confirm that
-`--claude-dir` is the configuration directory Claude Code is using, which is
-`$CLAUDE_CONFIG_DIR` when that is set, and that `--projects-dir` is the one
-earlier runs used. A wrong value maps each project to a memory directory
-that does not exist, and the utility reads every memory it synced there
-before as deleted.
+`--claude-dir` is the configuration directory Claude Code is using; it
+defaults to `$CLAUDE_DIR`, then `$CLAUDE_CONFIG_DIR`, then `~/.claude`.
+Confirm that `--projects-dir` is the one earlier runs used. A wrong value
+usually maps each project to a memory directory that does not exist, which
+the utility holds as `MISSING`. A wrong `--claude-dir` that names another
+existing configuration is not caught: every memory this machine synced that
+the other configuration lacks reads as deleted.
 
 When the portable directory is a git repository, inspect `git status` first.
 Uncommitted changes there are unfinished work from an earlier run or a hand
@@ -64,11 +66,11 @@ its `name` and `description`, and what it holds:
 Stop before applying, and ask the user, when the preview looks like an
 accident rather than a decision:
 
-- Every file of a project is `DELETED_LOCAL`, or the project's memory
-  directory is missing on disk. That is a moved checkout, a cleaned-up
-  `~/.claude/projects`, or a wrong `--claude-dir` or `--projects-dir`, not a
-  set of deliberate deletions. Applying it would delete the project's
-  memories on every machine.
+- Every file of a project is `DELETED_LOCAL`. The utility holds a project
+  whose memory directory is gone, but an emptied directory or a
+  `--claude-dir` naming another configuration still reads as deletions.
+  That is more often a cleanup or a wrong argument than a decision, and
+  applying it would delete the project's memories on every machine.
 - This machine has no base store and the portable directory already holds
   memories. A memory deleted here before the first sync reappears as
   `NEW_REMOTE`. Ask whether an earlier sync tool recorded checksums that
@@ -76,17 +78,21 @@ accident rather than a decision:
 - An entry's status contradicts the copies you read, such as a
   `REMOTE_EDIT` whose disk copy differs from the base.
 
-`apply` leaves `CONFLICT` and `ALIASED` entries untouched. Show each
-conflict with both versions and let the user choose; run `resolve` or
-`link-aliases` only on their decision.
+`apply` leaves `CONFLICT`, `ALIASED` and `MISSING` entries untouched. Show
+each conflict with both versions and let the user choose; run `resolve` or
+`link-aliases` only on their decision. For a `MISSING` project, first rule
+out a wrong `--claude-dir` or `--projects-dir` and a moved checkout. Then
+list the files the portable directory holds for it, and ask whether to
+restore them with `resolve --keep remote`, which must name every one, or to
+delete them everywhere with `resolve --keep local`.
 
 ## Apply and verify
 
 List the timestamped directories under the backup directory (`--backup-dir`,
 default `backups/` in the base store), then run `apply` with the same
 arguments. Each action line must be the one the decision table maps that
-file's previewed status to, and every previewed entry other than `CONFLICT`
-and `ALIASED` must have one. A missing, extra or different line is a
+file's previewed status to, and every previewed entry other than `CONFLICT`,
+`ALIASED` and `MISSING` must have one. A missing, extra or different line is a
 finding.
 
 Check the result against the preview:
@@ -98,8 +104,8 @@ Check the result against the preview:
 - A `MERGED` index is identical on disk and in the portable directory. It
   keeps every entry either side added and drops every entry one side
   removed.
-- A second `status` reports only the `CONFLICT` and `ALIASED` entries left
-  behind. Anything else pending means `apply` did not converge.
+- A second `status` reports only the `CONFLICT`, `ALIASED` and `MISSING`
+  entries left behind. Anything else pending means `apply` did not converge.
 
 Then check what the utility does not. After deletions and merges, each
 `MEMORY.md` should link only to files beside it, and each memory file should

@@ -58,9 +58,13 @@ statuses (status) and actions (apply):
   MERGE           MEMORY.md changed on both sides  -> MERGED
   CONFLICT        cannot be decided; left untouched until `resolve`
   ALIASED         the project has several memory dirs; run `link-aliases`
+  MISSING         the project's memory dir is gone but files synced from it
+                  remain; usually a wrong --claude-dir or --projects-dir.
+                  Otherwise `resolve` its files: --keep remote restores
+                  (naming every remaining file), --keep local deletes
 
 exit status: 0 nothing pending, 1 error, 2 pending changes (status) or
-unresolved conflicts / aliased projects left (apply).
+unresolved conflicts / aliased or missing projects left (apply).
 
 Deletions and merges reach every machine, so run apply under an agent
 following prompts/sync-memories.md in Agent Toolbox, which checks each one."""
@@ -314,6 +318,18 @@ class Sync:
         found.update(self.stored_slugs(self.base_root))
         return sorted(s for s in found if self.included(s))
 
+    def missing(self, slug):
+        """Files synced from slug whose disk memory dir is gone; empty when present.
+
+        A whole directory vanishing is a wrong --claude-dir or --projects-dir, a
+        moved checkout or a cleaned-up ~/.claude/projects far more often than a
+        decision to delete every memory in it. Read file by file it would be
+        DELETED_LOCAL, and the tombstones would delete it on every machine.
+        """
+        if self.memory_dirs(slug):
+            return set()
+        return self.names(self.base_dir(slug)) & self.names(self.portable_dir(slug))
+
     @staticmethod
     def names(directory, tombstones=False):
         names = set()
@@ -331,6 +347,11 @@ class Sync:
         for slug in self.slugs():
             if len(self.memory_dirs(slug)) > 1:
                 yield slug, None, "ALIASED", " ".join(str(d) for d in self.memory_dirs(slug))
+                continue
+            # Held whole: importing even one new file would recreate the dir,
+            # and the next run would read the rest as deleted here.
+            if self.missing(slug):
+                yield slug, None, "MISSING", f"no memory dir at {self.disk_dir(slug)}"
                 continue
             ddir, pdir, bdir = self.disk_dir(slug), self.portable_dir(slug), self.base_dir(slug)
             for name in sorted(self.names(ddir) | self.names(pdir, True) | self.names(bdir)):
@@ -517,7 +538,7 @@ def cmd_apply(sync, args):
     sync.lock()
     blocked = False
     for slug, name, status, detail in list(sync.entries()):
-        if status in ("CONFLICT", "ALIASED"):
+        if status in ("CONFLICT", "ALIASED", "MISSING"):
             blocked = True
             print("\t".join(filter(None, [status, label(slug, name), detail])))
             continue
@@ -529,8 +550,19 @@ def cmd_apply(sync, args):
 
 def cmd_resolve(sync, args):
     sync.lock()
-    for text in args.paths:
-        slug, name = split_label(text)
+    targets = [(text, *split_label(text)) for text in args.paths]
+    if args.keep == "remote":
+        # Restoring part of a MISSING project recreates its memory dir, and the
+        # files left out would then read as deleted here and be tombstoned.
+        for slug in {slug for _, slug, _ in targets}:
+            left = sync.missing(slug) - {name for _, s, name in targets if s == slug}
+            if left:
+                raise SyncError(
+                    f"{slug} has no memory dir at {sync.disk_dir(slug)}, and restoring only some "
+                    f"of its files would turn the rest into deletions. Also name: "
+                    f"{' '.join(label(slug, n) for n in sorted(left))}, or delete the unwanted "
+                    "ones first with --keep local.")
+    for text, slug, name in targets:
         dpath, ppath = sync.disk_dir(slug) / name, sync.portable_dir(slug) / name
         if args.keep == "local":
             if dpath.exists():
@@ -624,8 +656,11 @@ def build_parser():
                         help="portable directory (default: $CLAUDE_MEMORY_DIR or ~/.claude/memory-sync)")
     common.add_argument("--projects-dir", default=os.environ.get("CLAUDE_PROJECTS_DIR", "~/projects"),
                         help="where project checkouts live (default: $CLAUDE_PROJECTS_DIR or ~/projects)")
-    common.add_argument("--claude-dir", default=os.environ.get("CLAUDE_DIR", "~/.claude"),
-                        help="Claude Code data directory (default: $CLAUDE_DIR or ~/.claude)")
+    common.add_argument("--claude-dir",
+                        default=(os.environ.get("CLAUDE_DIR") or os.environ.get("CLAUDE_CONFIG_DIR")
+                                 or "~/.claude"),
+                        help="Claude Code data directory (default: $CLAUDE_DIR, else Claude Code's "
+                             "own $CLAUDE_CONFIG_DIR, else ~/.claude)")
     common.add_argument("--state-dir", default=str(state_home / "agent-toolbox/claude-memory"),
                         help="per-machine base store (default: $XDG_STATE_HOME/agent-toolbox/claude-memory)")
     common.add_argument("--backup-dir", help="where overwritten and deleted files are copied first "
