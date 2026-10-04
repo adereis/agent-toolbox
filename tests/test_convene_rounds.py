@@ -177,6 +177,8 @@ class RoundTests(unittest.TestCase):
         self.assertIn("```", (root / "board/rounds/r001/digest.md").read_text())
         self.assertEqual(self.box.git("status", "--porcelain"), "", "the operator's checkout is untouched")
         self.assertIn("A checkout of the repository is at repo/", self.prompt(root, "d", 1))
+        self.assertIn("build output and caches included, so delete any you do not mean to submit",
+                      self.prompt(root, "d", 1))
         removed = round_.prune(root)
         self.assertIn(str(tree), removed)
         self.assertFalse(tree.exists())

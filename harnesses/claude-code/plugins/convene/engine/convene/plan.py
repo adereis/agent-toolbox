@@ -270,9 +270,14 @@ def _start_text(plan, seat, common, private):
         text += (f"The repository is at {plan['project_root']}, read-only. Cite files by "
                  "their path there.\n\n")
     elif seat["workspace"] == "worktree":
+        # Untracked files ship too, so a seat must hear that its build output
+        # does: live seats left __pycache__/ behind, and reviewers and judges
+        # then blamed them for committing bytecode they never added.
         text += ("A checkout of the repository is at repo/ in your working directory. It is "
-                 "yours to edit, build and test; whatever you change there is collected "
-                 "with your post as a patch.\n\n")
+                 "yours to edit, build, test and commit in; everything you change there is "
+                 "collected with your post as a patch against where you started, committed "
+                 "or not. Files git does not ignore are collected too, build output and "
+                 "caches included, so delete any you do not mean to submit.\n\n")
     if plan.get("instrument") and seat["visibility"] != "sealed" and seat["id"] != synthesizer:
         # The judge and the synthesizer are told what to produce by their own
         # phase's instruction; the others' instrument would ask them to do
