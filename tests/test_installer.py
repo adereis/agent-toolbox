@@ -363,13 +363,16 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(marker.read_text(), "Authoritative workflow")
 
     def test_commands_exclude_agent_invoked_scripts(self):
-        """A skill reads whats-new by path, so it never lands on PATH."""
+        """Agents run whats-new and memory sync by path; neither lands on PATH."""
         commands = set()
         for harness in ("claude-code", "codex"):
             commands |= set(installer.catalog(harness, ["commands"]))
-        for withheld in ("claude-code-whats-new", "codex-whats-new"):
+        for withheld in ("claude-code-whats-new", "codex-whats-new", "claude-memory-sync"):
             self.assertNotIn(withheld, commands)
-        self.assertIn("claude-memory-sync", commands)
+        self.assertIn("harnesses/claude-code/scripts/claude-memory-sync.py",
+                      {str(source.relative_to(REPO)) for source
+                       in installer.catalog("claude-code", ["scripts"]).values()},
+                      "the supervised run reaches memory sync through scripts")
         self.assertTrue(all("." not in command for command in commands),
                         "commands install under the name their own help text prints")
 

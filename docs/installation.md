@@ -136,6 +136,12 @@ installed `scripts` path:
 python3 ~/.claude/scripts/claude-code-whats-new.py
 ```
 
+`claude-memory-sync` is withheld as well. A deletion or merge it applies
+reaches every machine at its next sync, and its output names files without
+their content, so an agent runs it from the `scripts` path under the
+[supervised memory sync prompt](../prompts/sync-memories.md) and reports each
+memory it removed or merged.
+
 ## Plugins
 
 Claude Code plugins live under `harnesses/claude-code/plugins/` and are

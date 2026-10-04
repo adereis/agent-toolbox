@@ -40,8 +40,27 @@ Check the removal against your own `~/bin` before running it; the installer
 never deletes files it did not create. If both directories are on your
 `PATH`, confirm with `type -a <command>` that no stale entry remains. The
 `whats-new` utilities never belonged on `PATH`; run them from their
-installed `scripts` directory instead. `claude-memory-sync` does belong
-there, and the `commands` component installs it.
+installed `scripts` directory instead. `claude-memory-sync` has left
+`PATH` as well; see [Memory sync leaves PATH](#memory-sync-leaves-path).
+
+## Memory sync leaves PATH
+
+The `commands` component used to link `claude-memory-sync` into
+`~/.local/bin`. It no longer does. A deletion or merge the utility applies
+reaches every machine, so an agent now runs it by path under
+[the supervised procedure](../prompts/sync-memories.md) and accounts for
+each memory it removes or merges.
+
+The installer never deletes a link it no longer manages, and a dry run says
+nothing about it because the catalog no longer names that path. Confirm the
+link points into your checkout with `ls -l`, then remove it:
+
+```bash
+rm -f ~/.local/bin/claude-memory-sync
+```
+
+Keep the `scripts` component installed; the agent reaches the utility at
+`~/.claude/scripts/claude-memory-sync.py`.
 
 ## Codex release digest discovery
 

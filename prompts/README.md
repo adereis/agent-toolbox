@@ -11,6 +11,9 @@ not install agents, select models, or change permissions.
   with concrete findings and verification evidence.
 - [Verify a web UI](verify-web-ui.md): exercise a running application in a
   browser and check the resulting behavior.
+- [Sync memories](sync-memories.md): run Claude Code's three-way memory sync
+  under supervision, accounting for every memory it deletes or merges.
+  Claude Code only.
 
 The prompts replace the old Claude-specific reviewer and verifier agent/skill
 pairs, and baseline adoption followed them for the same reason. A harness's

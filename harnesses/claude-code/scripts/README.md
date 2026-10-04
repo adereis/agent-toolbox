@@ -232,11 +232,24 @@ writes are atomic, and a lock keeps two mutating runs apart.
 
 ### Usage
 
+Ask an agent to sync your memories by following
+[the supervised procedure](../../../prompts/sync-memories.md). The utility
+is deliberately not on `PATH`. A deletion or merge it applies reaches every
+machine, and its output names files without their content. The agent reads
+each affected memory before `apply`, and stops on a preview that looks like
+an accident, such as a whole project read as deleted. Afterwards it checks
+the backups and tombstones and reports which memories were removed and
+merged. Install the `scripts` component so the agent finds the utility at
+`~/.claude/scripts/claude-memory-sync.py`.
+
+These are the subcommands the agent runs:
+
 ```bash
-claude-memory-sync status              # read-only; exit 2 when work is pending
-claude-memory-sync apply               # everything except CONFLICT / ALIASED
-claude-memory-sync resolve --keep local  foo/memory/user_role.md
-claude-memory-sync resolve --keep remote foo/memory/user_role.md
+sync=~/.claude/scripts/claude-memory-sync.py
+python3 "$sync" status    # read-only; exit 2 when work is pending
+python3 "$sync" apply     # everything except CONFLICT / ALIASED
+python3 "$sync" resolve --keep local  foo/memory/user_role.md
+python3 "$sync" resolve --keep remote foo/memory/user_role.md
 ```
 
 With git as the carrier, pull before `apply` so remote tombstones are
@@ -244,12 +257,9 @@ present, and commit afterwards, including the `.deleted/` directories:
 
 ```bash
 git -C ~/.claude/memory-sync pull
-claude-memory-sync apply
+python3 "$sync" apply
 git -C ~/.claude/memory-sync add -A && git -C ~/.claude/memory-sync commit -m "Sync memories"
 ```
-
-Install it on `PATH` with the `commands` component, or run
-`harnesses/claude-code/scripts/claude-memory-sync.py` from the checkout.
 
 | Flag | Env var | Default |
 |------|---------|---------|
@@ -271,7 +281,7 @@ looks like `NEW_REMOTE` and would be re-imported. If the previous tool
 recorded checksums of what it last synced, seed the base from them first:
 
 ```bash
-printf 'foo/memory/old.md\t<sha256>\n' | claude-memory-sync adopt
+printf 'foo/memory/old.md\t<sha256>\n' | python3 "$sync" adopt
 ```
 
 A line is adopted when the portable or disk copy has that checksum;

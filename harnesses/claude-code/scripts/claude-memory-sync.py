@@ -60,7 +60,10 @@ statuses (status) and actions (apply):
   ALIASED         the project has several memory dirs; run `link-aliases`
 
 exit status: 0 nothing pending, 1 error, 2 pending changes (status) or
-unresolved conflicts / aliased projects left (apply)."""
+unresolved conflicts / aliased projects left (apply).
+
+Deletions and merges reach every machine, so run apply under an agent
+following prompts/sync-memories.md in Agent Toolbox, which checks each one."""
 
 
 class SyncError(Exception):

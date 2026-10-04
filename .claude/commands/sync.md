@@ -36,9 +36,11 @@ installation.
 reach them by path. `commands` links only the utilities a person runs, into
 `~/.local/bin` without the file extension. The two overlap by design: the
 same script can be a path the agent reads and a name you type. Do not add
-the `whats-new` utilities to `commands`; `tools/install.py` records why,
-and `tests/test_installer.py` enforces it. `claude-memory-sync` belongs
-there and the same test pins it: a person runs it between machines.
+the `whats-new` utilities or `claude-memory-sync` to `commands`;
+`tools/install.py` records why, and `tests/test_installer.py` enforces it.
+Memory sync runs under an agent following
+[the supervised procedure](../../prompts/sync-memories.md), because its
+deletions and merges reach every machine.
 
 ## Plugins
 
