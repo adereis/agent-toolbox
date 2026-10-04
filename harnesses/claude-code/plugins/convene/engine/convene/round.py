@@ -720,13 +720,13 @@ def usage(root):
 
 
 def prune(root, *, force=False):
-    """Remove the run's worktrees and private harness homes, keeping every record.
+    """Remove the run's seat repositories and private homes, keeping every record.
 
     A private home is the harness's own state, bound over the real one so a
     seat cannot reach the operator's; it is large and nothing else collects
-    it. A worktree is a registration in the operator's repository. Neither
-    is evidence: the receipts beside them already hold what was read from
-    them. A seat still running is never pruned; a machine that cannot say
+    it. A seat's repository is a clone of the operator's, and its work is
+    already captured as changes.patch. Neither is evidence: the receipts
+    beside them already hold what was read from them. A seat still running is never pruned; a machine that cannot say
     whether one is running keeps everything unless forced.
     """
     root, plan = runs.load(root)

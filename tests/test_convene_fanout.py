@@ -103,6 +103,20 @@ class FanoutTests(unittest.TestCase):
         self.assertIn("COMMITTED.md", patch)
         self.assertIn("edited by the stub seat", patch)
 
+    def test_attempts_never_reach_each_others_commits_through_git(self):
+        """Linked worktrees shared one .git, so on private-home the seat that
+        ran second found the first seat's commit in `git log --all`."""
+        root, _ = self.prepare(per_harness=1,
+                               seats=[{"id": "one", "persona": "connie-tinuity"},
+                                      {"id": "two", "persona": "archie-tecture"}],
+                               brief={"text": "[[stub:commit-repo]] [[report:git-all]] Do it."})
+        round_.run(root)
+        for seat in ("one", "two"):
+            with self.subTest(seat=seat):
+                self.assertIn("SEAT_COMMITS=1",
+                              (root / "records" / seat / "r001/answer.md").read_text())
+        self.assertNotIn("seat commit", self.box.git("log", "--all", "--format=%s"))
+
     def test_declared_phases_keep_their_own_deliverables(self):
         """Found by a live Antigravity seat reviewing the fanout commit."""
         root, frozen = self.prepare(rounds=2, phases=[
@@ -297,9 +311,15 @@ class FanoutTests(unittest.TestCase):
             with self.subTest(fields=fields), self.assertRaisesRegex(ValueError, message):
                 self.prepare(seats=[dict(s) for s in self.JUDGED], **fields)
         repo = [dict(s) for s in self.JUDGED]
-        repo[2]["workspace"] = "repo-ro"
-        with self.assertRaisesRegex(ValueError, "takes workspace = \"none\""):
+        repo[2]["workspace"] = "worktree"
+        with self.assertRaisesRegex(ValueError, "takes workspace = \"none\" or \"repo-ro\""):
             self.prepare(seats=repo, judgment={"by": "judge"})
+        # The repository holds no trace of the attempts' clones, so a judge
+        # may read it for context.
+        repo[2]["workspace"] = "repo-ro"
+        _, frozen = self.prepare(seats=repo, judgment={"by": "judge"})
+        self.assertEqual(next(s for s in frozen["seats"] if s["id"] == "judge")["workspace"],
+                         "repo-ro")
         with self.assertRaisesRegex(ValueError, "visibility = \"sealed\" is the judge's"):
             self.prepare(seats=[{"id": "one", "persona": "connie-tinuity", "visibility": "sealed"}])
         with self.assertRaisesRegex(ValueError, "the judge 'judge' may not act in a declared phase"):

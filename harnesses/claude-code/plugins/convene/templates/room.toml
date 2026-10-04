@@ -4,7 +4,7 @@
 #   convene prepare room.toml
 #   convene run <name>            # plays every round; stops on a quota hold
 #   convene board <name>          # every round's digest, attributed
-#   convene prune <name>          # removes worktrees and private homes after export
+#   convene prune <name>          # removes seat repositories and private homes after export
 #
 # Phases add up to `rounds`. A phase may seat a subset (the rest listen),
 # ask for a deliverable file (written to outbox/NAME beside the post, so
@@ -50,7 +50,7 @@ model = "terra"
 id = "drafter"
 persona = "connie-tinuity"
 tools = "write"
-workspace = "worktree"        # its own detached checkout under work/drafter/repo
+workspace = "worktree"        # its own private clone under work/drafter/repo
 
 [[phases]]
 name = "discuss"

@@ -18,7 +18,7 @@ annotated template is `templates/panel.toml`.
 | `tools` | `read` | seat default: `none`, `read`, `write`, `research` |
 | `isolation` | `strongest` | seat default: `strongest`, `enforced`, `private-home`, `none` |
 | `visibility` | `board` | seat default: `board` or `blind`; matters from round 2 |
-| `workspace` | `none` (`repo-ro` for a panel) | seat default: `none`, `repo-ro`, `worktree` (needs `tools = "write"`) |
+| `workspace` | `none` (`repo-ro` for a panel) | seat default: `none`, `repo-ro`, `worktree`, a private clone of the repository (needs `tools = "write"`) |
 | `compaction` | `forbid` | `forbid` pins the whole context window; `allow` lets the harness compact |
 | `persona` | none | seat default persona id |
 | `grants` | `[]` | doors opened for every seat: `web`, `mcp`, `settings`, `instructions`, `hooks` |
@@ -36,7 +36,7 @@ annotated template is `templates/panel.toml`.
 | `seats[].grants`, `seats[].args`, `seats[].env` | plan default | this seat's doors; `args` are for its own harness |
 | `phases` | one phase | list of `{ name, rounds, seats?, deliverable?, instruction?, length? }`; a `deliverable` is a file, so every seat the phase seats needs `tools = "write"` |
 | `stop_novelty`, `stop_closing` | 55.0, 0.75 | convergence thresholds for an unphased room |
-| `judgment.by` | `operator` | fanout only: `operator`, or a seat id: that seat acts alone in one extra round after the attempts, sees only the lettered attempts (never the key, the board or the repository), and its post is filed as the round's `judgment.md`; it takes `workspace = "none"` and may not act in any declared phase |
+| `judgment.by` | `operator` | fanout only: `operator`, or a seat id: that seat acts alone in one extra round after the attempts, sees only the lettered attempts (never the key, the board or the repository), and its post is filed as the round's `judgment.md`; it takes `workspace = "none"` (the default) or `"repo-ro"` and may not act in any declared phase |
 | `synthesis.by` | `operator` | `operator`, or a seat id: that seat acts alone in one extra final round, sees the board, and its post is the synthesis; it may not act in any declared phase |
 
 Defaults for every plan come from `$XDG_CONFIG_HOME/agent-toolbox/convene.toml`

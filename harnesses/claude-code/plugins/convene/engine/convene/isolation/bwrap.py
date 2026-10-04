@@ -311,17 +311,16 @@ class Enforced:
         staged = [name for name in READ_ONLY_IN_WORKSPACE if (workspace / name).exists()]
         for name in staged:
             jail += ["--ro-bind", str(workspace / name), str(virtual_workspace / name)]
-        # A worktree's `.git` file names the main repository's git directory
-        # by absolute path, and git writes this worktree's index there. The
-        # common directory is bound read-only at its real path and only the
-        # worktree's own entry inside it is writable.
+        # A seat's repository is a private clone whose .git sits inside the
+        # workspace, so the writable bind above already carries it and
+        # nothing of the operator's repository is bound. A run prepared
+        # before clones has a linked worktree, whose .git file points into
+        # the operator's repository; it is refused rather than half-built.
         tree = workspace / worktrees.REPO
-        worktree_binds = []
-        if tree.is_dir():
-            common = worktrees.common_dir(tree)
-            own = worktrees.gitdir(tree)
-            jail += ["--ro-bind", str(common), str(common), "--bind", str(own), str(own)]
-            worktree_binds = [str(common), str(own)]
+        if worktrees.is_linked(tree):
+            raise RuntimeError(f"{tree} is a linked git worktree from a run prepared before "
+                               "seats got private clones, and the enforced jail no longer binds "
+                               "the operator's .git; `convene prepare` the plan again")
         env = base_environment()
         env["HOME"] = str(home)
         env.update(harness.private_env(virtual_harness_home))
@@ -351,7 +350,7 @@ class Enforced:
             "writable": [str(virtual_workspace)], "read_only_in_workspace":
             [str(virtual_workspace / n) for n in staged],
             "harness_home": str(virtual_harness_home), "harness_home_source": str(private),
-            "chdir": str(virtual_workspace), "worktree_git": worktree_binds,
+            "chdir": str(virtual_workspace),
             "repository_read_only": str(project_root) if repo_ro else None,
             "session_bus": None if bus is None else
             {"names": list(harness.bus_names), "proxy": BUS_PROXY, "filtered": True},

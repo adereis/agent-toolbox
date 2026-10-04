@@ -21,7 +21,7 @@ convene: multi-seat panels over native coding-agent CLIs.
   continue RUN SEAT [--round N]               retake a quota-stopped turn
   promote RUN N [--absent]                    close a round by hand
   extend RUN ROUNDS                           raise the round budget
-  prune RUN [--force]                         remove worktrees and private homes
+  prune RUN [--force]                         remove seat repositories and private homes
   follow RUN SEAT [--round N] [--thinking]    tail a seat's turn as it runs
   seal RUN [--round N]                        letter a blind round's drafts for reading
   unseal RUN [--round N]                      print the key, once judgment.md is written
@@ -132,7 +132,7 @@ def main(argv=None):
     p.add_argument("run")
     p.add_argument("rounds", type=int)
 
-    p = sub.add_parser("prune", help="remove worktrees and private homes; keep the records")
+    p = sub.add_parser("prune", help="remove seat repositories and private homes; keep the records")
     p.add_argument("run")
     p.add_argument("--force", action="store_true")
 

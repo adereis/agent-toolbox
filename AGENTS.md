@@ -148,16 +148,24 @@ never enabled silently to make a run pass. Raw arguments and environment
 pass-through exist for what has no name yet, and they too appear in the
 receipt.
 
-A fanout's judge seat sees copies of the sealed letters and nothing else.
-It never gets the key or `seal.json`, and never the board, which names
-every seat. It never gets the repository either: its `.git` records each
-attempt's worktree under a path naming the seat, with whatever that seat
-committed. Only the enforced tier makes that blindness more than the
-judge's good behaviour, so every other tier's receipt says `judging is
-advisory`. Seats the engine appends to act alone, the judge and the
-synthesizer, deliver through their post rather than an outbox file,
-because their default read tool set cannot write one; `prepare` refuses
-any phase that asks a seat without `tools = "write"` for a file.
+A `worktree` seat gets a private `git clone --local` of the operator's
+repository, not a linked worktree, with its origin removed and a generic
+git identity. Linked worktrees share the operator's `.git`: the jail had
+to bind its object store read-only, so no seat could commit, and on
+private-home one seat's `git log --all` showed every other seat's
+commits. A seat's repository lives wholly inside its workspace; do not go
+back to binding the operator's `.git` to give a seat one.
+
+A fanout's judge seat sees copies of the sealed letters and nothing else
+of the run. It never gets the key or `seal.json`, and never the board,
+which names every seat. It may read the repository (`repo-ro`), because
+the attempts' clones leave no trace there. Only the enforced tier makes
+that blindness more than the judge's good behaviour, so every other
+tier's receipt says `judging is advisory`. Seats the engine appends to act
+alone, the judge and the synthesizer, deliver through their post rather
+than an outbox file, because their default read tool set cannot write
+one; `prepare` refuses any phase that asks a seat without
+`tools = "write"` for a file.
 
 Models are named by family (`opus`, `terra`, `gemini-pro`), never by a
 version, in defaults, templates and examples of what to write. A family

@@ -141,20 +141,26 @@ if asked and "Write" in tools:
         made.write(f"Deliverable {asked.group(1)} from {served}.\n")
 if os.path.isdir("repo") and scenario == "commit-repo":
     # A seat that commits part of its work and leaves the rest uncommitted,
-    # as agents often do; git refuses the commit where the object store is
-    # read-only.
+    # as agents often do. No identity is passed: a seat's private home has
+    # none, so the commit relies on the one its clone was given.
     import subprocess
     with open(os.path.join("repo", "COMMITTED.md"), "w") as handle:
         handle.write("committed by the seat\n")
     for step in (["add", "-A"], ["commit", "-q", "-m", "seat commit"]):
-        subprocess.run(["git", "-C", "repo", "-c", "user.name=Seat", "-c",
-                        "user.email=seat@example.com", *step], capture_output=True)
+        subprocess.run(["git", "-C", "repo", *step], capture_output=True)
     scenario = "edit-repo"
 if os.path.isdir("repo") and (scenario == "edit-repo" or "edit repo" in prompt):
     with open(os.path.join("repo", "app.py"), "a") as handle:
         handle.write("# edited by the stub seat\n")
     with open(os.path.join("repo", "NEW.md"), "w") as handle:
         handle.write("a new file from the seat\n")
+if os.path.isdir("repo") and "[[report:git-all]]" in prompt:
+    # What `git log --all` shows this seat: its own commits, and any other
+    # seat's that its repository can reach.
+    import subprocess
+    subjects = subprocess.run(["git", "-C", "repo", "log", "--all", "--format=%s"],
+                              capture_output=True, text=True).stdout.split("\n")
+    text += f" SEAT_COMMITS={subjects.count('seat commit')}"
 content.append({"type": "text", "text": text})
 emit({"type": "assistant", "session_id": sid, "message": {"model": served, "content": content}})
 if scenario == "compaction":

@@ -60,6 +60,13 @@ class BwrapArgvTests(unittest.TestCase):
                 ["claude", "-p"], harness=harness, seat_home=self.box.root / "seat-home",
                 workspace=work, project_root=project or self.box.project, repo_ro=repo_ro)
 
+    def test_a_linked_worktree_from_an_older_run_is_refused_by_name(self):
+        tree = self.box.root / "work/repo"
+        self.box.git("worktree", "add", "--detach", "-q", str(tree), "HEAD")
+        with self.assertRaisesRegex(RuntimeError, "linked git worktree.*`convene prepare` the plan "
+                                                  "again"):
+            self.wrap()
+
     def test_judge_letters_are_bound_read_only_and_attested_only_when_staged(self):
         home = str(self.box.home)
         launched = self.wrap()
@@ -317,9 +324,35 @@ class RealJailWorktreeTests(unittest.TestCase):
         self.assertIn("READ=fail", answer, "the operator's checkout stays out of reach")
         patch = (root / "board/made/d/r001/changes.patch").read_text()
         self.assertIn("STUB-NOTE.md", patch)
-        self.assertEqual(got["isolation"]["worktree_git"][0], str(self.box.project / ".git"))
+        self.assertNotIn(str(self.box.project), " ".join(got["isolation"]["read_only_binds"]),
+                         "nothing of the operator's repository is bound for a clone")
         round_.prune(root)
-        self.assertNotIn("work/d/repo", self.box.git("worktree", "list"))
+        self.assertFalse((root / "work/d/repo").exists())
+
+    def test_seats_commit_in_the_jail_and_never_see_each_others_commits(self):
+        """Linked worktrees shared the operator's .git: under the jail its
+        read-only object store refused every commit, and on private-home a
+        seat's `git log --all` listed the others' commits."""
+        root, _ = plan.prepare(self.box.plan(
+            kind="fanout", isolation="enforced", per_harness=1,
+            seats=[{"id": "one", "persona": "connie-tinuity"},
+                   {"id": "two", "persona": "archie-tecture"}],
+            brief={"text": "[[stub:commit-repo]] [[report:git-all]] Implement it."}),
+            project_root=self.box.project)
+        round_.run(root)
+        for seat in ("one", "two"):
+            with self.subTest(seat=seat):
+                got = read(root / "records" / seat / "r001/receipt.json")
+                self.assertEqual(got["status"], "answered", got.get("error"))
+                answer = (root / "records" / seat / "r001/answer.md").read_text()
+                # Its own commit landed, and the other seat's, made first or
+                # second, is nowhere its repository can reach.
+                self.assertIn("SEAT_COMMITS=1", answer, answer)
+                patch = (root / "board/made" / seat / "r001/changes.patch").read_text()
+                self.assertIn("COMMITTED.md", patch)
+        self.assertNotIn("seat commit", self.box.git("log", "--all", "--format=%s"))
+        self.assertEqual(len(self.box.git("worktree", "list").splitlines()), 1)
+        round_.prune(root)
 
 
 # Captured before any Sandbox replaces them: the one test that dials the

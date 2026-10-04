@@ -368,14 +368,14 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
             seats.append(_seat(item, {**defaults, "visibility": "board", "workspace": "none",
                                       "tools": "read"}, project_root, plan_dir, environ))
         elif judge and item.get("id") == judge:
-            # The judge sees the lettered attempts and nothing else. Not the
-            # board, which names every seat; and not the repository either,
-            # whose .git records each attempt's worktree under a path naming
-            # its seat, along with anything that seat committed there.
-            if item.get("workspace", "none") != "none":
-                raise ValueError(f"the judge {judge!r} takes workspace = \"none\": the "
-                                 "repository's worktree records name the attempt seats")
-            item = {**item, "visibility": "sealed", "workspace": "none",
+            # The judge sees the lettered attempts and never the board, which
+            # names every seat. The repository may come along read-only for
+            # context: the attempts are private clones in the run directory,
+            # so nothing in the operator's repository records them.
+            if item.get("workspace", "none") not in ("none", "repo-ro"):
+                raise ValueError(f"the judge {judge!r} takes workspace = \"none\" or "
+                                 "\"repo-ro\": it rules on the attempts, it does not make one")
+            item = {**item, "visibility": "sealed", "workspace": item.get("workspace", "none"),
                     "tools": item.get("tools", "read")}
             seats.append(_seat(item, {**defaults, "visibility": "sealed", "workspace": "none",
                                       "tools": "read"}, project_root, plan_dir, environ))

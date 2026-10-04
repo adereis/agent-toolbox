@@ -189,12 +189,14 @@ round two resumes both sessions (`launch.json` shows `--resume` or
 Claude seat's round-two `launch.json` passes `--model` the exact id round
 one served, not `haiku`, and its receipt shows that id as `model_pinned`;
 a Codex seat named by family (`luna`) prepares as `gpt-5.6-luna (from
-luna)` or its successor; the drafter's `changes.patch` appears under `board/made/drafter/r002/` and on
-the round-two digest; `git -C <project> worktree list` shows the seat's
-worktree and the operator's checkout has no changes; the drafter's
-receipt shows `isolation.worktree_git` naming the project's `.git`.
-`bin/convene prune NAME` removes the worktree and the private homes, and
-`git worktree list` no longer shows it.
+luna)` or its successor; the drafter's `changes.patch` appears under
+`board/made/drafter/r002/` and on the round-two digest. The drafter's
+`work/drafter/repo` is a clone with its own `.git` directory and no
+remote; `git -C <project> worktree list` never shows it, and the
+operator's checkout has no changes. Ask the drafter to commit part of its
+work: the commit succeeds inside the jail, and the committed files still
+appear in `changes.patch`. `bin/convene prune NAME` removes the clone and
+the private homes.
 
 **Hold and continue:** only when a quota window is genuinely exhausted:
 `status` reports HELD with the seat, `continue NAME SEAT` after the reset

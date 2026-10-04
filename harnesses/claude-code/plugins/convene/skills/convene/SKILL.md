@@ -91,8 +91,8 @@ operator may be any of them.
 9. **Report.** Report to the user:
    the synthesis, then the receipts (served model per seat, isolation
    tier, tool calls, usage) and every red flag verbatim. Offer
-   `convene prune NAME` once the export is in hand: it removes the
-   worktrees and private homes and keeps every record.
+   `convene prune NAME` once the export is in hand: it removes the seat
+   repositories and private homes and keeps every record.
 
 ## Reading a sealed round
 

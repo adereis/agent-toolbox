@@ -137,7 +137,7 @@ $convene continue NAME skeptic       # once the window resets
 $convene promote NAME 2              # or: promote NAME 2 --absent
 $convene run NAME                    # the remaining rounds
 $convene extend NAME 6               # more rounds than the plan declared
-$convene prune NAME                  # remove worktrees and private homes; records stay
+$convene prune NAME                  # remove seat repositories and private homes; records stay
 ```
 
 `convene status` reads the records and changes nothing. Its header counts
@@ -172,7 +172,8 @@ The operator wrote the plan, so it knows which persona sits on which model
 and is never fully blind. A plan may name a judge seat instead
 (`[judgment] by = "ID"`). `run` then seals the attempts itself and plays
 one more round, in which the judge alone reads the letters' own files:
-no key, no board and no repository. Its post is filed as `judgment.md`,
+no key and no board, and the repository only if the plan gives the judge
+`workspace = "repo-ro"`. Its post is filed as `judgment.md`,
 and `unseal` prints who judged. Only the `enforced` tier keeps the run
 directory out of the judge's reach; on any other tier its receipt says
 `judging is advisory`.
@@ -288,11 +289,13 @@ Phases divide the rounds: each may seat a subset (the rest listen), ask for
 a `deliverable` file written to `outbox/NAME` beside the post, add an
 `instruction`, or set a post `length`. Promotion moves deliverables to
 `board/made/<seat>/rNNN/` and prints them under the post on the digest. A
-`worktree` seat (`tools = "write"`) gets a detached checkout of the
-repository at `repo/`; whatever it changes is captured as `changes.patch` on
-every round it acts, untracked files included, and the operator's checkout
-is never touched. In the `enforced` tier the main repository's git directory
-is bound read-only and only the worktree's own entry is writable.
+`worktree` seat (`tools = "write"`) gets a private clone of the repository
+at `repo/`, checked out detached at the run's base commit, with no remote
+and a generic git identity, so it can commit on any tier. Whatever it
+changes is captured against the base commit as `changes.patch` on every
+round it acts, committed and untracked files included. The operator's
+checkout is never touched and its `.git` records nothing of the clone, so
+no seat can reach another's commits through git.
 
 ## Personas and instruments
 

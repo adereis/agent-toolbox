@@ -162,8 +162,14 @@ class RoundTests(unittest.TestCase):
             brief={"text": "[[stub:edit-repo]] Build it."})
         tree = root / "work/d/repo"
         self.assertTrue((tree / "app.py").is_file())
-        self.assertIn(str(tree), self.box.git("worktree", "list"))
+        # A private clone: the operator's repository never records it, and
+        # nothing in it points back there.
+        self.assertNotIn(str(tree), self.box.git("worktree", "list"))
+        self.assertTrue((tree / ".git").is_dir())
+        self.assertEqual(self.box.git("-C", str(tree), "remote").strip(), "")
         self.assertEqual(frozen["base_commit"], self.box.git("rev-parse", "HEAD").strip())
+        self.assertEqual(self.box.git("-C", str(tree), "rev-parse", "HEAD").strip(),
+                         frozen["base_commit"])
         round_.run(root)
         patch = (root / "board/made/d/r001/changes.patch").read_text()
         self.assertIn("edited by the stub seat", patch)
@@ -174,9 +180,21 @@ class RoundTests(unittest.TestCase):
         removed = round_.prune(root)
         self.assertIn(str(tree), removed)
         self.assertFalse(tree.exists())
-        self.assertNotIn(str(tree), self.box.git("worktree", "list"))
         self.assertFalse((root / "homes/d").exists())
         self.assertTrue((root / "records/d/r001/receipt.json").exists(), "records are kept")
+
+    def test_prune_unregisters_a_linked_worktree_from_an_older_run(self):
+        """Runs prepared before private clones hold linked worktrees, which
+        the operator's repository keeps a registration for."""
+        root, _ = self.prepare(rounds=1, seats=[
+            {"id": "d", "persona": "connie-tinuity", "tools": "write", "workspace": "worktree"}])
+        tree = root / "work/d/repo"
+        __import__("shutil").rmtree(tree)
+        self.box.git("worktree", "add", "--detach", "-q", str(tree), "HEAD")
+        self.assertIn(str(tree), self.box.git("worktree", "list"))
+        self.assertIn(str(tree), round_.prune(root))
+        self.assertFalse(tree.exists())
+        self.assertNotIn(str(tree), self.box.git("worktree", "list"))
 
     def test_prune_refuses_a_live_seat(self):
         root, _ = self.prepare(rounds=1, seats=[{"id": "a", "persona": "archie-tecture"}])
