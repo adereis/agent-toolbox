@@ -27,11 +27,11 @@ default `$CLAUDE_MEMORY_DIR` or `~/.claude/memory-sync`), `--claude-dir`,
 `--projects-dir`, and any `--allow` or `--skip` the user named. Confirm that
 `--claude-dir` is the configuration directory Claude Code is using; it
 defaults to `$CLAUDE_DIR`, then `$CLAUDE_CONFIG_DIR`, then `~/.claude`.
-Confirm that `--projects-dir` is the one earlier runs used. A wrong value
-usually maps each project to a memory directory that does not exist, which
-the utility holds as `MISSING`. A wrong `--claude-dir` that names another
-existing configuration is not caught: every memory this machine synced that
-the other configuration lacks reads as deleted.
+The utility refuses a run whose `--claude-dir` or `--projects-dir` differs
+from the ones this machine's base was built against. Report that refusal
+rather than working around it. Run `rebind` only when the user confirms the
+memories moved, and use a separate `--state-dir` only for a second
+configuration the user means to sync.
 
 When the portable directory is a git repository, inspect `git status` first.
 Uncommitted changes there are unfinished work from an earlier run or a hand
@@ -44,11 +44,13 @@ Run `status`. It is read-only and exits 2 when work is pending. Keep its
 output for the comparison after `apply`.
 
 Locate this machine's base store before reading the entries. It is the
-directory under the state directory (`$XDG_STATE_HOME/agent-toolbox/claude-memory`,
-or `~/.local/state/agent-toolbox/claude-memory` when that variable is unset)
+directory under the state directory
+(`$XDG_STATE_HOME/agent-toolbox/claude-memory`, or
+`~/.local/state/agent-toolbox/claude-memory` when that variable is unset)
 whose `portable-dir` file names the portable directory. Its `base/` holds
-the last synced copies. If no store names the portable directory, this
-machine has never applied against it.
+the last synced copies, and its `claude-dir` and `projects-dir` files name
+the directories the base is bound to. If no store names the portable
+directory, this machine has never applied against it.
 
 Read each entry that removes or rewrites a memory, and record its file name,
 its `name` and `description`, and what it holds:
@@ -67,10 +69,9 @@ Stop before applying, and ask the user, when the preview looks like an
 accident rather than a decision:
 
 - Every file of a project is `DELETED_LOCAL`. The utility holds a project
-  whose memory directory is gone, but an emptied directory or a
-  `--claude-dir` naming another configuration still reads as deletions.
-  That is more often a cleanup or a wrong argument than a decision, and
-  applying it would delete the project's memories on every machine.
+  whose memory directory is gone, but an emptied directory still reads as
+  deletions. That is more often a cleanup than a decision, and applying it
+  would delete the project's memories on every machine.
 - This machine has no base store and the portable directory already holds
   memories. A memory deleted here before the first sync reappears as
   `NEW_REMOTE`. Ask whether an earlier sync tool recorded checksums that

@@ -211,7 +211,7 @@ class Sync:
         self._lock = None
 
     # Locking: one mutating run per portable directory at a time.
-    def lock(self):
+    def lock(self, bind=True):
         self.store.mkdir(parents=True, exist_ok=True)
         (self.store / "portable-dir").write_text(str(self.portable.resolve()) + "\n")
         self._lock = open(self.store / "lock", "w")
@@ -220,6 +220,41 @@ class Sync:
         except BlockingIOError:
             raise SyncError(f"another claude-memory-sync is running on {self.portable} "
                             f"(lock {self.store / 'lock'}); retry when it finishes.")
+        if bind:
+            # Again under the lock: a rebind may have finished since main checked.
+            self.check_binding()
+            for key, value in self.binding().items():
+                if not (self.store / key).exists():
+                    write_atomic(self.store / key, (value + "\n").encode())
+
+    # Binding: the base describes one disk side, the Claude directory and the
+    # projects directory it was built against. Compared with any other, every
+    # memory absent there would read as DELETED_LOCAL and be tombstoned on
+    # every machine, and a second configuration that exists is not caught by
+    # the MISSING guard. A store records its binding on its first locked run.
+    def binding(self):
+        return {"claude-dir": os.path.realpath(self.claude_dir),
+                "projects-dir": os.path.realpath(self.projects_dir)}
+
+    def recorded_binding(self):
+        recorded = {}
+        for key in self.binding():
+            try:
+                recorded[key] = (self.store / key).read_text().rstrip("\n")
+            except FileNotFoundError:
+                pass
+        return recorded
+
+    def check_binding(self):
+        recorded = self.recorded_binding()
+        for key, now in self.binding().items():
+            if key in recorded and recorded[key] != now:
+                raise SyncError(
+                    f"this machine's base for {self.portable} was built against --{key} "
+                    f"{recorded[key]}, not {now}; compared with it, every memory absent from "
+                    f"{now} would read as deleted. Pass --{key} {recorded[key]} to sync that "
+                    "directory, --state-dir to give another configuration its own base, or, "
+                    f"only if the memories moved to {now}, run `rebind --{key} {now}`.")
 
     def included(self, slug):
         if slug == GLOBAL:
@@ -585,6 +620,21 @@ def cmd_resolve(sync, args):
     return 0
 
 
+def cmd_rebind(sync, args):
+    """Record that the memories this base describes now live in these directories."""
+    for key, path in (("claude-dir", sync.claude_dir), ("projects-dir", sync.projects_dir)):
+        if not path.is_dir():
+            raise SyncError(f"--{key} {path} is not a directory; rebind only to where the "
+                            "memories are now.")
+    sync.lock(bind=False)
+    recorded = sync.recorded_binding()
+    for key, now in sync.binding().items():
+        if recorded.get(key) != now:
+            write_atomic(sync.store / key, (now + "\n").encode())
+            print(f"REBOUND\t{key}\t{recorded.get(key, '(none)')} -> {now}")
+    return 0
+
+
 def cmd_adopt(sync, args):
     """Seed the base from a record of what an earlier tool last synced."""
     sync.lock()
@@ -700,6 +750,15 @@ def build_parser():
                                    "checksum; an existing base entry is never replaced.")
     p.set_defaults(func=cmd_adopt)
 
+    p = sub.add_parser("rebind", parents=[common],
+                       help="record that this machine's memories moved to --claude-dir / --projects-dir",
+                       description="The base is bound to the Claude and projects directories it "
+                                   "was built against, and any other run is refused. After moving "
+                                   "the memory directories themselves, run this with the new "
+                                   "directories to bind the base to them. To sync a second "
+                                   "configuration instead, give it its own base with --state-dir.")
+    p.set_defaults(func=cmd_rebind)
+
     p = sub.add_parser("link-aliases", parents=[common],
                        help="merge a project's duplicate memory dirs and symlink the extras",
                        description="A project reached through a symlink gets one memory dir per "
@@ -713,7 +772,10 @@ def build_parser():
 def main(argv=None):
     args = build_parser().parse_args(argv)
     try:
-        return args.func(Sync(args), args)
+        sync = Sync(args)
+        if args.func is not cmd_rebind:
+            sync.check_binding()
+        return args.func(sync, args)
     except SyncError as err:
         print(f"claude-memory-sync: {err}", file=sys.stderr)
         return 1

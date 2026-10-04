@@ -211,7 +211,9 @@ class DeletionTests(SyncTestCase):
         self.synced()
         wrong = self.root / "not-claude"
         wrong.mkdir()
-        self.assertEqual(self.apply(self.a, "--claude-dir", str(wrong)), (2, {("MISSING", "app")}))
+        code, _, err = self.a.run("apply", "--claude-dir", str(wrong))
+        self.assertEqual(code, 1)
+        self.assertIn("was built against --claude-dir", err)
         self.assertFalse(self.tombstone("app", "note.md").exists())
         self.assertFalse((wrong / "projects").exists())
 
@@ -249,6 +251,77 @@ class DeletionTests(SyncTestCase):
         self.assertFalse(self.tombstone("app", "note.md").exists())
         self.apply(self.b)
         self.assertEqual(self.b.read("app", "note.md"), "back\n")
+
+
+class BindingTests(SyncTestCase):
+    def setUp(self):
+        super().setUp()
+        self.a.write("app", "note.md", "one\n")
+        self.apply(self.a)
+        self.other = self.root / "other-config"
+        store = self.other / "projects" / cms.encode(self.a.home / "projects/app") / "memory"
+        store.mkdir(parents=True)
+        (store / "work.md").write_text("w\n")
+
+    def store(self, machine):
+        return next((machine.home / ".local/state").rglob("portable-dir")).parent
+
+    def test_another_existing_configuration_is_refused(self):
+        """It has a memory dir, so MISSING alone would read note.md as deleted."""
+        for command in ("status", "apply"):
+            code, out, err = self.a.run(command, "--claude-dir", str(self.other))
+            self.assertEqual((code, out), (1, ""))
+        real = os.path.realpath(self.a.home / ".claude")
+        self.assertIn(f"--claude-dir {real}", err)
+        self.assertIn("--state-dir", err)
+        self.assertIn("rebind", err)
+        self.assertFalse(self.tombstone("app", "note.md").exists())
+        self.assertFalse((self.other / "projects" / cms.encode(self.a.home / "projects/app")
+                          / "memory/note.md").exists())
+
+    def test_projects_dir_is_bound_too(self):
+        elsewhere = self.root / "elsewhere"
+        elsewhere.mkdir()
+        code, _, err = self.a.run("apply", "--projects-dir", str(elsewhere))
+        self.assertEqual(code, 1)
+        self.assertIn("was built against --projects-dir", err)
+
+    def test_second_configuration_gets_its_own_base(self):
+        code, out, err = self.a.run("status", "--claude-dir", str(self.other),
+                                    "--state-dir", str(self.root / "work-state"))
+        self.assertEqual((code, err), (2, ""))
+        self.assertEqual(sorted(out.splitlines()),
+                         ["NEW_LOCAL\tapp/memory/work.md", "NEW_REMOTE\tapp/memory/note.md"])
+
+    def test_rebind_follows_moved_memories(self):
+        moved = self.a.home / "claude-moved"
+        shutil.move(self.a.home / ".claude", moved)
+        self.assertEqual(self.a.run("status", "--claude-dir", str(moved))[0], 1)
+        code, out, _ = self.a.run("rebind", "--claude-dir", str(moved))
+        old, new = os.path.realpath(self.a.home / ".claude"), os.path.realpath(moved)
+        self.assertEqual((code, out), (0, f"REBOUND\tclaude-dir\t{old} -> {new}\n"))
+        self.assertEqual(self.a.lines("status", "--claude-dir", str(moved)), (0, []))
+        self.assertEqual(self.a.run("status")[0], 1)
+
+    def test_rebind_refuses_a_directory_that_does_not_exist(self):
+        code, _, err = self.a.run("rebind", "--claude-dir", str(self.root / "typo"))
+        self.assertEqual(code, 1)
+        self.assertIn("not a directory", err)
+        self.assertEqual(self.a.lines("status"), (0, []))
+
+    def test_unbound_store_is_bound_by_its_next_locked_run(self):
+        store = self.store(self.a)
+        for key in ("claude-dir", "projects-dir"):
+            (store / key).unlink()
+        self.assertEqual(self.a.run("status", "--claude-dir", str(self.other))[0], 2)
+        self.apply(self.a)
+        self.assertEqual((store / "claude-dir").read_text(),
+                         os.path.realpath(self.a.home / ".claude") + "\n")
+        self.assertEqual(self.a.run("status", "--claude-dir", str(self.other))[0], 1)
+
+    def test_status_does_not_bind(self):
+        self.b.run("status")
+        self.assertEqual(list((self.b.home / ".local/state").rglob("claude-dir")), [])
 
 
 class ConflictTests(SyncTestCase):

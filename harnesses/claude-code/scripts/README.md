@@ -201,7 +201,9 @@ records:
 - **Base** (per machine, never shared): a copy of each file as this machine
   last synced it, under
   `$XDG_STATE_HOME/agent-toolbox/claude-memory/<key>/base/`, keyed by the
-  portable directory so two portable directories never share a base.
+  portable directory so two portable directories never share a base. It is
+  bound to the Claude and projects directories it was built against; see
+  [One Base per Configuration](#one-base-per-configuration).
 - **Tombstones** (shared): `<slug>/memory/.deleted/<file>` lists the SHA-256
   of each deleted version. One file per deleted memory, so two machines
   deleting different memories never touch the same file and git or
@@ -302,15 +304,42 @@ A project whose memory directory has disappeared from disk, while files
 this machine synced from it remain in the portable directory, is reported
 as `MISSING`, and `apply` leaves the whole project alone. Read file by file,
 every memory in it would be `DELETED_LOCAL`, and the tombstones would delete
-it on every machine. A vanished directory is far more often a wrong
-`--claude-dir` or `--projects-dir`, a moved checkout, or a cleaned-up
-`~/.claude/projects` than a decision to delete everything in it.
+it on every machine. A vanished directory is far more often a moved
+checkout or a cleaned-up `~/.claude/projects` than a decision to delete
+everything in it.
 
-Correct the arguments when they are wrong. Otherwise settle the files with
-`resolve`: `--keep local` deletes a file everywhere, and `--keep remote`
-restores it. Restoring recreates the directory, which would expose any file
-left out as a deletion, so `--keep remote` refuses unless it names every
-remaining file; delete the unwanted ones first.
+Put the directory back when it was moved or removed by mistake. Otherwise
+settle the files with `resolve`: `--keep local` deletes a file everywhere,
+and `--keep remote` restores it. Restoring recreates the directory, which
+would expose any file left out as a deletion, so `--keep remote` refuses
+unless it names every remaining file; delete the unwanted ones first.
+
+### One Base per Configuration
+
+The base describes one disk side: a Claude configuration directory and a
+projects directory. The first run that changes anything records both, and a
+later run with a different `--claude-dir` or `--projects-dir` is refused
+rather than compared. Compared, every memory synced from the first
+directory and absent from the second would read as deleted and be
+tombstoned on every machine. The `MISSING` guard cannot catch that when the
+second directory exists, as another configuration does. A store from before
+this check is bound by its next run that changes anything.
+
+To sync a second configuration into the same portable directory, give it
+its own base:
+
+```bash
+python3 "$sync" status --claude-dir ~/.claude-work \
+  --state-dir ~/.local/state/agent-toolbox/claude-memory-work
+```
+
+When the memories themselves moved, for instance with `~/.claude` relocated
+whole, bind the base to the new location. `rebind` accepts only directories
+that exist:
+
+```bash
+python3 "$sync" rebind --claude-dir /new/location/of/claude
+```
 
 ---
 
