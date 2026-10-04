@@ -304,14 +304,23 @@ def dispatch(args):
         result = seal_.seal(runs.resolve(args.run, project), args.round_number, seed=args.seed,
                             force=args.force)
         print(f"round {result['round']} sealed as {', '.join(result['letters'])} under "
-              f"{result['directory']}\nread each letter's post.md and files, write your judgment to "
-              f"{result['judgment']}, then: convene unseal {args.run}")
+              f"{result['directory']}")
+        if result["judge"]:
+            print(f"the judge seat {result['judge']} rules on these letters: convene run "
+                  f"{args.run} plays its round and files its post as {result['judgment']}")
+        else:
+            print(f"read each letter's post.md and files, write your judgment to "
+                  f"{result['judgment']}, then: convene unseal {args.run}")
         if result["judgment_kept"]:
             print("your existing judgment.md was kept; the letters under it were reshuffled")
         return 0
     if args.command == "unseal":
         result = seal_.unseal(runs.resolve(args.run, project), args.round_number)
-        print(f"round {result['round']} unsealed:")
+        by = result["judged_by"]
+        print(f"round {result['round']} unsealed; judged by "
+              + (f"the judge seat {by['seat']} ({by['served']}, tier {by['tier']})"
+                 if by["seat"] != "operator" else "the operator")
+              + ":")
         for letter, who in result["key"].items():
             print(f"  {letter} = {who['seat']} ({who['served']})")
         return 0

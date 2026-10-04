@@ -261,7 +261,7 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(names, {"quinn-t-shun", "ada-versary", "connie-tinuity", "emma-pirical",
                                  "sec-urity", "axel-cess", "archie-tecture", "tess-tcase",
                                  "xavier-pert", "percy-formance"})
-        self.assertEqual(set(instruments.catalog()), {"review", "design", "implement", "synthesize"})
+        self.assertEqual(set(instruments.catalog()), {"review", "design", "implement", "synthesize", "judge"})
         self.assertIn("json_schema", instruments.catalog()["review"]["profile"])
 
     def test_run_resolution_by_name_and_path(self):

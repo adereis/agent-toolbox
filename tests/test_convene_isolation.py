@@ -60,6 +60,21 @@ class BwrapArgvTests(unittest.TestCase):
                 ["claude", "-p"], harness=harness, seat_home=self.box.root / "seat-home",
                 workspace=work, project_root=project or self.box.project, repo_ro=repo_ro)
 
+    def test_judge_letters_are_bound_read_only_and_attested_only_when_staged(self):
+        home = str(self.box.home)
+        launched = self.wrap()
+        self.assertNotIn(f"{home}/workspace/sealed", launched.attestation["read_only_in_workspace"],
+                         "a seat with no letters is not attested as having them")
+        (self.box.root / "work/sealed/A").mkdir(parents=True)
+        launched = self.wrap()
+        argv = launched.argv
+        self.assertIn(f"{home}/workspace/sealed", launched.attestation["read_only_in_workspace"])
+        letters = argv.index(str(self.box.root / "work/sealed"))
+        self.assertEqual((argv[letters - 1], argv[letters + 1]),
+                         ("--ro-bind", f"{home}/workspace/sealed"))
+        self.assertGreater(letters, argv.index(str(self.box.root / "work")),
+                           "the letters are bound over the writable workspace, not under it")
+
     def test_order_blank_then_allow_list_then_workspace_then_chdir(self):
         launched = self.wrap()
         argv = launched.argv
@@ -253,6 +268,33 @@ class RealJailTests(unittest.TestCase):
                 self.assertIsNone(got["isolation"]["session_bus"])
                 self.assertTrue(list((root / "homes/s/claude/projects").rglob("*.jsonl")),
                                 "the seat's session landed in its private home")
+
+
+@unittest.skipUnless(sys.platform.startswith("linux") and shutil.which("/usr/bin/bwrap"),
+                     "needs the real bubblewrap")
+class RealJailJudgeTests(unittest.TestCase):
+    def setUp(self):
+        self.box = Sandbox(self)
+
+    def test_judge_reads_the_letters_and_cannot_reach_the_run(self):
+        root, _ = plan.prepare(self.box.plan(
+            kind="fanout", isolation="enforced", judgment={"by": "judge"},
+            seats=[{"id": "one", "persona": "connie-tinuity"},
+                   {"id": "two", "persona": "archie-tecture"},
+                   {"id": "judge", "persona": "quinn-t-shun"}],
+            brief={"text": f"[[stub:canary]] [[probe:{self.box.state}]] Implement it."}),
+            project_root=self.box.project)
+        played, why = round_.run(root)
+        got = read(root / "records/judge/r002/receipt.json")
+        self.assertEqual(got["status"], "answered", (played, got.get("error"),
+                         (root / "records/judge/r002/stderr.log").read_text()))
+        answer = (root / "records/judge/r002/answer.md").read_text()
+        self.assertIn("SEALED=A,B", answer, answer)
+        self.assertIn("PROBE=absent", answer, "the run directory, key included, is out of reach")
+        self.assertIn(f"{self.box.home}/workspace/sealed", got["isolation"]["read_only_in_workspace"])
+        self.assertFalse([f for f in got["red_flags"] if f.startswith("judging is advisory")])
+        self.assertEqual((root / "sealed/r001/judgment.md").read_text().strip(), answer.strip())
+        round_.prune(root)
 
 
 @unittest.skipUnless(sys.platform.startswith("linux") and shutil.which("/usr/bin/bwrap"),

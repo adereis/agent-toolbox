@@ -45,6 +45,10 @@ BLANKED = ("$HOME", "/tmp", "/var/tmp")
 # so real output never counts against it.
 TMPFS_BYTES = 2 * 1024 ** 3
 WORKSPACE_NAME = "workspace"
+# What the engine staged for the seat, bound back read-only over the
+# writable workspace: a seat may not rewrite its brief, its materials, the
+# board it answers, or the letters a judge rules on.
+READ_ONLY_IN_WORKSPACE = ("materials", "START.md", "board", "sealed")
 # Host trees a CLI needs, bound read-only at their own paths. A required
 # tree that is missing fails the launch by name; an optional one is bound
 # when present. `/var/lib` rather than `/var`: on Silverblue `/var/mnt` and
@@ -304,10 +308,9 @@ class Enforced:
         for source, target in read_only:
             jail += ["--ro-bind", source, target]
         jail += ["--bind", str(workspace), str(virtual_workspace)]
-        for name in ("materials", "START.md", "board"):
-            item = workspace / name
-            if item.exists():
-                jail += ["--ro-bind", str(item), str(virtual_workspace / name)]
+        staged = [name for name in READ_ONLY_IN_WORKSPACE if (workspace / name).exists()]
+        for name in staged:
+            jail += ["--ro-bind", str(workspace / name), str(virtual_workspace / name)]
         # A worktree's `.git` file names the main repository's git directory
         # by absolute path, and git writes this worktree's index there. The
         # common directory is bound read-only at its real path and only the
@@ -346,7 +349,7 @@ class Enforced:
             "dev": "minimal", "tmpfs_bytes": TMPFS_BYTES, "blanked": blanked,
             "read_only_binds": [t for _, t in read_only],
             "writable": [str(virtual_workspace)], "read_only_in_workspace":
-            [str(virtual_workspace / n) for n in ("materials", "START.md", "board")],
+            [str(virtual_workspace / n) for n in staged],
             "harness_home": str(virtual_harness_home), "harness_home_source": str(private),
             "chdir": str(virtual_workspace), "worktree_git": worktree_binds,
             "repository_read_only": str(project_root) if repo_ro else None,

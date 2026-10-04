@@ -28,6 +28,13 @@ A version such as `opus-5.5` or `gpt-5.6-terra` pins the seat to it. A
 name the catalog cannot place is refused, and the refusal lists the
 families it has.
 
+**A judge.** A fanout's judge sees only the lettered attempts. Put it on
+a model family that made none of them where you can: a model tends to
+rate its own family's writing higher, so a Claude judge may favor the
+Claude attempt for its style rather than its substance. A persona that
+distrusts claims (`quinn-t-shun`) suits the role. On any tier but
+`enforced`, its receipt says `judging is advisory`.
+
 **Tools.** `read` (the default) lets a seat read the repository and its
 materials. `none` is for a seat that must answer from the brief alone;
 it cannot take materials. `write` adds edit and shell tools, which a

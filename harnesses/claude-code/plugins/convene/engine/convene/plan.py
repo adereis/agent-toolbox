@@ -21,7 +21,9 @@ from convene.storage import (digest, event, hashes, identifier, read, safe_name,
                              write_text)
 
 KINDS = ("panel", "room", "fanout")
-VISIBILITY = ("board", "blind")
+# `sealed` is the judge's alone: it sees the attempts under letters, never
+# the board. `[judgment] by` assigns it; a plan cannot.
+VISIBILITY = ("board", "blind", "sealed")
 WORKSPACES = ("none", "repo-ro", "worktree")
 COMPACTION = ("forbid", "allow")
 SEAT_FIELDS = ("harness", "model", "effort", "tools", "isolation", "visibility", "workspace",
@@ -230,6 +232,14 @@ def _start_text(plan, seat, common, private):
     if plan["kind"] == "panel":
         text += (f"You are one of {others + 1} reviewers convened on the same change. Each "
                  "of you was given the same brief and works independently.\n\n")
+    elif seat["visibility"] == "sealed":
+        attempts = sum(1 for s in plan["seats"] if s["visibility"] == "blind")
+        text += (f"You are judging {attempts} attempts at the brief below, each made "
+                 "independently. When your turn comes they are under sealed/ in your working "
+                 "directory, one folder per letter in no particular order: post.md is the "
+                 "author's note, report.md its report, and changes.patch what it changed. "
+                 "Nobody will tell you who made which, and your judgment must not rest on "
+                 "guessing.\n\n")
     elif seat["visibility"] == "board":
         text += (f"You are one of {others + 1} people in a room working on the same brief. "
                  "Between your turns, the board with everyone's posts appears under board/ "
@@ -248,7 +258,9 @@ def _start_text(plan, seat, common, private):
         text += ("A checkout of the repository is at repo/ in your working directory. It is "
                  "yours to edit, build and test; whatever you change there is collected "
                  "with your post as a patch.\n\n")
-    if plan.get("instrument"):
+    if plan.get("instrument") and seat["visibility"] != "sealed":
+        # The judge is told what to produce by its own phase's instruction;
+        # the attempts' instrument would ask it to implement the brief.
         text += "# What to produce\n\n" + plan["instrument"]["profile"]["prompt"].strip() + "\n\n"
     text += ("Your final message each turn is your post. It is what the others and the "
              f"operator read under your name, about {plan['post_length']} words, as finished "
@@ -287,6 +299,16 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
     if not isinstance(synthesis, dict) or not isinstance(synthesis.get("by"), str):
         raise ValueError("synthesis.by must be \"operator\" or a seat id")
     synthesizer = None if synthesis["by"] == "operator" else identifier(synthesis["by"])
+    judgment = supplied.get("judgment", {"by": "operator"})
+    if not isinstance(judgment, dict) or not isinstance(judgment.get("by"), str):
+        raise ValueError("judgment.by must be \"operator\" or a seat id")
+    judge = None if judgment["by"] == "operator" else identifier(judgment["by"])
+    if judge and kind != "fanout":
+        raise ValueError("judgment.by applies to kind = \"fanout\" only: a judge reads a "
+                         "fanout's attempts sealed")
+    if judge and judge == synthesizer:
+        raise ValueError(f"{judge!r} cannot both judge and synthesize: the synthesizer reads "
+                         "the board, which names every seat")
 
     defaults = dict(DEFAULTS)
     configured, config_sources = config.load(project_root, environ)
@@ -345,7 +367,22 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
                     "tools": item.get("tools", "read")}
             seats.append(_seat(item, {**defaults, "visibility": "board", "workspace": "none",
                                       "tools": "read"}, project_root, plan_dir, environ))
+        elif judge and item.get("id") == judge:
+            # The judge sees the lettered attempts and nothing else. Not the
+            # board, which names every seat; and not the repository either,
+            # whose .git records each attempt's worktree under a path naming
+            # its seat, along with anything that seat committed there.
+            if item.get("workspace", "none") != "none":
+                raise ValueError(f"the judge {judge!r} takes workspace = \"none\": the "
+                                 "repository's worktree records name the attempt seats")
+            item = {**item, "visibility": "sealed", "workspace": "none",
+                    "tools": item.get("tools", "read")}
+            seats.append(_seat(item, {**defaults, "visibility": "sealed", "workspace": "none",
+                                      "tools": "read"}, project_root, plan_dir, environ))
         else:
+            if item.get("visibility", defaults["visibility"]) == "sealed":
+                raise ValueError(f"seat {item.get('id')!r}: visibility = \"sealed\" is the "
+                                 "judge's; name the seat in [judgment] by instead")
             seats.append(_seat(item, defaults, project_root, plan_dir, environ))
     if jobs is None:
         # Seats sharing one account hit the same quota wall together, so the
@@ -357,38 +394,46 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         raise ValueError("duplicate seat id")
     if synthesizer and synthesizer not in {s["id"] for s in seats}:
         raise ValueError(f"synthesis.by names no seat: {synthesizer!r}")
+    if judge and judge not in {s["id"] for s in seats}:
+        raise ValueError(f"judgment.by names no seat: {judge!r}")
     for seat in seats:
         if seat["tools"] == "none" and (common or seat["_private"]):
             raise ValueError(f"seat {seat['id']!r}: tools = \"none\" cannot read materials; "
                              "give the seat Read (tools = \"read\") or inline the brief")
     ids = [s["id"] for s in seats]
     declared_by_plan = bool(supplied.get("phases"))
-    if synthesizer:
-        # One more round at the end, in which only the synthesizer acts; every
-        # other phase seats everyone else. Its post is the synthesis rather
-        # than a note beside a synthesis.md, because a seat on the read tool
-        # set has no way to write a file, and nobody is left in the room for
-        # a note to address.
+    # Seats that act alone in a round the engine appends: the judge after
+    # the attempts, then the synthesizer after everything. Each one's post
+    # is its work rather than a note beside a file, because a seat on the
+    # read tool set has no way to write one, and nobody is left in the room
+    # for a note to address.
+    solo = [(who, role) for who, role in ((judge, "judge"), (synthesizer, "synthesizer")) if who]
+    if solo:
         declared = supplied.get("phases") or []
-        if any(synthesizer in (p.get("seats") or ids) for p in declared):
-            raise ValueError(f"the synthesizer {synthesizer!r} may not act in a declared phase")
-        working = [s for s in ids if s != synthesizer]
+        for who, role in solo:
+            if any(who in (p.get("seats") or ids) for p in declared):
+                raise ValueError(f"the {role} {who!r} may not act in a declared phase")
+        working = [s for s in ids if s not in {who for who, _ in solo}]
         if not working:
-            raise ValueError("a synthesizer needs at least one other seat")
+            raise ValueError(f"a {solo[0][1]} needs at least one other seat")
         if not declared:
             declared = [{"name": "attempt" if kind == "fanout" else "discussion",
                          "rounds": rounds, "seats": working}]
-        synth = instruments.resolve("synthesize", project_root)
-        declared = declared + [{"name": "synthesis", "rounds": 1, "seats": [synthesizer],
-                                "instruction": synth["profile"]["prompt"].strip()}]
-        rounds += 1
+        for who, role in solo:
+            phase, instrument_id = {"judge": ("judgment", "judge"),
+                                    "synthesizer": ("synthesis", "synthesize")}[role]
+            prompt = instruments.resolve(instrument_id, project_root)["profile"]["prompt"]
+            declared = declared + [{"name": phase, "rounds": 1, "seats": [who],
+                                    "instruction": prompt.strip()}]
+            rounds += 1
         supplied = {**supplied, "phases": declared}
     phases = _phases(supplied, rounds, ids, kind)
     if kind == "fanout" and not declared_by_plan:
         # The attempt phase the engine generated asks for a report; phases a
         # plan declares keep exactly the deliverables they declare.
+        alone = [[who] for who, _ in solo]
         for phase in phases:
-            if phase.get("seats") != [synthesizer]:
+            if phase.get("seats") not in alone:
                 phase["deliverable"] = "report.md"
     _check_deliverables(phases, seats)
     if any(s["workspace"] == "worktree" for s in seats):
@@ -412,7 +457,7 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         "schema": SCHEMA, "kind": kind, "title": title.strip(), "name": root.name,
         "project_root": str(project_root), "plan_source": str(plan_path),
         "rounds": rounds, "jobs": jobs, "per_harness": per_harness,
-        "phases": phases, "synthesis": synthesis,
+        "phases": phases, "synthesis": synthesis, "judgment": judgment,
         "post_length": post_length, "base_commit": base,
         "brief": {"text": brief, "sha256": digest_text(brief)},
         "instrument": instrument, "delta": delta,

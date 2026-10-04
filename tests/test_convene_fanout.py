@@ -187,6 +187,111 @@ class FanoutTests(unittest.TestCase):
         self.assertIn("(synth, claude/opus)", board.text(root, frozen))
         self.assertTrue(export.export(root, self.box.root / "out").exists())
 
+    JUDGED = [{"id": "one", "persona": "connie-tinuity"},
+              {"id": "two", "persona": "archie-tecture", "harness": "codex", "model": "gpt-5.5",
+               "effort": "low"},
+              {"id": "judge", "persona": "quinn-t-shun"}]
+
+    def judged(self, *extra, **fields):
+        seats = [dict(s) for s in self.JUDGED] + list(extra)
+        return self.prepare(seats=seats, judgment={"by": "judge"}, **fields)
+
+    def test_judge_seat_rules_on_the_letters_alone(self):
+        root, frozen = self.judged()
+        judge = next(s for s in frozen["seats"] if s["id"] == "judge")
+        self.assertEqual((judge["visibility"], judge["workspace"], judge["tools"]),
+                         ("sealed", "none", "read"))
+        self.assertEqual([(p["name"], p.get("seats"), p.get("deliverable")) for p in frozen["phases"]],
+                         [("attempt", ["one", "two"], "report.md"), ("judgment", ["judge"], None)])
+        start = (root / "work/judge/START.md").read_text()
+        self.assertIn("You are judging 2 attempts", start)
+        self.assertNotIn("Report what you built", start, "the attempts' instrument is not the judge's")
+        played, why = round_.run(root)
+        self.assertEqual(why, "done")
+        self.assertEqual([n for n, _ in played], [1, 2])
+        # The engine sealed the attempts before the judge's round opened and
+        # staged the letters' own files, never the key beside them.
+        self.assertEqual(sorted(read(root / "sealed/r001/identity-key.json").values()), ["one", "two"])
+        staged = root / "work/judge/sealed"
+        self.assertEqual(sorted(p.name for p in staged.iterdir()), ["A", "B"])
+        for letter in "AB":
+            self.assertEqual(sorted(p.name for p in (staged / letter).iterdir()),
+                             sorted(p.name for p in (root / "sealed/r001" / letter).iterdir()))
+        names = {p.name for p in (root / "work/judge").rglob("*")}
+        self.assertFalse(names & {"identity-key.json", "seal.json"}, "the key never reaches the judge")
+        self.assertFalse(list((root / "work/judge/board").iterdir()), "the judge sees no board")
+        self.assertIn("You are judging, not competing",
+                      (root / "records/judge/r002/prompt.md").read_text())
+        # Its post is the judgment, filed where unseal looks for one.
+        post = board.post_path(root, "judge", 2).read_text()
+        self.assertIn("I judged A, B.", post)
+        self.assertEqual((root / "sealed/r001/judgment.md").read_text(), post)
+        data = round_.status(root)
+        self.assertEqual(data["withheld"], [1, 2])
+        self.assertTrue(data["next"].startswith(f"convene unseal {root.name}; the judgment by judge"))
+        flags = data["seats"]["judge"]["receipts"][2]["red_flags"]
+        self.assertTrue(any(f.startswith("judging is advisory") for f in flags), flags)
+        with self.assertRaisesRegex(ValueError, "judgment.md is on file, so `convene unseal`"):
+            seal.guard(root, frozen, "the board")
+        unsealed = seal.unseal(root)
+        self.assertEqual(unsealed["judged_by"],
+                         {"seat": "judge", "served": "claude/opus", "tier": "private-home"})
+        self.assertEqual(read(root / "sealed/r001/unsealed.json")["judged_by"]["seat"], "judge")
+        self.assertEqual(round_.status(root)["withheld"], [])
+
+    def test_the_judge_rules_before_anyone_reads_the_letters(self):
+        root, frozen = self.judged()
+        round_.run_round(root, 1)
+        self.assertEqual(round_.status(root)["next"],
+                         f"convene run {root.name}; the judge judge reads round 1 sealed next")
+        with self.assertRaisesRegex(ValueError, "`convene run` lets the judge seat 'judge' rule"):
+            seal.guard(root, frozen, "the board")
+        # A judgment already on file is never overwritten by the judge.
+        seal.seal(root, seed=1)
+        (root / "sealed/r001/judgment.md").write_text("Mine.\n")
+        with self.assertRaisesRegex(ValueError, "already has a judgment.md on file.*aside"):
+            round_.run_round(root, 2)
+        (root / "sealed/r001/judgment.md").unlink()
+        round_.run_round(root, 2)
+        self.assertEqual(read(root / "sealed/r001/seal.json")["round"], 1, "the operator's seal is reused")
+        # An operator's edit of the judge's words is no longer the judge's judgment.
+        with open(root / "sealed/r001/judgment.md", "a") as handle:
+            handle.write("Edited.\n")
+        self.assertEqual(seal.unseal(root)["judged_by"], {"seat": "operator"})
+
+    def test_judge_then_synthesizer(self):
+        root, frozen = self.judged({"id": "synth", "persona": "tess-tcase"},
+                                   synthesis={"by": "synth"})
+        self.assertEqual([p["name"] for p in frozen["phases"]], ["attempt", "judgment", "synthesis"])
+        # The appended phases once shadowed prepare's own `name` argument and
+        # named the run after the last of them.
+        self.assertRegex(root.name, r"^\d{4}-\d{2}-\d{2}-fanout-")
+        round_.run(root)
+        self.assertEqual(board.published_rounds(root), [1, 2, 3])
+        self.assertEqual(seal.sealed_rounds(root), [1])
+        self.assertIn("(judge)", (root / "work/synth/board/round-002/digest.md").read_text())
+        self.assertEqual(round_.status(root)["withheld"], [1, 2, 3])
+        seal.unseal(root)
+        self.assertEqual(round_.status(root)["withheld"], [])
+
+    def test_judge_plans_are_refused_by_name(self):
+        for fields, message in (
+            ({"kind": "room", "judgment": {"by": "judge"}}, "applies to kind = \"fanout\" only"),
+            ({"judgment": {"by": "one"}, "synthesis": {"by": "one"}}, "cannot both judge and synthesize"),
+            ({"judgment": {"by": "nobody"}}, "judgment.by names no seat"),
+            ({"judgment": {"by": 3}}, "judgment.by must be"),
+        ):
+            with self.subTest(fields=fields), self.assertRaisesRegex(ValueError, message):
+                self.prepare(seats=[dict(s) for s in self.JUDGED], **fields)
+        repo = [dict(s) for s in self.JUDGED]
+        repo[2]["workspace"] = "repo-ro"
+        with self.assertRaisesRegex(ValueError, "takes workspace = \"none\""):
+            self.prepare(seats=repo, judgment={"by": "judge"})
+        with self.assertRaisesRegex(ValueError, "visibility = \"sealed\" is the judge's"):
+            self.prepare(seats=[{"id": "one", "persona": "connie-tinuity", "visibility": "sealed"}])
+        with self.assertRaisesRegex(ValueError, "the judge 'judge' may not act in a declared phase"):
+            self.judged(phases=[{"name": "attempt", "rounds": 1}])
+
     def test_cli_seal_and_unseal(self):
         root, _ = self.prepare()
         run = lambda *a: main(["--project", str(self.box.project), *a])  # noqa: E731

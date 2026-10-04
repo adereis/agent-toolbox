@@ -1,6 +1,8 @@
 # A fanout: N seats attempt the same brief, blind to each other, each in
 # its own worktree. The operator reads the attempts sealed under letters,
-# records a judgment, then unseals to learn who wrote what.
+# records a judgment, then unseals to learn who wrote what. With a judge
+# seat (below), `run` seals the attempts and the judge's post becomes the
+# judgment, so the steps between `run` and `unseal` fall away.
 #
 #   convene prepare fanout.toml
 #   convene run <name>
@@ -46,6 +48,19 @@ model = "terra"
 [[seats]]
 id = "three"
 persona = "tess-tcase"
+
+# Let a seat judge instead of the operator: it acts alone in one extra
+# round, sees only the lettered attempts, and posts the judgment. The
+# operator knows the plan and the judge does not, so the judge is blind
+# where the operator cannot be.
+# [[seats]]
+# id = "judge"
+# persona = "quinn-t-shun"
+# harness = "codex"
+# model = "sol"
+#
+# [judgment]
+# by = "judge"
 
 # Let a seat synthesize instead of the operator: it acts alone in one
 # extra round, sees the board, and posts the synthesis.

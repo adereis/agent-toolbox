@@ -115,7 +115,16 @@ def open_round(root, plan, n):
         target.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target / "digest.md")
     event(root, round=n, event="board-published", digest_sha256=digest(source))
+    if seal.judge_of(plan) in board.acting(plan, n):
+        seal.stage_for_judge(root, plan, n)
     return source
+
+
+def _promote(root, plan, n):
+    """Publish round `n`, then file a judge's post as the judgment it is."""
+    published = board.promote(root, n)
+    seal.file_judgment(root, plan, n)
+    return published
 
 
 def _terminate(proc):
@@ -242,6 +251,11 @@ def launch(root, plan, seat, n, prompt, mode, session_id, *, timeout=None):
         flags.append("isolation is advisory (private-home): the OS did not enforce it")
     if launched.attestation.get("tier") == "none":
         flags.append("no isolation: the seat ran in the operator's own harness home")
+    if seat["visibility"] == "sealed" and not launched.attestation.get("enforced"):
+        # Only the jail keeps the run directory out of reach; anywhere else
+        # the judge's blindness rests on it not looking.
+        flags.append("judging is advisory: nothing stopped the judge from opening the run "
+                     "directory, where the key sits beside the letters")
     bus = launched.attestation.get("session_bus")
     if bus:
         flags.append("session bus proxied into the jail for " + ", ".join(bus["names"])
@@ -395,7 +409,7 @@ def run_round(root, n, *, jobs=None, timeout=None):
             event(root, round=n, event="round-held", waiting_on=held)
             results["_board"] = {"held": held}
             return results
-        results["_board"] = board.promote(root, n)
+        results["_board"] = _promote(root, plan, n)
     return results
 
 
@@ -435,7 +449,7 @@ def promote_held(root, n):
         if waiting:
             raise RuntimeError(f"round {n} is still held on {', '.join(waiting)}; continue them "
                                "first, or accept their absence with --absent")
-        return board.promote(root, n)
+        return _promote(root, plan, n)
 
 
 def promote_absent(root, n):
@@ -452,7 +466,7 @@ def promote_absent(root, n):
                 state["status"] = "given-up"
                 write(state_path(root, seat["id"]), state)
                 event(root, round=n, seat=seat["id"], event="given-up")
-        return board.promote(root, n)
+        return _promote(root, plan, n)
 
 
 def _spans(numbers):
@@ -484,6 +498,15 @@ def next_step(root, plan, *, published, budget, held, withheld, converged):
                 f"then convene promote {name} {held[0].get('round')}")
     if withheld:
         n = seal.pending(root, plan)[-1]
+        rules = seal.judge_round(root, plan, n)
+        if rules and rules not in published:
+            # A judge seat rules before anybody reads the letters, so the
+            # next step is its round, not `seal`.
+            return f"convene run {name}; the judge {seal.judge_of(plan)} reads round {n} sealed next"
+        judgment = Path(root) / "sealed" / f"r{n:03d}" / seal.JUDGMENT
+        if judgment.exists():
+            by = seal.judged_by(root, plan, n)["seat"]
+            return f"convene unseal {name}; the judgment by {by} is on file at {judgment}"
         if not seal.is_sealed(root, n):
             return f"convene seal {name}"
         return (f"read {root}/sealed/r{n:03d}/, write its {seal.JUDGMENT}, "

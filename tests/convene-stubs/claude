@@ -110,6 +110,11 @@ if scenario == "canary":
             f"ROOT={','.join(sorted(os.listdir('/')))} "
             f"RUNTIME={'yes' if os.path.exists('/run/user') else 'no'} "
             f"PIDS={sum(1 for e in os.listdir('/proc') if e.isdigit())}")
+    reach = re.search(r"\[\[probe:(\S+)\]\]", prompt)
+    if reach:
+        text += f" PROBE={'reached' if os.path.exists(reach.group(1)) else 'absent'}"
+    if os.path.isdir("sealed"):
+        text += f" SEALED={','.join(sorted(os.listdir('sealed')))}"
     if os.path.isdir("repo"):
         import subprocess
         with open(os.path.join("repo", "STUB-NOTE.md"), "w") as note:
@@ -122,6 +127,8 @@ else:
     boards = sorted(os.listdir("board")) if os.path.isdir("board") else []
     if boards:
         text += f"\nI read {boards[-1]}.\n"
+    if os.path.isdir("sealed"):
+        text += f"\nI judged {', '.join(sorted(os.listdir('sealed')))}.\n"
     if "You are joining a room already in progress" in prompt:
         text += "\nJoining late.\n"
 asked = re.search(r"Write the work itself to outbox/(\S+),", prompt)

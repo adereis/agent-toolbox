@@ -38,8 +38,9 @@ Three kinds ship: the one-round **panel**; the **room**, where seats
 discuss a feature over rounds on a shared board, one seat drafts it in its
 own git worktree, and the room critiques and revises the patch; and the
 **fanout**, where N seats implement the same brief blind in their own
-worktrees and the operator judges the attempts sealed under letters before
-learning who wrote what.
+worktrees and the attempts are judged sealed under letters, by the operator
+or by a judge seat that sees nothing else, before anyone learns who wrote
+what.
 
 ## Available components
 

@@ -108,7 +108,16 @@ key by arithmetic. Write your judgment to `sealed/rNNN/judgment.md` by
 letter: which attempt to take, what to change in it first, what the
 others got right. Then `convene unseal NAME`, which prints the key. Report
 the judgment as written, then the key, then the receipts. A synthesizer
-seat's synthesis is its post on the board; read it after your own judgment.
+seat's synthesis is its post on the board; read it after the judgment.
+
+A fanout may name a judge seat (`[judgment] by = "ID"`). It acts alone in
+the round after the attempts: `run` seals them, copies only the letters'
+own files into the judge's workspace, never the key, and files its post as
+that round's `judgment.md`. The judge is blind to the plan and you are not,
+so once it has ruled, do not write or edit a judgment. `unseal` names the
+judge as the author only while its words are unchanged. Report its
+judgment, then who judged, then the key. If the judge was absent, the
+judgment falls to you, and `unseal` records you as its author.
 
 ## Red flags you must repeat, never soften
 
@@ -116,6 +125,8 @@ seat's synthesis is its post on the board; read it after your own judgment.
   post may have lost the early material.
 - `isolation is advisory`: the OS did not stop the seat from opening an
   absolute path; the tier was `private-home`.
+- `judging is advisory`: the judge ran outside the jail, where nothing
+  kept it from the run directory and the key in it.
 - `no isolation`: the seat ran in the operator's own harness home.
 - `granted on purpose: …`, `extra harness arguments: …`, `environment
   passed through: …`: a door the plan opened; name it beside the seat's

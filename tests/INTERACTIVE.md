@@ -221,6 +221,16 @@ round-two digest is the synthesis and cites both attempt seats by id.
 `seal` letters round one, not round two, and `board` stays refused
 until round one is unsealed, then shows both rounds attributed.
 
+**Judge:** instead of the synthesizer, a third seat on Codex named by
+`[judgment] by`, enforced tier. Expected: `run` plays two rounds and
+seals round one itself; `work/<judge>/sealed/` holds only the letters'
+folders; the judge's round-two `launch.json` shows `--ro-bind` of that
+folder and its receipt carries no `judging is advisory`; its post is
+`sealed/r001/judgment.md`, by letter; `status` names `convene unseal`, and
+`unseal` prints `judged by the judge seat <id> (codex/<model>, tier
+enforced)` before the key. Repeat on `private-home`: the receipt must then
+say `judging is advisory`.
+
 ## IT-12: Convene Antigravity seat
 
 **Prerequisites:** `agy` logged in (`~/.gemini/oauth_creds.json`), Linux

@@ -75,11 +75,106 @@ def withheld(root, plan):
     return [n for n in board.published_rounds(root) if not is_unsealed(root, n)]
 
 
+def judge_of(plan):
+    """The judge seat's id, or None when the operator judges."""
+    by = (plan.get("judgment") or {}).get("by", "operator")
+    return None if by == "operator" else by
+
+
+def judged_round(plan, n):
+    """The blind round a judge acting in round `n` reads: the latest before it."""
+    earlier = blind_rounds(plan, range(1, n))
+    if not earlier:
+        raise ValueError(f"the judge acts in round {n}, but no blind round comes before it")
+    return earlier[-1]
+
+
+def stage_for_judge(root, plan, n):
+    """Seal the attempts if needed and copy only the letters to the judge.
+
+    The key and seal.json stay in the run directory, which an enforced jail
+    never binds; what the judge sees is exactly the letters' own files.
+    """
+    root, judge = Path(root), judge_of(plan)
+    m = judged_round(plan, n)
+    if (sealed_dir(root, m) / JUDGMENT).exists():
+        raise ValueError(f"round {m} already has a {JUDGMENT} on file, and the judge seat "
+                         f"{judge!r} rules on that round next; move "
+                         f"{sealed_dir(root, m) / JUDGMENT} aside so the judge can rule")
+    if not is_sealed(root, m):
+        seal(root, m)
+    letters = read(sealed_dir(root, m) / "seal.json")["letters"]
+    target = root / "work" / judge / "sealed"
+    if target.exists():
+        shutil.rmtree(target)
+    for letter in letters:
+        shutil.copytree(sealed_dir(root, m) / letter, target / letter)
+    event(root, round=n, seat=judge, event="judge-staged", judged=m, letters=letters)
+
+
+def file_judgment(root, plan, n):
+    """File the judge's post as the judged round's judgment.md.
+
+    judge.json beside it records the post's hash, so `unseal` can tell the
+    judge's words from an operator's edit of them.
+    """
+    root, judge = Path(root), judge_of(plan)
+    if not judge or judge not in board.acting(plan, n):
+        return None
+    m = judged_round(plan, n)
+    post = board.post_path(root, judge, n)
+    if not post.exists():
+        event(root, round=n, seat=judge, event="judge-absent", judged=m)
+        return None
+    judgment = sealed_dir(root, m) / JUDGMENT
+    if judgment.exists():
+        event(root, round=n, seat=judge, event="judgment-not-filed", judged=m,
+              reason=f"{JUDGMENT} was already on file")
+        return None
+    shutil.copyfile(post, judgment)
+    write(sealed_dir(root, m) / "judge.json", {"seat": judge, "round": n,
+                                               "judgment_sha256": digest(judgment)})
+    event(root, round=n, seat=judge, event="judgment-filed", judged=m,
+          sha256=digest(judgment))
+    return judgment
+
+
+def judged_by(root, plan, m):
+    """Who wrote round `m`'s judgment: the judge seat, or the operator."""
+    record = sealed_dir(root, m) / "judge.json"
+    judgment = sealed_dir(root, m) / JUDGMENT
+    if record.exists() and judgment.exists():
+        filed = read(record)
+        if filed["judgment_sha256"] == digest(judgment):
+            seat = next(s for s in plan["seats"] if s["id"] == filed["seat"])
+            receipt = Path(root) / "records" / seat["id"] / f"r{filed['round']:03d}" / "receipt.json"
+            tier = (read(receipt).get("isolation") or {}).get("tier") if receipt.exists() else None
+            return {"seat": seat["id"], "served": f"{seat['harness']}/{seat['model']}",
+                    "tier": tier}
+    return {"seat": "operator"}
+
+
+def judge_round(root, plan, m):
+    """The round in which the judge rules on blind round `m`, or None."""
+    judge = judge_of(plan)
+    if not judge:
+        return None
+    return next((r for r in range(m + 1, board.budget(root, plan) + 1)
+                 if judge in board.acting(plan, r)), None)
+
+
 def guard(root, plan, what):
     if withheld(root, plan):
         n = pending(root, plan)[-1]
-        step = ("`convene seal` then read sealed/" if not is_sealed(root, n)
-                else f"read sealed/r{n:03d}/, write its {JUDGMENT}, then `convene unseal`")
+        rules = judge_round(root, plan, n)
+        if (sealed_dir(root, n) / JUDGMENT).exists():
+            step = f"the {JUDGMENT} is on file, so `convene unseal`"
+        elif rules and rules not in board.published_rounds(root):
+            step = f"`convene run` lets the judge seat {judge_of(plan)!r} rule on it first"
+        elif not is_sealed(root, n):
+            step = "`convene seal` then read sealed/"
+        else:
+            step = f"read sealed/r{n:03d}/, write its {JUDGMENT}, then `convene unseal`"
         raise ValueError(f"{what} is withheld while round {n} is sealed or unsealed: {step}")
 
 
@@ -138,7 +233,8 @@ def seal(root, n=None, *, seed=None, force=False):
                                  "posts_sha256": {k: digest(target / k / "post.md") for k in key}})
     event(root, round=n, event="sealed", count=len(key))
     return {"round": n, "letters": sorted(key), "directory": str(target),
-            "judgment": str(target / JUDGMENT), "judgment_kept": kept is not None}
+            "judgment": str(target / JUDGMENT), "judgment_kept": kept is not None,
+            "judge": judge_of(plan)}
 
 
 def unseal(root, n=None):
@@ -160,10 +256,15 @@ def unseal(root, n=None):
         raise ValueError(f"write your judgment of the lettered drafts to {judgment} before "
                          "unsealing; the key is printed only after it is on file")
     key = read(target / "identity-key.json")
-    if not is_unsealed(root, n):
+    if is_unsealed(root, n):
+        by = read(target / "unsealed.json").get("judged_by") or {"seat": "operator"}
+    else:
+        by = judged_by(root, plan, n)
         write(target / "unsealed.json", {"round": n, "unsealed_at": time.time(),
-                                         "judgment_sha256": digest(judgment)})
-        event(root, round=n, event="unsealed")
+                                         "judgment_sha256": digest(judgment),
+                                         "judged_by": by})
+        event(root, round=n, event="unsealed", judged_by=by["seat"])
     served = {s["id"]: f"{s['harness']}/{s['model']}" for s in plan["seats"]}
-    return {"round": n, "key": {letter: {"seat": seat, "served": served.get(seat)}
-                                 for letter, seat in key.items()}}
+    return {"round": n, "judged_by": by,
+            "key": {letter: {"seat": seat, "served": served.get(seat)}
+                    for letter, seat in key.items()}}

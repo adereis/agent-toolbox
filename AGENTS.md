@@ -148,6 +148,17 @@ never enabled silently to make a run pass. Raw arguments and environment
 pass-through exist for what has no name yet, and they too appear in the
 receipt.
 
+A fanout's judge seat sees copies of the sealed letters and nothing else.
+It never gets the key or `seal.json`, and never the board, which names
+every seat. It never gets the repository either: its `.git` records each
+attempt's worktree under a path naming the seat, with whatever that seat
+committed. Only the enforced tier makes that blindness more than the
+judge's good behaviour, so every other tier's receipt says `judging is
+advisory`. Seats the engine appends to act alone, the judge and the
+synthesizer, deliver through their post rather than an outbox file,
+because their default read tool set cannot write one; `prepare` refuses
+any phase that asks a seat without `tools = "write"` for a file.
+
 Models are named by family (`opus`, `terra`, `gemini-pro`), never by a
 version, in defaults, templates and examples of what to write. A family
 resolves at prepare to the newest version the harness's own catalog lists

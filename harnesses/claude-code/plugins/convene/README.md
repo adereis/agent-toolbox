@@ -15,8 +15,9 @@ independent reviewers who do not see each other. The **room** has seats
 discuss a brief over rounds on a shared board, one seat draft the change in
 its own git worktree, and the room critique and revise it. The **fanout**
 hands the same brief to N seats that each implement it blind in their own
-worktree; the operator reads the attempts sealed under letters, records a
-judgment, and only then learns who wrote what.
+worktree. The operator, or a judge seat that sees nothing but the attempts,
+reads them sealed under letters and records a judgment, and only then does
+anyone learn who wrote what.
 
 ## Why a panel rather than a subagent
 
@@ -166,6 +167,15 @@ file is written at `seal` and never printed before a judgment is on file.
 A plan may name a seat as the synthesizer (`[synthesis] by = "ID"`): it
 acts alone in one extra round, sees the board, and posts the synthesis;
 the operator still reads the attempts sealed first.
+
+The operator wrote the plan, so it knows which persona sits on which model
+and is never fully blind. A plan may name a judge seat instead
+(`[judgment] by = "ID"`). `run` then seals the attempts itself and plays
+one more round, in which the judge alone reads the letters' own files:
+no key, no board and no repository. Its post is filed as `judgment.md`,
+and `unseal` prints who judged. Only the `enforced` tier keeps the run
+directory out of the judge's reach; on any other tier its receipt says
+`judging is advisory`.
 
 `convene follow NAME SEAT` tails a running seat: what it says, which tools
 it calls, and its stderr when the turn ends; `--thinking` adds reasoning.

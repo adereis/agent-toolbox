@@ -1,6 +1,6 @@
 ---
 description: Fan a brief out to N blind seats that each implement it in their own worktree; read the attempts sealed, judge, then unseal
-argument-hint: "discuss | [seats=N] [seat=harness/model ...] [--persona ID ...] [synthesizer=ID] [grant=...] brief text"
+argument-hint: "discuss | [seats=N] [seat=harness/model ...] [--persona ID ...] [judge=ID] [synthesizer=ID] [grant=...] brief text"
 disable-model-invocation: true
 ---
 
@@ -26,6 +26,9 @@ Interpret them as:
   with neither, use the template's three, on two harnesses when both are
   installed;
 - `--persona ID` (repeatable) assigns personas in order;
+- `judge=ID` adds a seat of that id that judges the attempts instead of
+  you (`[judgment] by = ID`). It sees only the lettered attempts, never the
+  plan, so it is blind where you are not. Leave it out to judge yourself;
 - `synthesizer=ID` adds a seat of that id that synthesizes instead of
   you (`[synthesis] by = ID`); leave it out to synthesize yourself;
 - `grant=...` opens doors for every seat (see the skill);
@@ -44,13 +47,19 @@ Then:
    a while; say so.
 4. `convene status NAME`. A held round is a quota stop: name the seat and
    the reset time; `continue`, `promote`, `run` as the skill describes.
-5. `convene seal NAME`. Read every letter under `sealed/r001/` in the run
-   directory: `post.md`, `report.md`, `changes.patch`. Do not run
-   `board`, `usage` or `export`; they are withheld and say so. Write your
+5. With a judge seat, `run` has already sealed round 1 and played the
+   judge's round, and its post is on file as `sealed/r001/judgment.md`.
+   Read it; do not write or edit a judgment of your own. Without one,
+   `convene seal NAME`, then read every letter under `sealed/r001/` in the
+   run directory: `post.md`, `report.md`, `changes.patch`. Write your
    judgment to `sealed/r001/judgment.md`: which attempt to take, what to
    change in it first, what each other attempt got right, all by letter.
-6. `convene unseal NAME` prints the key. Report the judgment first, as
-   written, then the key, then the receipts and every red flag verbatim.
-   With a synthesizer seat, the synthesis is its post on the board;
-   read it after your own judgment, never before.
+   Either way, do not run `board`, `usage` or `export`; they are withheld
+   and say so.
+6. `convene unseal NAME` prints who judged and the key. Report the
+   judgment first, as written, then who judged, then the key, then the
+   receipts and every red flag verbatim. A view of your own after a
+   judge's goes last, labeled as written with the key in hand. With a
+   synthesizer seat, the synthesis is its post on the board; read it after
+   the judgment, never before.
 7. `convene export NAME DIR`, then offer `convene prune NAME`.
