@@ -177,25 +177,29 @@ reset time, and that `board` prints nothing for that round.
 
 ## IT-10: Convene room with a worktree drafter
 
-**Prerequisites:** as IT-09. Two cheap seats over two rounds keep the cost
-to four short exchanges.
+**Prerequisites:** as IT-09, and a small project whose `.gitignore` covers
+its build output (see the brief guidance on ignore rules). Two cheap seats
+over three rounds keep the cost to four short exchanges.
 
 **Room:** a plan from `templates/room.toml` with two seats (Claude `haiku`
 as the drafter with `tools = "write"` and `workspace = "worktree"`, a Codex
-seat as the other) and two phases, `discuss` (both) then `draft` (drafter
-only), on the enforced tier. Run it with `bin/convene run NAME`. Expected:
-round two resumes both sessions (`launch.json` shows `--resume` or
-`resume SID` and the receipt's `session_id` equals round one's); the
-Claude seat's round-two `launch.json` passes `--model` the exact id round
-one served, not `haiku`, and its receipt shows that id as `model_pinned`;
-a Codex seat named by family (`luna`) prepares as `gpt-5.6-luna (from
-luna)` or its successor; the drafter's `changes.patch` appears under
-`board/made/drafter/r002/` and on the round-two digest. The drafter's
-`work/drafter/repo` is a clone with its own `.git` directory and no
-remote; `git -C <project> worktree list` never shows it, and the
-operator's checkout has no changes. Ask the drafter to commit part of its
-work: the commit succeeds inside the jail, and the committed files still
-appear in `changes.patch`. `bin/convene prune NAME` removes the clone and
+seat named by family, `luna`, as the other) and the template's first three
+phases: `discuss` (both), `draft` (drafter only) and `critique` (the other
+only), on the enforced tier. The draft instruction asks the drafter to
+commit part of its change and leave the rest uncommitted. Run it with
+`bin/convene run NAME`. Expected: each seat's second turn resumes its
+first session, the drafter's in round two and the other's in round three
+(`launch.json` shows `--resume` or `resume SID`, and the receipt's
+`session_id` equals the first turn's); the Claude seat's round-two
+`launch.json` passes `--model` the exact id round one served, not
+`haiku`, and its receipt shows that id as `model_pinned`; the Codex seat
+prepares as the newest Luna its catalog lists, printed as `<slug> (from
+luna)`, and needs no pin. The drafter's `changes.patch` appears under
+`board/made/drafter/r002/` and on the round-two digest, holding both the
+committed and the uncommitted files. Its `work/drafter/repo` is a clone
+with its own `.git` directory, no remote and a `convene seat` commit;
+`git -C <project> worktree list` never shows it, and the operator's
+checkout has no changes. `bin/convene prune NAME` removes the clone and
 the private homes.
 
 **Hold and continue:** only when a quota window is genuinely exhausted:
@@ -205,7 +209,8 @@ answers in the same session (interrupted) or with the same prompt
 
 ## IT-11: Convene fanout read sealed
 
-**Prerequisites:** as IT-09. Two cheap seats on two harnesses, one round.
+**Prerequisites:** as IT-10, including the `.gitignore`. Two cheap seats
+on two harnesses, one round.
 
 **Fanout:** a plan from `templates/fanout.toml` with two seats (Claude
 `haiku`, a Codex slug) and a small brief, enforced tier. After `run`,
@@ -223,8 +228,9 @@ round-two digest is the synthesis and cites both attempt seats by id.
 `seal` letters round one, not round two, and `board` stays refused
 until round one is unsealed, then shows both rounds attributed.
 
-**Judge:** instead of the synthesizer, a third seat on Codex named by
-`[judgment] by`, enforced tier. Expected: `run` plays two rounds and
+**Judge:** instead of the synthesizer, a third seat named by
+`[judgment] by`, on a model family that made neither attempt (Codex `sol`
+beside `haiku` and `luna` attempts), enforced tier. Expected: `run` plays two rounds and
 seals round one itself; `work/<judge>/sealed/` holds only the letters'
 folders; the judge's round-two `launch.json` shows `--ro-bind` of that
 folder and its receipt carries no `judging is advisory`; its post is
