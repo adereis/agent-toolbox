@@ -10,11 +10,15 @@ This is useful as a safety net for autonomous or semi-autonomous sessions: you c
 
 **Default behavior:** Guards `git push` commands. Prevents accidental pushes when Claude is running autonomously.
 
+**What counts as a push.** The guard asks whenever `git` is followed by `push`, with any of git's global options in between. So `git push`, `git -C "$repo" push` (the usual form when an agent works across repositories, in a loop or through `xargs`), `git -c key=val push`, `git --git-dir=… push` and `/usr/bin/git push` all ask. A command split with a line continuation is joined before matching. Other subcommands stay quiet even with the same options, `git -C repo pull` or `git stash push` for example.
+
+The guard scans the command's text; it does not parse the shell. So a command that only *mentions* a push asks too, an `echo` or a commit message, for instance. That is deliberate. A parser that misread one shell construct would let a real push through unasked, and for a safety net a needless prompt is the cheaper mistake. Text cannot reveal a push hidden behind a git alias (`git p`), a variable (`$GIT push`), or a script file the command runs.
+
 **Adapting to other commands:** The script uses parallel `PATTERNS` and `REASONS` arrays. Uncomment the built-in examples or add your own — the first matching pattern wins and its reason is shown to the user:
 
 | Guard | Pattern | Use case |
 |-------|---------|----------|
-| `git push` (default) | `\bgit\s+push\b` | Prevent unreviewed pushes |
+| `git push` (default) | `git` + global options + `push` (see the script) | Prevent unreviewed pushes |
 | `kubectl delete` | `\bkubectl\s+delete\b` | Protect cluster resources |
 | `docker rm` | `\bdocker\s+rm\b` | Prevent container removal |
 | `terraform destroy` | `\bterraform\s+destroy\b` | Protect infrastructure |

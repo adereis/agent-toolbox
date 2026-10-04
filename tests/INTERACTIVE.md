@@ -12,8 +12,10 @@ subscription quota or incur API charges when explicitly invoked.
 ## IT-01: git-push-guard fires on push
 
 **Setup:** Create a temp bare repo and local repo in ~/tmp.
-**Action:** Attempt `git push` to the bare repo.
-**Expected:** Claude is prompted for confirmation before push executes.
+**Action:** Attempt `git push` to the bare repo, then, from another
+directory, `git -C <local repo> push`.
+**Expected:** Claude is prompted for confirmation before each push
+executes. The `-C` form once slipped through unasked.
 **Teardown:** Remove ~/tmp/test-push-hook/.
 
 ## IT-05: statusline displays correctly

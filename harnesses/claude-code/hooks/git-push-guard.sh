@@ -16,15 +16,31 @@
 #
 # How it works:
 # - Receives JSON on stdin with tool_name and tool_input
-# - Matches Bash commands against each pattern in order (first match wins)
+# - Joins the command onto one line (continuations and newlines become
+#   spaces), so a command split across lines cannot slip past a pattern
+# - Matches it against each pattern in order (first match wins)
 # - Returns permissionDecision "ask" with the matched reason
 # - Returns nothing (exit 0) for non-matching commands
+#
+# Patterns scan the command text; they do not parse the shell. Text that
+# merely mentions a guarded command (an echo, a commit message) is asked
+# about too. That is deliberate: a parser that misreads one construct
+# lets a real command through unasked, and for a safety net a needless
+# prompt is the cheaper mistake.
 #
 
 # --- Configuration: add as many guards as you need ---
 PATTERNS=()  REASONS=()
 
-PATTERNS+=('\bgit\s+push\b')
+# git takes global options before the subcommand, and agents use them to
+# work across repositories: `git -C "$repo" push` must be caught like
+# `git push`. So: `git`, any run of global options (with a separate
+# argument for those that take one), then `push`. An argument may be
+# quoted (spaces included) or a $(...) or `...` substitution. Written
+# with POSIX classes only, not the GNU-specific \b and \s.
+_ARG="(\"[^\"]*\"|'[^']*'|\\\$\\([^)]*\\)|\`[^\`]*\`|[^[:space:]\"'\`;&|()]+)+"
+_GIT_OPT="(-C|-c|--git-dir|--work-tree|--namespace)[[:space:]]+${_ARG}|--?[[:alnum:]][[:alnum:]-]*(=${_ARG})?"
+PATTERNS+=("(^|[^[:alnum:]_.-])git([[:space:]]+(${_GIT_OPT}))*[[:space:]]+push([^[:alnum:]_-]|\$)")
 REASONS+=("Git push requires explicit approval")
 
 # Uncomment or add more guards:
@@ -45,9 +61,15 @@ if [ "$tool_name" != "Bash" ]; then
     exit 0
 fi
 
-# Check command against each guarded pattern (first match wins)
+# grep matches line by line, so `git -C repo \` + newline + `push` would
+# never match. Join continuations, then every line, with spaces.
+command=${command//$'\\\n'/ }
+command=${command//$'\n'/ }
+
+# Check command against each guarded pattern (first match wins). printf,
+# not echo: echo would take a command starting with -n or -e as options.
 for i in "${!PATTERNS[@]}"; do
-    if echo "$command" | grep -qE "${PATTERNS[$i]}"; then
+    if printf '%s\n' "$command" | grep -qE -- "${PATTERNS[$i]}"; then
         cat <<EOF
 {
   "hookSpecificOutput": {
