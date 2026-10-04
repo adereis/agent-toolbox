@@ -90,6 +90,19 @@ class FanoutTests(unittest.TestCase):
         self.assertTrue((target / "sealed/r001/judgment.md").exists())
         self.assertTrue((target / "board.md").exists())
 
+    def test_a_committed_attempt_keeps_its_work_in_the_patch(self):
+        """The patch was diffed against the worktree's HEAD, so whatever a
+        seat committed vanished from its letter."""
+        root, frozen = self.prepare(seats=[{"id": "one", "persona": "connie-tinuity"}],
+                                    brief={"text": "[[stub:commit-repo]] Implement it."})
+        round_.run(root)
+        tree = root / "work/one/repo"
+        self.assertNotEqual(self.box.git("-C", str(tree), "rev-parse", "HEAD").strip(),
+                            frozen["base_commit"], "the seat's commit landed")
+        patch = (root / "board/made/one/r001/changes.patch").read_text()
+        self.assertIn("COMMITTED.md", patch)
+        self.assertIn("edited by the stub seat", patch)
+
     def test_declared_phases_keep_their_own_deliverables(self):
         """Found by a live Antigravity seat reviewing the fanout commit."""
         root, frozen = self.prepare(rounds=2, phases=[

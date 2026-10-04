@@ -46,9 +46,11 @@ def common_dir(worktree):
     return Path(git(worktree, "rev-parse", "--git-common-dir").strip()).resolve()
 
 
-def capture(worktree):
+def capture(worktree, base):
     """The seat's changes against the base commit, untracked files included.
 
+    The diff runs from `base`, not from HEAD: a seat that commits moves
+    HEAD, and a diff from there would drop everything it committed.
     `git add -N` records intent-to-add so untracked files appear in the
     diff; the index is reset afterwards so the worktree is left as the seat
     left it.
@@ -56,7 +58,7 @@ def capture(worktree):
     worktree = Path(worktree)
     git(worktree, "add", "-N", "--", ".")
     try:
-        patch = git(worktree, "diff", "--binary", "HEAD", "--", ".")
+        patch = git(worktree, "diff", "--binary", base, "--", ".")
     finally:
         git(worktree, "reset", "-q", "--", ".", check=False)
     return patch

@@ -139,6 +139,17 @@ if asked and "Write" in tools:
     os.makedirs("outbox", exist_ok=True)
     with open(os.path.join("outbox", asked.group(1)), "w") as made:
         made.write(f"Deliverable {asked.group(1)} from {served}.\n")
+if os.path.isdir("repo") and scenario == "commit-repo":
+    # A seat that commits part of its work and leaves the rest uncommitted,
+    # as agents often do; git refuses the commit where the object store is
+    # read-only.
+    import subprocess
+    with open(os.path.join("repo", "COMMITTED.md"), "w") as handle:
+        handle.write("committed by the seat\n")
+    for step in (["add", "-A"], ["commit", "-q", "-m", "seat commit"]):
+        subprocess.run(["git", "-C", "repo", "-c", "user.name=Seat", "-c",
+                        "user.email=seat@example.com", *step], capture_output=True)
+    scenario = "edit-repo"
 if os.path.isdir("repo") and (scenario == "edit-repo" or "edit repo" in prompt):
     with open(os.path.join("repo", "app.py"), "a") as handle:
         handle.write("# edited by the stub seat\n")
