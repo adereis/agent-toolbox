@@ -47,31 +47,61 @@ def blind(plan):
     return plan["kind"] == "fanout" or any(s["visibility"] == "blind" for s in plan["seats"])
 
 
+def blind_rounds(plan, rounds):
+    """The rounds in which a blind seat acted: the only rounds `seal` letters.
+
+    A synthesizer's round has one seat that read the board; lettering it
+    would hide nothing and leave the attempts unsealed.
+    """
+    blind_seats = {s["id"] for s in plan["seats"] if s["visibility"] == "blind"}
+    return [n for n in rounds if blind_seats & set(board.acting(plan, n))]
+
+
+def pending(root, plan):
+    """Published blind rounds the operator has not yet judged and unsealed."""
+    return [n for n in blind_rounds(plan, board.published_rounds(root))
+            if not is_unsealed(root, n)]
+
+
 def withheld(root, plan):
-    """Rounds whose attributed view is still withheld from the operator."""
-    if not blind(plan):
+    """Rounds whose attributed view is still withheld from the operator.
+
+    Every published round stays withheld while any blind round is pending,
+    not only the blind rounds themselves: a synthesis or a reply names the
+    seats it read, which would hand over the key.
+    """
+    if not blind(plan) or not pending(root, plan):
         return []
     return [n for n in board.published_rounds(root) if not is_unsealed(root, n)]
 
 
 def guard(root, plan, what):
-    held = withheld(root, plan)
-    if held:
-        n = held[-1]
+    if withheld(root, plan):
+        n = pending(root, plan)[-1]
         step = ("`convene seal` then read sealed/" if not is_sealed(root, n)
                 else f"read sealed/r{n:03d}/, write its {JUDGMENT}, then `convene unseal`")
         raise ValueError(f"{what} is withheld while round {n} is sealed or unsealed: {step}")
 
 
 def seal(root, n=None, *, seed=None, force=False):
-    """Shuffle round `n`'s posts and made files under letters; write the key."""
+    """Shuffle round `n`'s posts and made files under letters; write the key.
+
+    With no `n`, the latest blind round not yet lettered, so the `convene
+    seal` that `status` names next always lands on the round it meant.
+    """
     root, plan = runs.load(root)
     published = board.published_rounds(root)
-    if not published:
-        raise ValueError("no published round to seal")
-    n = published[-1] if n is None else n
+    sealable = blind_rounds(plan, published)
+    if not sealable:
+        raise ValueError("no published round with a blind seat to seal")
+    if n is None:
+        unlettered = [r for r in sealable if not is_sealed(root, r)]
+        n = (unlettered or sealable)[-1]
     if n not in published:
         raise ValueError(f"round {n} is not published")
+    if n not in sealable:
+        raise ValueError(f"round {n} has no blind seat; nothing in it is read sealed "
+                         f"(blind rounds: {', '.join(map(str, sealable))})")
     target = sealed_dir(root, n)
     if is_sealed(root, n) and not force:
         raise ValueError(f"round {n} is already sealed; reading a second shuffle beside the "
@@ -117,7 +147,11 @@ def unseal(root, n=None):
     sealed = sealed_rounds(root)
     if not sealed:
         raise ValueError("no sealed round; `convene seal` first")
-    n = sealed[-1] if n is None else n
+    if n is None:
+        # The latest round still waiting, rather than the latest lettered:
+        # with two blind rounds, the second may be open while the first is not.
+        waiting = [r for r in sealed if not is_unsealed(root, r)]
+        n = (waiting or sealed)[-1]
     if n not in sealed:
         raise ValueError(f"round {n} is not sealed")
     target = sealed_dir(root, n)

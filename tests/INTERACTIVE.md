@@ -214,6 +214,13 @@ and `B` must each hold `post.md`, `report.md` and `changes.patch`;
 refuse until `judgment.md` has text, then print `A = <seat> (<harness>/
 <model>)`, after which `board` is attributed and `usage` prints.
 
+**Synthesizer:** add a third seat, Claude `haiku` on the read tool set,
+named by `[synthesis] by`. Expected: it acts only in round two; its
+round-two `launch.json` passes `--tools Read,Glob,Grep`; its post on the
+round-two digest is the synthesis and cites both attempt seats by id.
+`seal` letters round one, not round two, and `board` stays refused
+until round one is unsealed, then shows both rounds attributed.
+
 ## IT-12: Convene Antigravity seat
 
 **Prerequisites:** `agy` logged in (`~/.gemini/oauth_creds.json`), Linux

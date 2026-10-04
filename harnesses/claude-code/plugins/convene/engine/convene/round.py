@@ -483,7 +483,7 @@ def next_step(root, plan, *, published, budget, held, withheld, converged):
         return (f"convene continue {name} {first}{more} once the window resets, "
                 f"then convene promote {name} {held[0].get('round')}")
     if withheld:
-        n = withheld[-1]
+        n = seal.pending(root, plan)[-1]
         if not seal.is_sealed(root, n):
             return f"convene seal {name}"
         return (f"read {root}/sealed/r{n:03d}/, write its {seal.JUDGMENT}, "

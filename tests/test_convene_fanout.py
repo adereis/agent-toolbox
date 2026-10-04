@@ -162,6 +162,31 @@ class FanoutTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "names no seat"):
             self.prepare(synthesis={"by": "nobody"})
 
+    def test_seal_letters_the_attempts_not_the_synthesis(self):
+        """`seal` used to letter the latest round, which was the synthesizer's,
+        and the board then stayed withheld behind a round nobody could unseal."""
+        root, frozen = self.prepare(seats=[{"id": "one", "persona": "connie-tinuity"},
+                                           {"id": "two", "persona": "archie-tecture"},
+                                           {"id": "synth", "persona": "quinn-t-shun"}],
+                                    synthesis={"by": "synth"})
+        round_.run(root)
+        self.assertEqual(round_.status(root)["next"], f"convene seal {root.name}")
+        result = seal.seal(root, seed=1)
+        self.assertEqual(result["round"], 1)
+        self.assertEqual(sorted(read(root / "sealed/r001/identity-key.json").values()),
+                         ["one", "two"])
+        with self.assertRaisesRegex(ValueError, "round 2 has no blind seat"):
+            seal.seal(root, 2)
+        # The synthesis names seats by id, so it stays withheld with the attempts.
+        self.assertEqual(round_.status(root)["withheld"], [1, 2])
+        with self.assertRaisesRegex(ValueError, "withheld while round 1 .*sealed/r001/"):
+            seal.guard(root, frozen, "the board")
+        (root / "sealed/r001/judgment.md").write_text("A.\n")
+        self.assertEqual(seal.unseal(root)["round"], 1)
+        self.assertEqual(round_.status(root)["withheld"], [])
+        self.assertIn("(synth, claude/opus)", board.text(root, frozen))
+        self.assertTrue(export.export(root, self.box.root / "out").exists())
+
     def test_cli_seal_and_unseal(self):
         root, _ = self.prepare()
         run = lambda *a: main(["--project", str(self.box.project), *a])  # noqa: E731

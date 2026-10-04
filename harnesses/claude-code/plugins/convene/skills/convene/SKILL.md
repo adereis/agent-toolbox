@@ -97,10 +97,12 @@ operator may be any of them.
 ## Reading a sealed round
 
 A fanout, or any run with a blind seat, is read sealed. After `run`:
-`convene seal NAME` letters the round's drafts under `sealed/rNNN/` in the
-run directory. Read every letter's `post.md`, `report.md` and
-`changes.patch` before anything else. Do not call `board`, `usage` or
-`export`; they refuse until the round is unsealed, and `status` withholds
+`convene seal NAME` letters the latest round a blind seat acted in under
+`sealed/rNNN/` in the run directory. A synthesizer's round is never
+lettered; it stays withheld with the attempts until they are unsealed.
+Read every letter's `post.md`, `report.md` and `changes.patch` before
+anything else. Do not call `board`, `usage` or `export`; they refuse
+until the round is unsealed, and `status` withholds
 durations and tool counts, because any of those beside a seat id is the
 key by arithmetic. Write your judgment to `sealed/rNNN/judgment.md` by
 letter: which attempt to take, what to change in it first, what the
