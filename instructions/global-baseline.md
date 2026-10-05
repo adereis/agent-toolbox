@@ -29,6 +29,11 @@ security risk.
   is unacceptable. Explain the problem or root cause, why the change is
   needed, the chosen approach and important tradeoffs, and relevant
   verification. Do not merely restate filenames or the diff.
+* **In a repository that is or will be public, describe the problem's
+  shape, never the private event that surfaced it.** Write "a card billed
+  in a foreign currency", not the trip that produced the charge. Leave out
+  names, places, dates, counts, amounts and health details drawn from
+  personal data.
 * Before committing, inspect recent high-quality commit messages in the
   repository and review the complete proposed message alongside the staged
   diff.
