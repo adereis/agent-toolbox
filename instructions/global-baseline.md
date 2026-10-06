@@ -3,10 +3,6 @@
 Shared working agreements for coding agents. Repository conventions and
 direct user instructions take precedence over every default below.
 
-## CRITICAL: Temporary Files
-**ALWAYS use ~/tmp, NEVER /tmp** — predictable filenames in /tmp are a
-security risk.
-
 ## Environment
 * Use `rm -f` to avoid confirmation prompts
 
