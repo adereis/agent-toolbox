@@ -61,8 +61,8 @@ direct user instructions take precedence over every default below.
 * **Never stream verbose output into context.** Commands like `dnf install`,
   `pip install`, `npm install`, `cargo build`, and bulk file operations
   produce progress bars and transaction logs that waste tokens.
-* Redirect to a log file and only surface on failure:
-  `cmd > ~/tmp/cmd.log 2>&1 || { cat ~/tmp/cmd.log; false; }`
+* Redirect to a log file with a unique name and only surface it on
+  failure: `log=$(mktemp); cmd > "$log" 2>&1 || { cat "$log"; false; }`
 * On success, report a one-line summary (e.g., "12 packages installed").
 
 ## Quality Standards
