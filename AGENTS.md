@@ -246,9 +246,10 @@ behavior and isolate fixtures from user profiles and concurrent test runs.
 
 Make incremental commits that explain the problem, reason for the change,
 chosen approach, tradeoffs, and actual validation. Inspect recent messages
-and the staged diff before committing. Use a subject of at most 50 columns,
-wrap body paragraphs at 72 columns, and include an accurate `Co-Authored-By`
-trailer. Include `Claude-Session` only when this session has such a URL.
+and the staged diff before committing. Target a 50-column subject with 60 as
+the hard limit, wrap body paragraphs at 72 columns, and include an accurate
+`Co-Authored-By` trailer. Include `Claude-Session` only when this session has
+such a URL.
 
 Fold follow-up fixes into their intended commit. Check `git log -1 --oneline`
 before any amend or soft reset and never reuse an unrelated commit's subject.
