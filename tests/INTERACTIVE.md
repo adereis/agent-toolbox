@@ -376,3 +376,37 @@ loader errors. The final automated run passed all shell suites and 344
 Python tests. The skill validator and diff whitespace check also passed.
 The public archive fetch covered 0.2.0 through 0.160.0. Tests left the
 real digest baseline unchanged.
+
+## IT-15: Agent panel rows from the status line
+
+**Setup:** in a trusted workspace, start a throwaway session that adds only
+the subagent setting, so the user's own configuration stays untouched:
+
+```bash
+claude --model haiku --debug-file ~/tmp/subagent-rows.log --settings \
+  '{"subagentStatusLine":{"type":"command","command":"<checkout>/harnesses/claude-code/settings/statusline.sh --subagent"}}'
+```
+
+**Action:** in one message, ask for two background agents: an `Explore`
+agent named `scout` and an unnamed `general-purpose` agent. Give each
+several files to read so both stay alive across a few panel refreshes.
+Do not give them a standalone `sleep`, which the harness may block.
+
+**Expected:** the agent panel shows one aligned row per agent. The named
+agent reads `scout  Explore`, and the unnamed one is named by its type.
+The model shows as a display name such as `Haiku 5.5`. Context fill, token
+count and elapsed time advance on each refresh, about every five seconds.
+When one agent finishes, its row leaves the panel, and on the next refresh
+the surviving row drops any padding the finished row had forced. The debug
+log has no `subagentStatusLine exited`, `non-JSON` or `invalid schema` line.
+
+**Teardown:** exit the session and delete the debug log.
+
+**Observed on Linux, 2026-10-07, Claude Code 2.1.293:** rows rendered as
+expected, with context fill rising from 3% to 5% and elapsed time from 0s
+to 10s across refreshes. Claude Code parsed the row colors and restored its
+own gray after each reset, so the colors composed with the panel's dimming.
+The first run showed a finished agent's long name still widening the
+surviving row; sizing columns from unfinished agents only fixed it, and a
+rerun confirmed the padding dropped on the next refresh. The debug log held
+no script errors.

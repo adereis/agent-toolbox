@@ -24,8 +24,34 @@
 #     "refreshInterval": 10
 #   }
 #
+# With --subagent the same script renders the agent panel below the prompt,
+# one aligned row per subagent (name, agent type, model, effort, context fill,
+# tokens, elapsed, task label). Configure that mode as:
+#   "subagentStatusLine": {
+#     "type": "command",
+#     "command": "~/.claude/statusline.sh --subagent"
+#   }
+#
 # The per-model weekly columns need statusline-usage.sh alongside this script;
 # see the "Weekly per-model quotas" section below for why.
+
+# ── Mode ────────────────────────────────────────────────────────────
+# No argument serves statusLine. --subagent serves subagentStatusLine, a
+# different protocol (JSON lines per agent row, see "Subagent rows" below), so
+# the mode is named by the caller rather than guessed from the payload shape.
+
+_usage='usage: statusline.sh [--subagent] < payload.json
+  (no argument)  render the main status line (Claude Code statusLine)
+  --subagent     render agent panel rows (Claude Code subagentStatusLine)'
+
+mode=main
+case "$#:${1:-}" in
+  0:)            ;;
+  1:--subagent)  mode=subagent ;;
+  1:-h|1:--help) printf '%s\n' "$_usage"; exit 0 ;;
+  *)             printf 'statusline.sh: unexpected arguments: %s\n%s\n' "$*" "$_usage" >&2
+                 exit 2 ;;
+esac
 
 input=$(cat)
 
@@ -111,6 +137,161 @@ _proc_rss_kb() {
     Darwin) ps -o rss= -p "$1" 2>/dev/null | tr -d ' ' ;;
   esac
 }
+
+# ── Subagent rows (--subagent) ───────────────────────────────────────
+#
+# With --subagent this script serves Claude Code's subagentStatusLine setting,
+# which shares only the helpers above with the main line. Claude Code runs the
+# command once per refresh tick with every visible agent row in one payload:
+# the base hook fields, a `columns` width, and a `tasks` array. It reads back
+# one JSON line per row, {"id": "<task id>", "content": "<row body>"}, and a
+# row left unanswered keeps its default rendering.
+#
+# The content replaces the whole default row body (name · description ·
+# elapsed · tokens). Only Claude Code's pointer and status glyph stay in front
+# of it. So each row carries its own name, and because one invocation sees
+# every row, the cells line up across rows the way the main line's columns do.
+#
+# The free-text label goes last and unpadded. Claude Code truncates a row at
+# the panel edge, and `columns` does not count the tree connector a nested
+# agent's row spends, so anything right-aligned against it would lose its tail
+# on nested rows. Packed left, truncation eats the label first, which is the
+# same priority the default row gives it.
+
+# Widen the column width held in the variable named $1 to fit text $2.
+_grow() {
+  _width "$2"
+  (( _w > ${!1} )) && printf -v "$1" '%d' "$_w"
+  return 0
+}
+
+# Append one aligned cell to the caller's $row: text $3 padded to width $1 in
+# color $2, then the gap. A column that no row fills has width 0 and vanishes,
+# the same way an empty main-line column drops out.
+_cell() {
+  (( $1 > 0 )) || return 0
+  local cell gap
+  _width "$3"
+  gap=$(( $1 - _w ))
+  (( gap < 0 )) && gap=0   # a finished row may outgrow the live columns
+  printf -v cell '%s%*s' "$3" "$gap" ''
+  row+="$2$cell"$'\033[0m  '
+}
+
+subagent_rows() {
+  local rows
+  # One record per task, fields joined by the unit separator (0x1f). A tab
+  # would collapse under IFS like the bug noted at the main extraction; 0x1f
+  # is not IFS whitespace, so an empty field survives. Arithmetic happens in
+  # jq, so no float ever reaches bash printf.
+  rows=$(printf '%s' "$input" | jq -r '
+    def val: if . == null then "" else tostring end;
+    # Names and labels are free text. Dropping control characters keeps the
+    # framing intact and stops a label from smuggling escape sequences into
+    # the terminal.
+    def oneline: val | gsub("[[:cntrl:]]+"; " ");
+    def two: tostring | if length < 2 then "0" + . else . end;
+    def compact:
+      if   . >= 1000000 then "\((. / 100000 | floor) / 10)M"
+      elif . >= 100000  then "\(. / 1000 | floor)k"
+      elif . >= 1000    then "\((. / 100 | floor) / 10)k"
+      else "\(floor)" end;
+    def clock:
+      floor as $s
+      | if   $s < 60   then "\($s)s"
+        elif $s < 3600 then "\($s / 60 | floor)m\($s % 60 | two)s"
+        else                "\($s / 3600 | floor)h\($s % 3600 / 60 | floor | two)m" end;
+    # A task carries the resolved model id, not the display name the main
+    # line gets, so rebuild that name from the id shape current Claude ids use
+    # (claude-opus-5-5 reads Opus 5.5). Any other id passes through intact
+    # rather than being flattened into a wrong guess.
+    def model_name:
+      sub("\\[1m\\]$"; "") as $id
+      | ([$id | capture("^claude-(?<fam>[a-z]+)-(?<maj>[0-9]+)(-(?<min>[0-9]{1,2}))?(-[0-9]{8})?$")]
+         | first) as $m
+      | if $m == null then $id
+        else ($m.fam[:1] | ascii_upcase) + $m.fam[1:] + " " + $m.maj
+             + (if $m.min then "." + $m.min else "" end) end;
+    (.tasks // [])[]
+    | (.tokenCount // 0) as $tok
+    | (.contextWindowSize // 0) as $win
+    | [ (.id | val),
+        (if .status == "completed" or .status == "failed" or .status == "killed"
+         then "" else "1" end),
+        # .name exists only for an agent spawned with a name; otherwise the
+        # agent type is the name, as in the default row.
+        ((.name // .agentType // "agent") | oneline),
+        # agentType (Claude Code 2.1.293+) tells custom agent types apart. It
+        # earns its own cell only when a name is already in the first one.
+        (if .name != null and .agentType != null and .agentType != .name
+         then .agentType | oneline else "" end),
+        # Same rule as the main model column: 1M is the ordinary window and
+        # stays bare, a smaller one wears its size.
+        (if .model == null then ""
+         else (.model | model_name)
+              + (if $win > 0 and $win < 1000000 then " [\($win / 1000 | floor)k]" else "" end) end),
+        # Effort is a level word or a numeric thinking budget.
+        (if .effort == null then ""
+         elif (.effort | type) == "number" then "budget \(.effort | compact)"
+         else .effort | oneline end),
+        (if $tok > 0 and $win > 0 then "\($tok * 100 / $win | round)%" else "" end),
+        (if $tok > 0 then $tok | compact else "" end),
+        # startTime is wall-clock milliseconds. There is no end time in the
+        # payload, so only a running agent can show an honest duration.
+        (if .status == "running" and (.startTime | type) == "number"
+         then (now - .startTime / 1000) | if . >= 0 then clock else "" end
+         else "" end),
+        ((.label // .description) | oneline) ]
+    | join("\u001f")') || {
+    echo "statusline.sh --subagent: cannot read the subagentStatusLine payload (jq failed above)" >&2
+    return 1
+  }
+
+  local -a ids=() lives=() names=() kinds=() models=() efforts=() pcts=() toks=() ages=() labels=()
+  local id live name kind model effort pct tok age label any_live=""
+  while IFS=$'\x1f' read -r id live name kind model effort pct tok age label; do
+    [ -n "$id" ] || continue
+    ids+=("$id")         lives+=("$live")     names+=("$name")
+    kinds+=("$kind")     models+=("$model")   efforts+=("$effort")
+    pcts+=("$pct")       toks+=("$tok")       ages+=("$age")
+    labels+=("$label")
+    [ -n "$live" ] && any_live=1
+  done <<< "$rows"
+  [ "${#ids[@]}" -gt 0 ] || return 0
+
+  # Size the columns from the agents still working. A finished agent stays in
+  # the payload for a while after the panel stops showing its row, so letting
+  # it count would pad the visible rows to fit one nobody can see.
+  local i wn=0 wk=0 wm=0 we=0 wp=0 wt=0 wa=0
+  for i in "${!ids[@]}"; do
+    [ -n "$any_live" ] && [ -z "${lives[i]}" ] && continue
+    _grow wn "${names[i]}";   _grow wk "${kinds[i]}"; _grow wm "${models[i]}"
+    _grow we "${efforts[i]}"; _grow wp "${pcts[i]}";  _grow wt "${toks[i]}"
+    _grow wa "${ages[i]}"
+  done
+
+  # Colors follow the main line: green model, the effort brightness ramp, the
+  # usage tier on context fill, cyan for the counters that only grow.
+  local row out=""
+  for i in "${!ids[@]}"; do
+    row=""
+    _cell "$wn" $'\033[1;34m' "${names[i]}"
+    _cell "$wk" $'\033[34m'   "${kinds[i]}"
+    _cell "$wm" $'\033[32m'   "${models[i]}"
+    _cell "$we" "$(effort_color "${efforts[i]}")" "${efforts[i]}"
+    _cell "$wp" "$(tier_color "${pcts[i]%\%}")"   "${pcts[i]}"
+    _cell "$wt" $'\033[36m'   "${toks[i]}"
+    _cell "$wa" $'\033[36m'   "${ages[i]}"
+    out+="${ids[i]}"$'\x1f'"${row}${labels[i]}"$'\n'
+  done
+  # jq does the JSON string escaping, including the ESC bytes of the colors.
+  printf '%s' "$out" | jq -Rc 'split("\u001f") | {id: .[0], content: .[1]}'
+}
+
+if [ "$mode" = subagent ]; then
+  subagent_rows
+  exit $?
+fi
 
 # ── Extract all fields in one jq call ────────────────────────────────
 # Each value on its own line — avoids bash IFS tab-stripping bug where

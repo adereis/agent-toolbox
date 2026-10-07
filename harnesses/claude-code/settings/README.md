@@ -60,12 +60,55 @@ resets at (`↻14:30`), so the deadline costs no extra width.
 ```
 
 4. For the per-model weekly columns, also install `statusline-usage.sh` (below)
+5. Optionally, register the agent panel rows too (see *Agent panel rows* below)
 
 **Platform notes:**
 
 - **Linux**: Memory detection reads `/proc/<pid>/status` (VmRSS)
 - **macOS**: Memory detection uses `ps -o rss=`
 - Requires `jq` and `git` in `$PATH` (plus `curl` for the per-model columns)
+
+**Agent panel rows (`--subagent`):**
+
+The same script also draws the agent panel, the list of subagents below the
+prompt. Claude Code's `subagentStatusLine` setting replaces each panel row's
+default body (`name · description · token count`) with what the command
+prints, and `--subagent` selects that mode:
+
+```json
+{
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh --subagent"
+  }
+}
+```
+
+**Illustrative rows** (fictitious values; the `◯` status glyph is Claude Code's):
+```
+◯ scout            Explore  Haiku 5.5        4%   39.6k  10s    Map the config loader
+◯ general-purpose           Opus 5.5   high  12%  120k   2m05s  Write the parser tests
+```
+
+| Cell | Color | Description |
+|------|-------|-------------|
+| name | Bold blue | The name the agent was spawned with, or its agent type when it has none, as in the default row |
+| agent type | Blue | The agent's type (`Explore`, `security-reviewer`, …), shown only for a named agent whose type differs from its name. Read from `agentType`, which needs Claude Code 2.1.293 or later |
+| model | Green | The display name rebuilt from the task's model id (`claude-opus-5-5` reads `Opus 5.5`). An id of any other shape is shown unchanged. A window below 1M wears its size, as in the main line |
+| effort | Magenta (dim→bold) | Effort level, or `budget 8k` for a numeric thinking budget. Hidden when the agent has none |
+| context | Green→Yellow→Red | The agent's own context fill, `tokenCount` over `contextWindowSize` |
+| tokens | Cyan | The agent's token count |
+| elapsed | Cyan | Time since the agent started, for running agents only. The payload has no end time, so a finished agent's duration cannot be shown honestly |
+| label | Panel default | What the agent is doing: its progress label, else its description |
+
+Behavior worth knowing:
+
+- Cells line up across rows. One invocation receives every row, so each cell pads to its column's widest value. Only unfinished agents set those widths, because a finished agent stays in the payload for a while after the panel hides it.
+- Rows are packed left with the label last. Claude Code truncates a row at the panel edge, and the `columns` width it passes does not count the tree connector a nested agent's row spends. Right-aligned cells would lose their tail on nested rows; packed left, truncation cuts the label first.
+- Control characters in names and labels become spaces. Free text then cannot break the JSON-lines reply or inject terminal escape sequences.
+- Claude Code reruns the command on each panel refresh, about every five seconds. The script reads only its stdin, touching no file, network, or git, and finishes in tens of milliseconds.
+- If the payload is not valid JSON, the script exits 1 with a message on stderr. Claude Code logs that under `claude --debug` and keeps its default rows.
+- Running the command needs a trusted workspace, the same as `statusLine`.
 
 ## statusline-usage.sh
 
