@@ -6,6 +6,9 @@ import json
 import os
 import re
 import shutil
+import subprocess
+import tempfile
+import threading
 from pathlib import Path
 
 from convene import quota
@@ -39,6 +42,119 @@ NO_IMAGES = ["-c", "features.image_generation=false"]
 TOOL_FEATURES = ("shell_tool", "unified_exec", "view_image", "browser_use",
                  "browser_use_external", "in_app_browser", "computer_use")
 NO_TOOLS = [arg for feature in TOOL_FEATURES for arg in ("-c", f"features.{feature}=false")]
+# How long the app server may take to list a seat's MCP servers. The
+# account's apps are fetched over the network when they are on.
+INVENTORY_SECONDS = 120
+# The flags of a seat's command that `codex app-server` takes too.
+SETTINGS = ("-c", "--config", "--enable", "--disable")
+
+
+def settings(argv):
+    """The settings a seat's command makes, as `codex app-server` takes them.
+
+    Only settings travel. The app server refuses the rest of an exec command
+    (its subcommand, -m, -s, --ignore-user-config), and none of it decides
+    which servers load.
+    """
+    argv, out = [str(a) for a in argv], []
+    for index, arg in enumerate(argv):
+        if index and argv[index - 1] in SETTINGS:
+            continue  # the value of the flag before it, already taken
+        if arg in SETTINGS and index + 1 < len(argv):
+            out += [arg, argv[index + 1]]
+        elif arg.startswith(("--config=", "--enable=", "--disable=")) or (
+                arg.startswith("-c") and len(arg) > 2):
+            out.append(arg)
+    return out
+
+
+def without_user_config(home, view):
+    """Fill `view` with links to every entry of `home` except its config.toml.
+
+    `--ignore-user-config` skips exactly `$CODEX_HOME/config.toml`, and the
+    app server has no such flag. Pointed at this view it sees what the seat
+    sees: the same login, plugin cache and state, and no config to enable a
+    plugin or declare a server from.
+    """
+    for entry in Path(home).iterdir():
+        if entry.name != "config.toml":
+            (Path(view) / entry.name).symlink_to(entry)
+
+
+def mcp_inventory(argv, *, env, cwd, pass_fds=(), timeout=INVENTORY_SECONDS):
+    """The MCP servers `codex app-server` lists, as ``({name: tool count}, "")``.
+
+    ``(None, why)`` when the inventory could not be read. The protocol is
+    marked experimental, so a release that changes it leaves the inventory
+    unreadable rather than empty. Every page is read, so a long list is never
+    taken for its first page.
+    """
+    with tempfile.TemporaryFile() as err:
+        try:
+            proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                    stderr=err, env=env, cwd=cwd, pass_fds=pass_fds)
+        except OSError as exc:
+            return None, f"codex app-server did not start ({exc})"
+        expired = []
+        timer = threading.Timer(timeout, lambda: (expired.append(True), proc.kill()))
+        timer.start()
+        servers = {}
+        try:
+            why = _list_servers(proc, servers)
+        except OSError as exc:
+            why = f"codex app-server stopped answering ({exc})"
+        finally:
+            timer.cancel()
+            proc.kill()
+            proc.wait()
+        if why and expired:
+            why += f" within {timeout}s"
+        if why:
+            err.seek(0)
+            tail = err.read().decode("utf-8", "replace").strip()[-200:]
+            return None, why + (f": {tail}" if tail else "")
+        return servers, ""
+
+
+def _list_servers(proc, servers):
+    """Speak the app server's JSON-RPC over stdio; return why it failed, or ""."""
+    def ask(number, method, params=None):
+        message = {"method": method}
+        if number is not None:
+            message |= {"id": number, "params": params or {}}
+        proc.stdin.write((json.dumps(message) + "\n").encode())
+        proc.stdin.flush()
+        if number is None:
+            return None
+        for line in proc.stdout:
+            try:
+                reply = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(reply, dict) and reply.get("id") == number:
+                return reply
+        return None
+
+    hello = {"clientInfo": {"name": "convene", "version": "1"}}
+    if (ask(1, "initialize", hello) or {}).get("result") is None:
+        return "codex app-server did not initialize"
+    ask(None, "initialized")
+    cursor = None
+    # The bound guards against a server that never stops paging; no real
+    # inventory comes near it.
+    for number in range(2, 50):
+        reply = ask(number, "mcpServerStatus/list",
+                    {"detail": "toolsAndAuthOnly", "cursor": cursor}) or {}
+        page = reply.get("result")
+        if not isinstance(page, dict):
+            return "codex app-server listed no MCP inventory: " + (
+                json.dumps(reply["error"])[:200] if reply.get("error") else "no reply")
+        for server in page.get("data") or []:
+            servers[server.get("name", "?")] = len(server.get("tools") or {})
+        cursor = page.get("nextCursor")
+        if not cursor:
+            return ""
+    return "codex app-server's MCP inventory did not end"
 
 
 class Codex(Harness):
@@ -204,6 +320,57 @@ class Codex(Harness):
 
     def classify_stop(self, record):
         return quota.classify("codex", record)
+
+    def preflight(self, seat, argv, launched, home):
+        """The MCP servers the seat would hold, by Codex's own count.
+
+        Codex has no start-up event naming what it loaded, as Claude's init
+        row does, and its session records no inventory. Its app server does.
+        Started inside the seat's own wrapper, with the seat's settings and
+        home, it lists every server the seat would hold, before any model is
+        called and without the model's word. Without the `mcp` grant, any
+        server refuses the launch, and so does an inventory that cannot be
+        read, because then nothing shows the seat holds none. With the grant
+        the inventory is recorded, and what it lists is a red flag.
+
+        The app server cannot ignore the user config the way the seat does,
+        and a config enables plugins that bring servers of their own. Where
+        the seat ignores it and its home has one, which only the `none`
+        tier's does, the operator's own, the app server reads a view of that
+        home without it. A jailed home is a private one with no config; if
+        one ever had a config, its servers would be counted, refusing the
+        seat rather than admitting it.
+        """
+        wrapper = launched.argv[: len(launched.argv) - len(argv)]
+        command = [*wrapper, "codex", "app-server", *settings(argv)]
+        with tempfile.TemporaryDirectory(prefix="convene-codex-home.") as view:
+            env = dict(launched.env)
+            if ("--ignore-user-config" in argv and not wrapper
+                    and (Path(home) / "config.toml").exists()):
+                without_user_config(home, view)
+                env[self.home_variable] = view
+            servers, why = mcp_inventory(command, env=env, cwd=launched.cwd,
+                                         pass_fds=launched.pass_fds)
+        out = {"mcp_servers": servers}
+        held = ", ".join(f"{name} ({count} tools)" for name, count in sorted((servers or {}).items()))
+        if granted(seat, "mcp"):
+            out["red_flags"] = ([f"MCP inventory unread: {why}"] if servers is None
+                                else [f"MCP servers held: {held}"] if servers else [])
+            return out
+        if servers is None:
+            raise RuntimeError(
+                f"Codex's MCP inventory could not be read ({why}), so nothing shows this seat "
+                "holds no MCP servers; it was refused before its turn and no model was called. "
+                "`codex app-server` is experimental: if a release changed "
+                "mcpServerStatus/list, update the reader in convene's harnesses/codex.py")
+        if servers:
+            raise RuntimeError(
+                f"Codex's app server lists MCP servers this seat would hold without the mcp "
+                f"grant: {held}. It was refused before its turn and no model was called. A "
+                "Codex release may have moved the switch that closes them (features.apps for "
+                "the account's apps); run `convene doctor`, and grant mcp only if the seat "
+                "is meant to hold them")
+        return out
 
     def receipt(self, seat, record, home, expected_session=None):
         stream = rows(Path(record) / "events.jsonl")

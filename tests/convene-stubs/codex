@@ -37,6 +37,43 @@ if args[-2:] == ["features", "list"]:
         print(f"{name:<40} stable             {'true' if on else 'false'}")
     sys.exit(0)
 
+if args[:1] == ["app-server"]:
+    # The app server, as far as the inventory check speaks it. It lists the
+    # account's apps unless they are off, or unless CONVENE_STUB_APPS plays a
+    # release that ignores the switch; a server named in a setting; and one
+    # in config.toml, which the app server reads whatever the seat ignores.
+    # One server per page, so the reader has to follow the cursor.
+    import tomllib
+    home = os.environ.get("CODEX_HOME") or os.path.join(os.path.expanduser("~"), ".codex")
+    os.makedirs(home, exist_ok=True)
+    with open(os.path.join(home, "stub-app-server.jsonl"), "a") as log:
+        log.write(json.dumps({"argv": args, "cwd": os.getcwd()}) + "\n")
+    if os.environ.get("CONVENE_STUB_APP_SERVER") == "broken":
+        print("this is not the app-server protocol")
+        sys.exit(1)
+    servers = {}
+    if given.get("features.apps") != "false" or os.environ.get("CONVENE_STUB_APPS"):
+        servers["codex_apps"] = {"mail_send": {}, "repo_merge": {}}
+    for key in given:
+        if key.startswith("mcp_servers."):
+            servers.setdefault(key.split(".")[1], {})
+    config = os.path.join(home, "config.toml")
+    if os.path.exists(config):
+        with open(config, "rb") as handle:
+            for name in tomllib.load(handle).get("mcp_servers", {}):
+                servers.setdefault(name, {})
+    pages = [[{"name": n, "tools": t}] for n, t in servers.items()] or [[]]
+    for line in sys.stdin:
+        asked = json.loads(line)
+        if asked.get("method") == "initialize":
+            print(json.dumps({"id": asked["id"], "result": {}}), flush=True)
+        elif asked.get("method") == "mcpServerStatus/list":
+            at = int(asked["params"].get("cursor") or 0)
+            more = str(at + 1) if at + 1 < len(pages) else None
+            print(json.dumps({"id": asked["id"], "result": {"data": pages[at], "nextCursor": more}}),
+                  flush=True)
+    sys.exit(0)
+
 home = os.environ.get("CODEX_HOME") or os.path.join(os.path.expanduser("~"), ".codex")
 os.makedirs(home, exist_ok=True)
 prompt = sys.stdin.read()

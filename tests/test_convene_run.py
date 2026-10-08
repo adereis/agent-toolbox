@@ -2,6 +2,7 @@
 
 import json
 import os
+import sys
 import unittest
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from convene_support import Sandbox
 
 from convene import board, export, harnesses, plan, round as round_, runs
 from convene.cli import main
+from convene.harnesses import codex as codex_harness
 from convene.storage import read
 
 
@@ -464,3 +466,103 @@ class GrantTests(unittest.TestCase):
         project.write_text('colour = "blue"\n')
         with self.assertRaisesRegex(ValueError, "unknown keys \\['colour'\\]"):
             self.prepare([{"id": "c", "persona": "quinn-t-shun"}])
+
+
+class CodexInventoryTests(unittest.TestCase):
+    """A Codex seat's MCP servers, by Codex's own count, before its turn.
+
+    Codex has no start-up event naming what it loaded, and the account's
+    apps reach a seat through generic tools, so neither the stream nor the
+    model can say what a seat holds. Its app server can, under the seat's
+    own settings, before a model is called.
+    """
+
+    def setUp(self):
+        self.box = Sandbox(self)
+
+    def run_seat(self, **seat):
+        root, _ = plan.prepare(self.box.plan(kind="room", workspace="none", seats=[
+            {"id": "x", "persona": "sec-urity", "harness": "codex", "model": "gpt-5.5",
+             "effort": "low", **seat}]), project_root=self.box.project)
+        return root, round_.run_round(root, 1)
+
+    def passthrough(self, name, value):
+        os.environ[name] = value
+        self.addCleanup(os.environ.pop, name, None)
+        return [name]
+
+    def asked(self):
+        return [json.loads(line) for path in self.box.root.rglob("stub-app-server.jsonl")
+                for line in path.read_text().splitlines()]
+
+    def test_a_closed_seat_holds_no_server_and_its_receipt_says_so(self):
+        root, _ = self.run_seat()
+        got = read(root / "records/x/r001/receipt.json")
+        self.assertEqual(got["status"], "answered", got.get("error"))
+        self.assertEqual(got["mcp_servers"], {})
+        (asked,) = self.asked()
+        self.assertEqual(asked["argv"][0], "app-server")
+        self.assertIn("features.apps=false", asked["argv"])
+        for flag in ("exec", "-m", "--ignore-user-config", "--json"):
+            self.assertNotIn(flag, asked["argv"], "only settings travel")
+
+    def test_a_granted_seat_records_what_it_holds_as_a_red_flag(self):
+        root, _ = self.run_seat(grants=["mcp"], args=["-c", 'mcp_servers.docs.command="docs"'])
+        got = read(root / "records/x/r001/receipt.json")
+        self.assertEqual(got["status"], "answered", got.get("error"))
+        self.assertEqual(got["mcp_servers"], {"codex_apps": 2, "docs": 0},
+                         "one server per page: the reader follows the cursor")
+        self.assertIn("MCP servers held: codex_apps (2 tools), docs (0 tools)", got["red_flags"])
+
+    def test_a_seat_holding_a_server_is_refused_before_its_turn(self):
+        """A release that ignored features.apps would hand the seat the account's apps."""
+        root, results = self.run_seat(env=self.passthrough("CONVENE_STUB_APPS", "1"))
+        self.assertRegex(results["x"], r"^stopped: .*without the mcp grant: codex_apps \(2 tools\)")
+        self.assertIn("no model was called", results["x"])
+        self.assertEqual(self.box.calls("x", "codex"), [], "the turn never started")
+        self.assertFalse((root / "records/x/r001/events.jsonl").exists())
+        self.assertFalse(list((root / "homes/x").rglob("auth.json")), "the login is unstaged")
+
+    def test_an_inventory_that_cannot_be_read_refuses_the_seat(self):
+        _, results = self.run_seat(env=self.passthrough("CONVENE_STUB_APP_SERVER", "broken"))
+        self.assertRegex(results["x"], r"^stopped: Codex's MCP inventory could not be read "
+                                       r"\(codex app-server did not initialize")
+        self.assertEqual(self.box.calls("x", "codex"), [])
+
+    def test_the_none_tier_reads_the_operators_home_without_its_config(self):
+        """The seat ignores the operator's config.toml; the app server cannot."""
+        (self.box.home / ".codex/config.toml").write_text(
+            '[mcp_servers.fictional]\ncommand = "true"\n')
+        root, _ = self.run_seat(isolation="none")
+        got = read(root / "records/x/r001/receipt.json")
+        self.assertEqual(got["status"], "answered", got.get("error"))
+        self.assertEqual(got["mcp_servers"], {})
+        self.assertTrue((self.box.home / ".codex/config.toml").exists(), "left where it was")
+        # With `settings` the seat reads that config, so the server is its own.
+        _, results = self.run_seat(isolation="none", grants=["settings"])
+        self.assertIn("without the mcp grant: fictional (0 tools)", results["x"])
+
+    def test_only_settings_travel_to_the_app_server(self):
+        argv = ["codex", "exec", "--ignore-user-config", "-m", "m", "-c", "a=b", "-s",
+                "read-only", "--enable", "x", "-cfoo=1", "--config=k=v", "--json", "-"]
+        self.assertEqual(codex_harness.settings(argv),
+                         ["-c", "a=b", "--enable", "x", "-cfoo=1", "--config=k=v"])
+
+    def test_the_inventory_reader_names_what_it_could_not_read(self):
+        env = {"PATH": os.environ["PATH"]}
+        silent = [sys.executable, "-c", "import time; time.sleep(30)"]
+        servers, why = codex_harness.mcp_inventory(silent, env=env, cwd=self.box.root, timeout=1)
+        self.assertIsNone(servers)
+        self.assertIn("within 1s", why)
+        refusing = [sys.executable, "-c", (
+            "import json, sys\n"
+            "for line in sys.stdin:\n"
+            "    m = json.loads(line)\n"
+            "    if 'id' not in m: continue\n"
+            "    r = {'result': {}} if m['method'] == 'initialize' else "
+            "{'error': {'code': -32601, 'message': 'unknown method'}}\n"
+            "    print(json.dumps({'id': m['id'], **r}), flush=True)\n")]
+        servers, why = codex_harness.mcp_inventory(refusing, env=env, cwd=self.box.root)
+        self.assertIsNone(servers)
+        self.assertIn("listed no MCP inventory", why)
+        self.assertIn("unknown method", why)

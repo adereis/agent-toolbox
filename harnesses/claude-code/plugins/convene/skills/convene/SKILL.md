@@ -131,6 +131,11 @@ judgment falls to you, and `unseal` records you as its author.
 - `granted on purpose: …`, `extra harness arguments: …`, `environment
   passed through: …`: a door the plan opened; name it beside the seat's
   findings.
+- `MCP servers held: …`: what a Codex seat with the `mcp` grant held, by
+  Codex's own count, the account's connected apps among them.
+- a Codex seat `stopped:` before its turn because Codex's app server listed
+  MCP servers, or could not list them: no model was called. Report it as
+  written. Do not grant `mcp` to make the seat run.
 - `JOINED LATE in round N`: the seat heard the room before it first
   spoke, so its first post is a reply, not an independent position.
 - a `failed` seat with its error text; a `quota` seat with its scope.

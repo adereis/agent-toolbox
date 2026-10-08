@@ -276,6 +276,19 @@ class RealJailTests(unittest.TestCase):
                 self.assertTrue(list((root / "homes/s/claude/projects").rglob("*.jsonl")),
                                 "the seat's session landed in its private home")
 
+    def test_a_codex_seat_is_inventoried_inside_its_own_jail(self):
+        """The app server must see the seat's home and login, so it runs in the jail."""
+        root, _ = plan.prepare(self.box.plan(kind="room", workspace="none", seats=[
+            {"id": "x", "persona": "sec-urity", "harness": "codex", "model": "gpt-5.5",
+             "effort": "low", "isolation": "enforced"}]), project_root=self.box.project)
+        played, why = round_.run(root)
+        got = read(root / "records/x/r001/receipt.json")
+        self.assertEqual(got["status"], "answered", (played, got.get("error")))
+        self.assertEqual(got["mcp_servers"], {})
+        (asked,) = [json.loads(line) for line in
+                    (root / "homes/x/codex/stub-app-server.jsonl").read_text().splitlines()]
+        self.assertEqual(asked["cwd"], f"{self.box.home}/workspace")
+
 
 @unittest.skipUnless(sys.platform.startswith("linux") and shutil.which("/usr/bin/bwrap"),
                      "needs the real bubblewrap")

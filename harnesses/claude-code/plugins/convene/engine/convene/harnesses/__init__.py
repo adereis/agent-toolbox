@@ -202,6 +202,17 @@ class Harness:
         """
         return None
 
+    def preflight(self, seat, argv, launched, home):
+        """Receipt fields read before the turn, or a RuntimeError refusing it.
+
+        Runs inside the seat's own wrapper (`launched`), after the tier has
+        staged it and before the model is called, so a door the flags failed
+        to close is refused without spending the turn. A `red_flags` list in
+        the result joins the receipt's. A harness whose own stream proves
+        what it loaded, as Claude's init row does, needs nothing here.
+        """
+        return {}
+
     def installed(self):
         return shutil.which(self.name)
 
@@ -233,6 +244,7 @@ class Harness:
     #   command(seat, mode, session_id, prompt, cwd) -> (argv, stdin_bytes)
     #   session_paths(home, session_id) -> [Path]
     #   receipt(seat, record, home, expected_session=None) -> dict
+    #   preflight(seat, argv, launched, home) -> dict (optional; see above)
     #   usage_totals(usage) -> dict | None
     #   probes -> tuple of doctor.Probe
 

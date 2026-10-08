@@ -201,8 +201,19 @@ sub-agents. Codex offers most models a `spawn_agent` tool that
 `features.multi_agent=false` does not remove, so every Codex seat is
 limited to one thread, itself, and a spawn fails. Without that limit a seat
 could hand its work to a model its receipt never names. Raw `codex_args`
-cannot reopen any of these. Those flags hide the operator's world from the
-seat's attention. The isolation tier hides it from the seat's hands:
+cannot reopen any of these.
+
+Codex has no start-up event that names what it loaded, so before each Codex
+turn the engine asks Codex's own app server, inside the seat's wrapper and
+under its settings, which MCP servers the seat would hold. Without the
+`mcp` grant, any server refuses the turn before a model is called, and so
+does an inventory that cannot be read. With the grant, the servers are
+recorded as a red flag. The protocol is marked experimental in Codex, so a
+release that changes it stops Codex seats by name rather than letting them
+run unchecked.
+
+Those flags hide the operator's world from the seat's attention. The
+isolation tier hides it from the seat's hands:
 
 | Tier | Platform | What the OS enforces | Attestation |
 |---|---|---|---|
@@ -271,7 +282,8 @@ non-zero output tokens for that model; Codex: `turn_context` rows in the
 native rollout), effort and its evidence, usage, tool calls, compaction
 markers, the isolation attestation, whether the materials were intact after
 the turn, the quota classification when a provider limit stopped the turn,
-and a list of red flags. `convene status` prints the flags; the operator
+for Codex the MCP servers the seat held by its app server's count
+(`mcp_servers`), and a list of red flags. `convene status` prints the flags; the operator
 skill requires them to be repeated to the user verbatim.
 
 A provider quota stop holds the round open instead of publishing an absence:

@@ -159,6 +159,15 @@ key wins. It is also probed by the doctor. A feature's probe reads
 `codex features list` with the setting applied, because Codex type-checks
 a feature's value whether or not the feature exists.
 
+A harness whose stream does not name what it loaded proves it in
+`preflight`, which runs inside the seat's own wrapper before the turn.
+Codex's asks its app server for the seat's MCP inventory. Without `mcp`,
+any server refuses the turn, and so does an inventory that cannot be read.
+The app-server protocol is experimental. When a release breaks the reader,
+fix the reader; never let the seat run unchecked. The app server cannot
+ignore `config.toml` as the seat does, so an unjailed seat that ignores it
+is inventoried against a view of its home without that file.
+
 A `worktree` seat gets a private `git clone --local` of the operator's
 repository, not a linked worktree, with its origin removed and a generic
 git identity. Linked worktrees share the operator's `.git`: the jail had

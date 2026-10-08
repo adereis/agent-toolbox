@@ -204,9 +204,12 @@ def launch(root, plan, seat, n, prompt, mode, session_id, *, timeout=None):
         "harness_version": harness.version(), "session_marks": marks,
     })
     event(root, round=n, seat=name, event="launching", mode=mode, tier=seat["isolation"])
-    started = time.time()
     timed_out = False
     try:
+        # Inside the try, so a refused seat still has its tier's staging
+        # undone; before the clock, because no turn has started yet.
+        checked = harness.preflight(seat, argv, launched, home)
+        started = time.time()
         with (record / "events.jsonl").open("xb") as out, (record / "stderr.log").open("xb") as err:
             try:
                 proc = subprocess.Popen(launched.argv, stdin=subprocess.PIPE, stdout=out,
@@ -272,8 +275,10 @@ def launch(root, plan, seat, n, prompt, mode, session_id, *, timeout=None):
         flags.append("extra harness arguments: " + " ".join(seat["args"]))
     if seat.get("env"):
         flags.append("environment passed through: " + ", ".join(seat["env"]))
+    flags += checked.pop("red_flags", [])
     write(record / "receipt.json", {
-        **got, "status": status, "exit_code": code, "seconds": seconds, "timed_out": timed_out,
+        **got, **checked, "status": status, "exit_code": code, "seconds": seconds,
+        "timed_out": timed_out,
         "error": detail, "isolation": launched.attestation, "compaction_markers": compacted,
         "compaction_observed": bool(compacted), "quota_stop": stop["phase"] if stop else None,
         "quota_scope": stop.get("scope") if stop else None,
