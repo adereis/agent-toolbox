@@ -308,6 +308,10 @@ Phases divide the rounds: each may seat a subset (the rest listen), ask for
 a `deliverable` file written to `outbox/NAME` beside the post, add an
 `instruction`, or set a post `length`. Promotion moves deliverables to
 `board/made/<seat>/rNNN/` and prints them under the post on the digest. A
+seat that posts without its file is named at the end of the digest
+(`No draft.md this round from: …`), marked `NOT MADE` on that turn in
+`status`, and counted in the summary `run` prints; while a blind round is
+withheld, status leaves the mark out, since it would name the letter. A
 `worktree` seat (`tools = "write"`) gets a private clone of the repository
 at `repo/`, checked out detached at the run's base commit, with no remote
 and a generic git identity, so it can commit on any tier. Whatever it

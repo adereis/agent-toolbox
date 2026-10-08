@@ -195,6 +195,13 @@ def main(argv=None):
         return 1
 
 
+def _unmade(published):
+    """How many posted without their file. A count, never names: beside a
+    blind round's letters a name would say whose letter has no file."""
+    unmade = (published or {}).get("unmade") or []
+    return f", {len(unmade)} without {published['deliverable']}" if unmade else ""
+
+
 def _run(args, project):
     value = args.run
     if value is None:
@@ -252,7 +259,8 @@ def dispatch(args):
             held = outcome["_board"].get("held", [])
             print(f"round {number}: " + ", ".join(f"{k}={v}" for k, v in outcome.items()
                                                   if k != "_board")
-                  + (f"; held on {', '.join(held)}" if held else f"; posted {len(posted)}"))
+                  + (f"; held on {', '.join(held)}" if held else f"; posted {len(posted)}")
+                  + _unmade(outcome["_board"]))
         print(f"{why}; next: convene status {root.name}")
         return 3 if why.startswith("held") else 0
     if args.command == "round":
@@ -260,7 +268,8 @@ def dispatch(args):
                                    timeout=args.timeout)
         held = outcome["_board"].get("held", [])
         print(f"round {args.number}: " + ", ".join(f"{k}={v}" for k, v in outcome.items() if k != "_board")
-              + (f"; held on {', '.join(held)}" if held else "; published"))
+              + (f"; held on {', '.join(held)}" if held else "; published")
+              + _unmade(outcome["_board"]))
         return 3 if held else 0
     if args.command == "continue":
         root = runs.resolve(args.run, project)
@@ -279,7 +288,8 @@ def dispatch(args):
         root = runs.resolve(args.run, project)
         outcome = (round_.promote_absent if args.absent else round_.promote_held)(root, args.number)
         print(f"round {args.number} published: posted {', '.join(outcome['posted']) or 'nobody'}"
-              + (f"; absent {', '.join(outcome['absent'])}" if outcome["absent"] else ""))
+              + (f"; absent {', '.join(outcome['absent'])}" if outcome["absent"] else "")
+              + _unmade(outcome))
         return 0
     if args.command == "extend":
         allowed = board_.extend(runs.resolve(args.run, project), args.rounds)

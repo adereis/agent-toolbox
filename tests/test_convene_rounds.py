@@ -96,6 +96,30 @@ class RoundTests(unittest.TestCase):
         self.assertIn("- a (Archie Tecture): answered 2 of 2 rounds", text)
         self.assertIn("- b (Quinn T. Shun): answered 2 of 2 rounds", text)
 
+    def test_a_seat_that_posts_without_its_file_is_named(self):
+        """Its prompt said where to write the file, so a post without it is the
+        trace any failure leaves; on its own it read as a finished turn."""
+        import contextlib
+        import io
+        root, _ = self.prepare(rounds=1, seats=[
+            {"id": "a", "persona": "archie-tecture", "tools": "write"},
+            {"id": "b", "persona": "quinn-t-shun", "harness": "codex", "model": "gpt-5.5",
+             "effort": "low", "tools": "write"}],
+            phases=[{"name": "draft", "rounds": 1, "deliverable": "draft.md"}],
+            brief={"text": "[[stub:no-file]] Draft it."})
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(main(["--project", str(self.box.project), "run", root.name]), 0)
+        self.assertIn("posted 2, 1 without draft.md", out.getvalue())
+        digest = (root / "board/rounds/r001/digest.md").read_text()
+        self.assertIn("No draft.md this round from: Archie Tecture.\n", digest)
+        self.assertNotIn("No post this round", digest)
+        self.assertEqual(read(root / "board/rounds/r001/digest.json")["unmade"], ["a"])
+        text = round_.render_status(round_.status(root))
+        self.assertIn("- a (Archie Tecture): answered 1 of 1 round, r001 without draft.md\n", text)
+        self.assertIn("    r001: answered, draft.md NOT MADE, ", text)
+        self.assertIn("- b (Quinn T. Shun): answered 1 of 1 round\n", text)
+
     def test_a_release_between_rounds_does_not_switch_a_seat_model(self):
         """`opus` is resolved by the CLI; round two must keep round one's Opus."""
         root, frozen = self.prepare(rounds=2)

@@ -92,7 +92,13 @@ def last_heard(root, plan, seat, n):
 
 
 def compose_digest(root, plan, n):
-    """Round `n`'s posts and made files, attributed by label and seat id."""
+    """Round `n`'s posts and made files, attributed by label and seat id.
+
+    A seat that posted without the file its phase asked for is named under
+    the posts. Its prompt said where to write it, so a missing file is the
+    trace any failure leaves, a seat whose tools never worked among them,
+    and a post alone reads like a finished turn.
+    """
     labels = {s["id"]: label(s) for s in plan["seats"]}
     research = {s["id"] for s in plan["seats"]
                 if s["tools"] == "research" or "web" in (s.get("grants") or [])}
@@ -116,9 +122,16 @@ def compose_digest(root, plan, n):
             text += (f"```\n{body}\n```\n\n" if file.suffix in (".patch", ".diff") else body + "\n\n")
             made.setdefault(name, {})[file.name] = digest(file)
     absent = [s for s in acting(plan, n) if s not in included]
+    asked = deliverable(plan, n)
+    unmade = [s for s in included if asked and asked not in made.get(s, {})]
+    missing = []
     if absent:
-        text += f"{RULE}\n\nNo post this round from: {', '.join(labels[a] for a in absent)}.\n"
-    return text, included, absent, made
+        missing.append(f"No post this round from: {', '.join(labels[a] for a in absent)}.")
+    if unmade:
+        missing.append(f"No {asked} this round from: {', '.join(labels[u] for u in unmade)}.")
+    if missing:
+        text += f"{RULE}\n\n" + "\n".join(missing) + "\n"
+    return text, included, absent, made, unmade
 
 
 def attributed(text, plan):
@@ -174,12 +187,13 @@ def promote(root, n):
         event(root, round=n, seat=name, event="promoted", bytes=post.stat().st_size,
               sha256=digest(post))
         collect_made(root, plan, seat, n)
-    text, included, absent, made = compose_digest(root, plan, n)
+    text, included, absent, made, unmade = compose_digest(root, plan, n)
     out = root / "board" / "rounds" / f"r{n:03d}"
     out.mkdir(parents=True, exist_ok=True)
     (out / "digest.md").write_text(text, encoding="utf-8")
     write(out / "digest.json", {"round": n, "order": board_order(plan["seats"], n),
                                 "posts": included, "made": made, "absent": absent,
+                                "deliverable": deliverable(plan, n), "unmade": unmade,
                                 "chair_note": chair_note(root, n) is not None,
                                 "digest_sha256": digest(out / "digest.md")})
     signal = convergence(root, plan, n)
@@ -188,6 +202,7 @@ def promote(root, n):
     event(root, round=n, event="convergence", novelty=signal["novelty"],
           closing=signal["closing"], converged=signal["converged"], reason=signal["reason"])
     return {"posted": sorted(included), "absent": absent, "made": made,
+            "deliverable": deliverable(plan, n), "unmade": unmade,
             "convergence": {k: signal[k] for k in ("novelty", "closing", "converged", "reason")}}
 
 

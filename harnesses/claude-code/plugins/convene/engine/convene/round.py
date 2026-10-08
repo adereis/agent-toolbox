@@ -532,6 +532,8 @@ def status(root):
     root, plan = runs.load(root, verify=False)
     withheld = seal.withheld(root, plan)
     budget = board.budget(root, plan)
+    digests = {n: read(root / "board" / "rounds" / f"r{n:03d}" / "digest.json")
+               for n in board.published_rounds(root)}
     seats = {}
     for seat in plan["seats"]:
         state = read(state_path(root, seat["id"]))
@@ -548,6 +550,10 @@ def status(root):
                 # Seconds and tool counts are near-unique per seat: printed
                 # beside the seat id they are the identity key by arithmetic.
                 receipts[n]["seconds"] = receipts[n]["tool_calls"] = "withheld"
+            elif seat["id"] in digests.get(n, {}).get("unmade", []):
+                # Left out while withheld: the letter without its file would
+                # name its seat.
+                receipts[n]["unmade"] = digests[n]["deliverable"]
         answered = sorted(int(r) for r, v in state.get("rounds", {}).items()
                           if v.get("status") == "answered")
         # The rounds this seat speaks in. It listens through the others, so
@@ -605,6 +611,8 @@ def _turn_line(n, got):
     round is blind, which is the worst moment to hand the reader a repr.
     """
     bits = [got.get("status") or "unknown"]
+    if got.get("unmade"):
+        bits.append(f"{got['unmade']} NOT MADE")
     if got.get("model"):
         bits.append(f"served {got['model']}")
     seconds = got.get("seconds")
@@ -632,8 +640,10 @@ def _seat_line(name, seat):
     receipts = seat["receipts"]
     expected = len(seat["acting_rounds"]) or len(receipts)
     done = sum(1 for got in receipts.values() if got.get("status") == "answered")
-    trouble = [f"r{n:03d} {got.get('status')}" for n, got in sorted(receipts.items())
-               if got.get("status") != "answered"]
+    trouble = [f"r{n:03d} {got.get('status')}" if got.get("status") != "answered"
+               else f"r{n:03d} without {got['unmade']}"
+               for n, got in sorted(receipts.items())
+               if got.get("status") != "answered" or got.get("unmade")]
     if not receipts:
         summary = f"not started, {expected} round" + ("" if expected == 1 else "s") + " to speak in"
     else:

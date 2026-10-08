@@ -135,7 +135,8 @@ asked = re.search(r"Write the work itself to outbox/(\S+),", prompt)
 # Without Write in --tools the real CLI has no way to create a file, so the
 # stub creates one only when the seat was given the tool.
 tools = args[args.index("--tools") + 1].split(",") if "--tools" in args else ["Write"]
-if asked and "Write" in tools:
+# `no-file` plays a seat that posts without writing what it was asked for.
+if asked and "Write" in tools and scenario != "no-file":
     os.makedirs("outbox", exist_ok=True)
     with open(os.path.join("outbox", asked.group(1)), "w") as made:
         made.write(f"Deliverable {asked.group(1)} from {served}.\n")

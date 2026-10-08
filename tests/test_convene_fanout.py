@@ -90,6 +90,21 @@ class FanoutTests(unittest.TestCase):
         self.assertTrue((target / "sealed/r001/judgment.md").exists())
         self.assertTrue((target / "board.md").exists())
 
+    def test_a_missing_report_stays_withheld_with_the_rest(self):
+        """Beside a seat id, the letter without its report would name its seat."""
+        root, frozen = self.prepare(brief={"text": "[[stub:no-file]] Implement it."})
+        round_.run(root)
+        self.assertEqual(sorted(read(root / "board/rounds/r001/digest.json")["unmade"]),
+                         ["one", "three"], "the claude stub plays seats that wrote no report")
+        data = round_.status(root)
+        self.assertNotIn("unmade", data["seats"]["one"]["receipts"][1])
+        self.assertNotIn("NOT MADE", round_.render_status(data))
+        self.assertNotIn("without report.md", round_.render_status(data))
+        seal.seal(root, seed=7)
+        (root / "sealed/r001/judgment.md").write_text("A fictional judgment.\n")
+        seal.unseal(root)
+        self.assertIn("r001: answered, report.md NOT MADE", round_.render_status(round_.status(root)))
+
     def test_a_committed_attempt_keeps_its_work_in_the_patch(self):
         """The patch was diffed against the worktree's HEAD, so whatever a
         seat committed vanished from its letter."""

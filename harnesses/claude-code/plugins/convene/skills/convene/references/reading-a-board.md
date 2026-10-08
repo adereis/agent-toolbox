@@ -24,6 +24,13 @@ served model, the tool call count and every red flag. A post from a
 seat that compacted, or that ran without isolation, is not discarded,
 but it is weighed with that known.
 
+**Treat a missing file as a failed turn until its post says otherwise.**
+A phase that asks for a file tells every seat where to write it. The
+digest ends with `No NAME this round from: …` and status marks the turn
+`NAME NOT MADE` when a seat posted without it. A seat whose tools all
+failed ends this way, having read nothing either, so read that post for
+the cause before counting it as a contribution.
+
 **Notice what nobody said.** The `What I checked and found sound`
 section of each post is what makes silence evidence. If no seat looked
 at the part you worried about, the panel did not cover it.

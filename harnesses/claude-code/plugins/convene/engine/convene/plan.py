@@ -109,8 +109,8 @@ def _check_deliverables(phases, seats):
 
     Only the write tool set can create a file: Claude's narrower sets lack
     Write and Codex runs them in a read-only sandbox. Such a seat would
-    answer, post, and leave the file missing, which the board records only
-    as an `unmade` event that nobody reads.
+    answer, post, and leave the file missing, which the digest and status
+    could only report after the round was spent.
     """
     for phase in phases:
         made = phase.get("deliverable")
