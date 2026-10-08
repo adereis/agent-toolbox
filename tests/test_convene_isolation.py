@@ -651,6 +651,19 @@ class DoctorTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("accepted a deliberately invalid value", detail)
 
+    def test_a_feature_that_stays_on_is_reported(self):
+        """A codex feature's invalid value errors whether or not the feature
+        exists, so its probe reads `features list` with the setting applied."""
+        labels = [p.label for p in harnesses.get("codex").probes]
+        for label in ("features.apps", "features.image_generation",
+                      "multi_agent_v2 thread limit", "tool-free features"):
+            self.assertIn(label, labels)
+        probe = doctor.Probe("apps", ("features", "list"), expect="ok",
+                             patterns=(r"^apps\s.*\sfalse\s*$",), why="reason here")
+        ok, detail = doctor.run_probe("codex", probe)
+        self.assertFalse(ok)
+        self.assertIn("no longer matches", detail)
+
     def test_missing_codex_login_is_named(self):
         (self.box.home / ".codex/auth.json").unlink()
         data = doctor.report(probes=False)

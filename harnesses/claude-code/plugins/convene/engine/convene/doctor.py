@@ -5,11 +5,15 @@ spent. The reason they exist is codex's asymmetry, which generalizes: an
 unknown config key is accepted in silence while an invalid value errors
 loudly. A renamed knob does not break; it quietly stops doing anything.
 Feeding a deliberately invalid value turns that silent failure into a loud
-one: if the error stops arriving, the key is dead.
+one: if the error stops arriving, the key is dead. Where an invalid value
+proves nothing, as for a codex feature, whose value is type-checked whether
+or not the feature exists, a probe asks the CLI to show the setting applied
+and matches its `patterns` against what it shows.
 """
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import sys
@@ -27,6 +31,7 @@ class Probe:
     needles: tuple = ()
     why: str = ""
     offline: bool = True
+    patterns: tuple = ()    # regular expressions the output must match
 
 
 def run_probe(name, probe):
@@ -50,6 +55,9 @@ def run_probe(name, probe):
     missing = [n for n in probe.needles if n.lower() not in low]
     if missing:
         return False, f"output no longer mentions {', '.join(missing)}"
+    unmatched = [p for p in probe.patterns if not re.search(p, out, re.M)]
+    if unmatched:
+        return False, f"output no longer matches {', '.join(unmatched)}"
     return True, ""
 
 

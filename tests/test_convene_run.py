@@ -7,7 +7,7 @@ from pathlib import Path
 
 from convene_support import Sandbox
 
-from convene import board, export, plan, round as round_, runs
+from convene import board, export, harnesses, plan, round as round_, runs
 from convene.cli import main
 from convene.storage import read
 
@@ -296,10 +296,48 @@ class GrantTests(unittest.TestCase):
         self.assertIn('"disableAllHooks": true', claude[claude.index("--settings") + 1])
         self.assertNotIn("WebSearch", claude[claude.index("--tools") + 1])
         for flag in ("--ignore-user-config", "--ignore-rules", "project_doc_max_bytes=0",
-                     'web_search="disabled"'):
+                     'web_search="disabled"', "features.apps=false"):
             self.assertIn(flag, codex)
         self.assertEqual(read(root / "records/c/r001/receipt.json")["red_flags"],
                          ["isolation is advisory (private-home): the OS did not enforce it"])
+
+    def test_every_codex_seat_closes_what_codex_leaves_open(self):
+        """Sub-agents and image generation on every seat, the apps unless granted.
+
+        Codex's catalog puts most models on multi-agent v2, which ignores
+        features.multi_agent=false and offers every seat a tool that spawns a
+        sub-agent on another model. The account's connected apps come with
+        the login. A builder that forgets either hands a seat both.
+        """
+        codex = harnesses.get("codex")
+        always = ["features.multi_agent_v2.max_concurrent_threads_per_session=1",
+                  "features.image_generation=false"]
+        for tools in harnesses.TOOL_SETS:
+            for mode, session in (("start", None), ("resume", "s-1")):
+                for grants in ([], ["mcp"]):
+                    seat = {"id": "x", "model": "gpt-5.5", "effort": "low", "tools": tools,
+                            "grants": grants, "args": []}
+                    with self.subTest(tools=tools, mode=mode, grants=grants):
+                        argv, _ = codex.command(seat, mode, session, "p", self.box.root)
+                        for setting in always:
+                            self.assertEqual(argv[argv.index(setting) - 1], "-c")
+                        self.assertEqual("features.apps=false" in argv, not grants,
+                                         "the mcp grant keeps the apps, as Claude's does")
+
+    def test_a_tool_free_codex_seat_names_its_tools_off_and_answers(self):
+        """Codex ignores `tools.view_image` since 0.156 and says so in an error
+        item, which the receipt reads as a failed turn; the viewer stayed on."""
+        root, _ = plan.prepare(self.box.plan(kind="room", workspace="none", seats=[
+            {"id": "x", "persona": "sec-urity", "harness": "codex", "model": "gpt-5.5",
+             "effort": "low", "tools": "none"}]), project_root=self.box.project)
+        round_.run_round(root, 1)
+        got = read(root / "records/x/r001/receipt.json")
+        self.assertEqual(got["status"], "answered", got.get("error"))
+        argv = self.argv("x", "codex")
+        for feature in ("shell_tool", "unified_exec", "view_image", "browser_use",
+                        "browser_use_external", "in_app_browser", "computer_use"):
+            self.assertIn(f"features.{feature}=false", argv)
+        self.assertFalse([a for a in argv if a.startswith("tools.")])
 
     def test_every_grant_changes_both_harnesses_and_is_a_red_flag(self):
         root, frozen = self.prepare(
@@ -313,7 +351,8 @@ class GrantTests(unittest.TestCase):
         self.assertNotIn("--setting-sources", claude)
         self.assertNotIn("disableAllHooks", claude[claude.index("--settings") + 1])
         self.assertIn("WebSearch,WebFetch", claude[claude.index("--tools") + 1])
-        for flag in ("--ignore-user-config", "--ignore-rules", "project_doc_max_bytes=0"):
+        for flag in ("--ignore-user-config", "--ignore-rules", "project_doc_max_bytes=0",
+                     "features.apps=false"):
             self.assertNotIn(flag, codex)
         self.assertIn('web_search="live"', codex)
         flags = read(root / "records/c/r001/receipt.json")["red_flags"]
@@ -379,6 +418,19 @@ class GrantTests(unittest.TestCase):
             with self.subTest(args=seats[0]["args"]), \
                  self.assertRaisesRegex(ValueError, "in args: (grant|set)"):
                 self.prepare(seats)
+
+    def test_args_cannot_reopen_what_every_codex_seat_closes(self):
+        """A seat's args come last and the last value of a key wins."""
+        for args in (["-c", "features.apps=true"], ["--enable", "apps"],
+                     ["--enable=image_generation"], ["--config", "features.view_image=true"],
+                     ["-c", "features.multi_agent_v2.max_concurrent_threads_per_session=8"],
+                     ["-cfeatures.multi_agent=true"], ["-c", "features={apps=true}"]):
+            seats = [{"id": "x", "persona": "sec-urity", "harness": "codex", "model": "gpt-5.5",
+                      "effort": "low", "args": args}]
+            with self.subTest(args=args), self.assertRaisesRegex(ValueError, "in args: "):
+                self.prepare(seats)
+        seats[0].update(args=["--enable", "apps"], grants=["mcp"])
+        self.assertEqual(self.prepare(seats)[1]["seats"][0]["args"], ["--enable", "apps"])
 
     def test_unknown_grant_names_the_known_ones(self):
         with self.assertRaisesRegex(ValueError, r"unknown grants \['network'\].*web \("):

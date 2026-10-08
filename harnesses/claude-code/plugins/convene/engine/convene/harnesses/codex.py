@@ -14,8 +14,31 @@ from convene.harnesses import (Capabilities, Harness, families, granted, guard_t
 from convene.storage import read, rows
 
 FALLBACK = "Falling back from WebSockets to HTTPS transport."
-NO_TOOLS = ["-c", "features.shell_tool=false", "-c", "features.unified_exec=false",
-            "-c", "features.apps=false", "-c", "tools.view_image=false"]
+# The account's connected apps (mail, calendar, documents, code hosting, with
+# tools that send, delete, commit and merge) reach a seat as the built-in
+# `codex_apps` MCP server. They come with the login, not from a file, so
+# neither a private home nor --ignore-user-config removes them; only this
+# switch does. The `mcp` grant keeps them, as it keeps Claude's.
+NO_APPS = ["-c", "features.apps=false"]
+# Codex's catalog puts most models (the `terra` default among them) on its
+# second multi-agent version, which ignores features.multi_agent=false and
+# offers every seat, a tool-free one included, `spawn_agent` with overrides
+# naming other models. No setting removes the tool. A session limit of one
+# thread, the seat itself, makes every spawn fail; Codex refuses a limit of
+# zero. A sub-agent's turns live in a session the receipt never reads, so
+# without this a seat could hand its work to a model the receipt never names.
+NO_SUBAGENTS = ["-c", "features.multi_agent_v2.max_concurrent_threads_per_session=1"]
+# A tool on every seat with a shell, spending the account's image quota; no
+# seat is asked for an image.
+NO_IMAGES = ["-c", "features.image_generation=false"]
+# Every tool feature a tool-free seat names off rather than leaving to its
+# default. Codex 0.156 moved the image viewer from `tools.view_image` to a
+# feature and ignores the old key with a warning, which the receipt reads as
+# a failed turn. `features list` shows unified_exec on whatever this says,
+# but its tools leave with shell_tool.
+TOOL_FEATURES = ("shell_tool", "unified_exec", "view_image", "browser_use",
+                 "browser_use_external", "in_app_browser", "computer_use")
+NO_TOOLS = [arg for feature in TOOL_FEATURES for arg in ("-c", f"features.{feature}=false")]
 
 
 class Codex(Harness):
@@ -42,15 +65,37 @@ class Codex(Harness):
         "-s": (None, "set tools on the seat"), "--sandbox": (None, "set tools on the seat"),
         "--json": (None, "the engine owns the stream"),
         "resume": (None, "the engine owns sessions"),
+        # A seat's args come after the engine's flags and the last value of a
+        # key wins, so every switch the engine closes is reserved here too.
+        "features": (None, "name one feature, `features.NAME=...`"),
+        "features.apps": ("mcp", "grant mcp on the seat; it keeps the account's apps"),
+        "features.multi_agent": (None, "every Codex seat is kept to its own thread"),
+        "features.multi_agent_v2": (None, "every Codex seat is kept to its own thread"),
+        "features.multi_agent_v2.": (None, "every Codex seat is kept to its own thread"),
+        "features.image_generation": (None, "no seat is asked for an image"),
+        **{f"features.{feature}": (None, "set tools on the seat") for feature in TOOL_FEATURES},
     }
 
     def check_args(self, seat):
-        # `-c key=value` carries the key in the next token; check both shapes.
+        # Check each setting as the key it sets: `-c key=value` carries it in
+        # the next token, `-ckey=value` and `--config=key=value` in the same
+        # one, and `--enable NAME` is `-c features.NAME=true`.
         args = list(seat.get("args") or [])
         flat = []
         for index, arg in enumerate(args):
-            flat.append(arg[2:] if arg.startswith("-c") and len(arg) > 2 else
-                        (args[index + 1] if arg == "-c" and index + 1 < len(args) else arg))
+            following = args[index + 1] if index + 1 < len(args) else ""
+            if arg in ("-c", "--config"):
+                flat.append(following)
+            elif arg in ("--enable", "--disable"):
+                flat.append(f"features.{following}")
+            elif arg.startswith(("--enable=", "--disable=")):
+                flat.append("features." + arg.split("=", 1)[1])
+            elif arg.startswith("--config="):
+                flat.append(arg.split("=", 1)[1])
+            elif arg.startswith("-c") and len(arg) > 2:
+                flat.append(arg[2:])
+            else:
+                flat.append(arg)
         super().check_args({**seat, "args": flat})
 
     def catalog(self, environ=None):
@@ -131,8 +176,12 @@ class Codex(Harness):
                  "-c", 'personality="none"', "-c", 'model_verbosity="high"']
         if not granted(seat, "instructions"):
             args += ["-c", "project_doc_max_bytes=0"]
-        args += ["-c", "features.multi_agent=false",
+        # multi_agent=false still removes the tools from a model on the first
+        # multi-agent version; NO_SUBAGENTS covers the second.
+        args += ["-c", "features.multi_agent=false", *NO_SUBAGENTS, *NO_IMAGES,
                  "-c", 'web_search="live"' if may_search(seat) else 'web_search="disabled"']
+        if not granted(seat, "mcp"):
+            args += NO_APPS
         # `codex exec resume` refuses -s; the sandbox travels as config there.
         if mode == "start":
             args += ["-s", self.sandbox(seat["tools"])]
@@ -248,4 +297,31 @@ class Codex(Harness):
                   why="the register pin, codex's analogue of --settings"),
             Probe("--ignore-user-config", ("exec", "--ignore-user-config", "--help"),
                   expect="ok", why="keeps the operator's config and rules out of the seat"),
+            _features_off("features.apps", ("apps",),
+                          "keeps the account's connected apps out of a seat; they come with "
+                          "the login, so no home or config file removes them"),
+            _features_off("features.image_generation", ("image_generation",),
+                          "no seat is asked for an image, and each one spends the account's quota"),
+            Probe("multi_agent_v2 thread limit",
+                  ("exec", "--ignore-user-config", "-c",
+                   "features.multi_agent_v2.max_concurrent_threads_per_session=0", "x"),
+                  needles=("at least 1",),
+                  why="the only bound on spawn_agent, which multi-agent v2 offers every seat"),
+            _features_off("tool-free features",
+                          tuple(f for f in TOOL_FEATURES if f != "unified_exec"),
+                          "what takes a tool-free seat's tools away"),
         )
+
+
+def _features_off(label, features, why):
+    """A probe that each feature still exists and reads off when set off.
+
+    An invalid value proves nothing here: codex type-checks a feature's value
+    whether or not the feature exists, so a dead name errors like a live one.
+    `features list` shows the setting applied, and a renamed feature drops
+    out of it.
+    """
+    from convene.doctor import Probe
+    args = tuple(a for f in features for a in ("-c", f"features.{f}=false"))
+    return Probe(label, (*args, "features", "list"), expect="ok",
+                 patterns=tuple(rf"^{f}\s.*\sfalse\s*$" for f in features), why=why)

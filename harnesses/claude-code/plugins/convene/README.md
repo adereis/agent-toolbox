@@ -194,8 +194,15 @@ Every seat is launched with the harness flags that remove the operator's
 layer: no setting sources (so no global `CLAUDE.md`), a pinned output style,
 no hooks, no MCP servers, no project instruction files for Codex
 (`project_doc_max_bytes=0`, `--ignore-rules`), a personality pin, and a
-tool allow-list. Those flags hide the operator's world from the seat's
-attention. The isolation tier hides it from the seat's hands:
+tool allow-list. A Codex seat also turns off what Codex turns on by
+default: the account's connected apps (`features.apps=false`), which
+arrive with the login rather than from any file; image generation; and
+sub-agents. Codex offers most models a `spawn_agent` tool that
+`features.multi_agent=false` does not remove, so every Codex seat is
+limited to one thread, itself, and a spawn fails. Without that limit a seat
+could hand its work to a model its receipt never names. Raw `codex_args`
+cannot reopen any of these. Those flags hide the operator's world from the
+seat's attention. The isolation tier hides it from the seat's hands:
 
 | Tier | Platform | What the OS enforces | Attestation |
 |---|---|---|---|
@@ -237,7 +244,7 @@ receipt says it was granted:
 | Grant | Claude seat | Codex seat |
 |---|---|---|
 | `web` | adds `WebSearch,WebFetch` to the tool list | `web_search="live"` |
-| `mcp` | drops the empty strict MCP config, so the account's servers and any `--mcp-config` in `args` load | loads `config.toml` (MCP servers live there), as `settings` does |
+| `mcp` | drops the empty strict MCP config, so the account's servers and any `--mcp-config` in `args` load | keeps the account's connected apps (drops `features.apps=false`) and loads `config.toml` (MCP servers live there), as `settings` does |
 | `settings` | drops `--setting-sources ""`, so the operator's settings and global `CLAUDE.md` load | drops `--ignore-user-config` |
 | `instructions` | `--setting-sources project` | keeps `AGENTS.md` and execpolicy rules (drops `project_doc_max_bytes=0`, `--ignore-rules`) |
 | `hooks` | drops `disableAllHooks` | no hooks exist |

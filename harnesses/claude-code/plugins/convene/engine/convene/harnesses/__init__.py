@@ -25,7 +25,8 @@ MODES = ("start", "resume", "fork")
 GRANTS = {
     "web": "web search and fetch tools (Claude: WebSearch, WebFetch; Codex: web_search=live)",
     "mcp": "MCP servers (Claude: the account's and any --mcp-config in the seat's args; "
-           "Codex: the user config's mcp_servers, which implies `settings`)",
+           "Codex: the account's connected apps and the user config's mcp_servers, which "
+           "implies `settings`)",
     "settings": "the operator's own harness settings (Claude: every setting source, so the "
                 "global CLAUDE.md loads; Codex: config.toml)",
     "instructions": "project instruction files (Claude: project setting sources; Codex: "

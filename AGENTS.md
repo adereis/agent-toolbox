@@ -148,6 +148,17 @@ never enabled silently to make a run pass. Raw arguments and environment
 pass-through exist for what has no name yet, and they too appear in the
 receipt.
 
+Codex turns tools on by default between releases, and some arrive with the
+account rather than from any file. Every Codex seat, whatever its tool
+set, turns off the account's connected apps (unless `mcp` is granted),
+image generation, and sub-agents. Multi-agent v2 ignores
+`features.multi_agent=false`, so the seat's session is limited to one
+thread. A switch closed in `harnesses/codex.py` is also reserved there
+against raw args, because a seat's args come last and the last value of a
+key wins. It is also probed by the doctor. A feature's probe reads
+`codex features list` with the setting applied, because Codex type-checks
+a feature's value whether or not the feature exists.
+
 A `worktree` seat gets a private `git clone --local` of the operator's
 repository, not a linked worktree, with its origin removed and a generic
 git identity. Linked worktrees share the operator's `.git`: the jail had

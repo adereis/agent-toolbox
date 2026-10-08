@@ -18,6 +18,25 @@ for key in ("web_search", "personality"):
         print(f"error: unknown variant `bogus` for {key}, expected one of {valid}", file=sys.stderr)
         sys.exit(1)
 
+# The features Codex 0.160 turns on by default that a seat turns off, and
+# the settings this command was given, so `features list` can show them.
+FEATURES = {"apps": True, "image_generation": True, "view_image": True, "shell_tool": True,
+            "unified_exec": True, "browser_use": True, "browser_use_external": True,
+            "in_app_browser": True, "computer_use": True, "multi_agent": True,
+            "multi_agent_v2": False}
+given = dict(value.partition("=")[::2] for flag, value in zip(args, args[1:])
+             if flag in ("-c", "--config"))
+if given.get("features.multi_agent_v2.max_concurrent_threads_per_session") == "0":
+    print("Error: features.multi_agent_v2.max_concurrent_threads_per_session must be at least 1",
+          file=sys.stderr)
+    sys.exit(1)
+if args[-2:] == ["features", "list"]:
+    for name, on in FEATURES.items():
+        value = given.get(f"features.{name}")
+        on = on if value is None else value == "true"
+        print(f"{name:<40} stable             {'true' if on else 'false'}")
+    sys.exit(0)
+
 home = os.environ.get("CODEX_HOME") or os.path.join(os.path.expanduser("~"), ".codex")
 os.makedirs(home, exist_ok=True)
 prompt = sys.stdin.read()
@@ -61,6 +80,14 @@ with open(os.path.join(directory, f"rollout-2026-09-21T00-00-00-{sid}.jsonl"), "
         handle.write(json.dumps({"type": "event_msg", "payload": {"type": "context_compacted"}}) + "\n")
 
 emit({"type": "thread.started", "thread_id": sid})
+# Codex 0.156 moved `tools.view_image` to a feature and warns about the old
+# key, as it does about any key it no longer reads, with an error item.
+ignored = sorted(k for k in given if k.startswith("tools."))
+if ignored:
+    emit({"type": "item.completed", "item": {"type": "error", "message":
+          f"Codex is ignoring {len(ignored)} unrecognized configuration setting. Check for "
+          "typos or deprecated settings.\n  session-flags: "
+          + ", ".join(f"`{k}` is ignored." for k in ignored)}})
 if scenario == "quota-refused":
     emit({"type": "turn.failed", "error": {"code": "rate_limit_exceeded",
           "message": "rate limit exceeded", "resets_at": 1900000000}})
