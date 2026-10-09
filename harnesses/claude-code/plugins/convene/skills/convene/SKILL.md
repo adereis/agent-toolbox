@@ -148,7 +148,7 @@ judgment falls to you, and `unseal` records you as its author.
 ## Opening doors
 
 Seats are closed by default: no web, no MCP servers (for Codex, none of the
-account's connected apps either), no operator settings, no project
+account's connected apps or plugins either), no operator settings, no project
 instruction files, no hooks. When the user asks for one of
 those, or a seat needs it (a reviewer that must check a source, a seat
 that must call a project MCP server), open it explicitly: `grants` in the

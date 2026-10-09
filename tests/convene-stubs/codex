@@ -18,9 +18,11 @@ for key in ("web_search", "personality"):
         print(f"error: unknown variant `bogus` for {key}, expected one of {valid}", file=sys.stderr)
         sys.exit(1)
 
-# The features Codex 0.160 turns on by default that a seat turns off, and
-# the settings this command was given, so `features list` can show them.
-FEATURES = {"apps": True, "image_generation": True, "view_image": True, "shell_tool": True,
+# The features Codex 0.160 turns on by default that a seat turns off (and
+# the plugin pair 0.162 does), and the settings this command was given, so
+# `features list` can show them.
+FEATURES = {"apps": True, "plugins": True, "remote_plugin": True,
+            "image_generation": True, "view_image": True, "shell_tool": True,
             "unified_exec": True, "browser_use": True, "browser_use_external": True,
             "in_app_browser": True, "computer_use": True, "multi_agent": True,
             "multi_agent_v2": False}

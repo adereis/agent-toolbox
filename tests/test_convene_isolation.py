@@ -668,7 +668,7 @@ class DoctorTests(unittest.TestCase):
         """A codex feature's invalid value errors whether or not the feature
         exists, so its probe reads `features list` with the setting applied."""
         labels = [p.label for p in harnesses.get("codex").probes]
-        for label in ("features.apps", "features.image_generation",
+        for label in ("features.apps", "features.plugins", "features.image_generation",
                       "multi_agent_v2 thread limit", "tool-free features"):
             self.assertIn(label, labels)
         probe = doctor.Probe("apps", ("features", "list"), expect="ok",

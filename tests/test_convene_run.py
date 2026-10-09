@@ -298,18 +298,20 @@ class GrantTests(unittest.TestCase):
         self.assertIn('"disableAllHooks": true', claude[claude.index("--settings") + 1])
         self.assertNotIn("WebSearch", claude[claude.index("--tools") + 1])
         for flag in ("--ignore-user-config", "--ignore-rules", "project_doc_max_bytes=0",
-                     'web_search="disabled"', "features.apps=false"):
+                     'web_search="disabled"', "features.apps=false", "features.plugins=false",
+                     "features.remote_plugin=false"):
             self.assertIn(flag, codex)
         self.assertEqual(read(root / "records/c/r001/receipt.json")["red_flags"],
                          ["isolation is advisory (private-home): the OS did not enforce it"])
 
     def test_every_codex_seat_closes_what_codex_leaves_open(self):
-        """Sub-agents and image generation on every seat, the apps unless granted.
+        """Sub-agents and image generation on every seat, apps and plugins unless granted.
 
         Codex's catalog puts most models on multi-agent v2, which ignores
         features.multi_agent=false and offers every seat a tool that spawns a
         sub-agent on another model. The account's connected apps come with
-        the login. A builder that forgets either hands a seat both.
+        the login, and so do its plugins, which install into every private
+        home. A builder that forgets any of them hands a seat all of them.
         """
         codex = harnesses.get("codex")
         always = ["features.multi_agent_v2.max_concurrent_threads_per_session=1",
@@ -323,8 +325,11 @@ class GrantTests(unittest.TestCase):
                         argv, _ = codex.command(seat, mode, session, "p", self.box.root)
                         for setting in always:
                             self.assertEqual(argv[argv.index(setting) - 1], "-c")
-                        self.assertEqual("features.apps=false" in argv, not grants,
-                                         "the mcp grant keeps the apps, as Claude's does")
+                        for closed in ("features.apps=false", "features.plugins=false",
+                                       "features.remote_plugin=false"):
+                            self.assertEqual(closed in argv, not grants,
+                                             "the mcp grant keeps the apps and plugins, "
+                                             "as Claude's keeps its servers")
 
     def test_a_tool_free_codex_seat_names_its_tools_off_and_answers(self):
         """Codex ignores `tools.view_image` since 0.156 and says so in an error
@@ -424,6 +429,7 @@ class GrantTests(unittest.TestCase):
     def test_args_cannot_reopen_what_every_codex_seat_closes(self):
         """A seat's args come last and the last value of a key wins."""
         for args in (["-c", "features.apps=true"], ["--enable", "apps"],
+                     ["--enable", "plugins"], ["-c", "features.remote_plugin=true"],
                      ["--enable=image_generation"], ["--config", "features.view_image=true"],
                      ["-c", "features.multi_agent_v2.max_concurrent_threads_per_session=8"],
                      ["-cfeatures.multi_agent=true"], ["-c", "features={apps=true}"]):

@@ -162,8 +162,8 @@ receipt.
 
 Codex turns tools on by default between releases, and some arrive with the
 account rather than from any file. Every Codex seat, whatever its tool
-set, turns off the account's connected apps (unless `mcp` is granted),
-image generation, and sub-agents. Multi-agent v2 ignores
+set, turns off the account's connected apps and plugins (unless `mcp`
+is granted), image generation, and sub-agents. Multi-agent v2 ignores
 `features.multi_agent=false`, so the seat's session is limited to one
 thread. A switch closed in `harnesses/codex.py` is also reserved there
 against raw args, because a seat's args come last and the last value of a

@@ -23,6 +23,13 @@ FALLBACK = "Falling back from WebSockets to HTTPS transport."
 # neither a private home nor --ignore-user-config removes them; only this
 # switch does. The `mcp` grant keeps them, as it keeps Claude's.
 NO_APPS = ["-c", "features.apps=false"]
+# The account's plugins arrive the same way: with the login on, Codex
+# installs every remote plugin the account enables (mail, calendar, drive,
+# code hosting) into the seat's private home, some tens of megabytes per
+# seat, on every launch into a fresh home. None reach a seat that runs
+# without apps, but they are its capabilities all the same, so they close
+# and open with the apps, under `mcp`.
+NO_PLUGINS = ["-c", "features.plugins=false", "-c", "features.remote_plugin=false"]
 # Codex's catalog puts most models (the `terra` default among them) on its
 # second multi-agent version, which ignores features.multi_agent=false and
 # offers every seat, a tool-free one included, `spawn_agent` with overrides
@@ -185,6 +192,8 @@ class Codex(Harness):
         # key wins, so every switch the engine closes is reserved here too.
         "features": (None, "name one feature, `features.NAME=...`"),
         "features.apps": ("mcp", "grant mcp on the seat; it keeps the account's apps"),
+        "features.plugins": ("mcp", "grant mcp on the seat; it keeps the account's plugins"),
+        "features.remote_plugin": ("mcp", "grant mcp on the seat; it keeps the account's plugins"),
         "features.multi_agent": (None, "every Codex seat is kept to its own thread"),
         "features.multi_agent_v2": (None, "every Codex seat is kept to its own thread"),
         "features.multi_agent_v2.": (None, "every Codex seat is kept to its own thread"),
@@ -297,7 +306,7 @@ class Codex(Harness):
         args += ["-c", "features.multi_agent=false", *NO_SUBAGENTS, *NO_IMAGES,
                  "-c", 'web_search="live"' if may_search(seat) else 'web_search="disabled"']
         if not granted(seat, "mcp"):
-            args += NO_APPS
+            args += NO_APPS + NO_PLUGINS
         # `codex exec resume` refuses -s; the sandbox travels as config there.
         if mode == "start":
             args += ["-s", self.sandbox(seat["tools"])]
@@ -467,6 +476,9 @@ class Codex(Harness):
             _features_off("features.apps", ("apps",),
                           "keeps the account's connected apps out of a seat; they come with "
                           "the login, so no home or config file removes them"),
+            _features_off("features.plugins", ("plugins", "remote_plugin"),
+                          "keeps the account's plugins out of a seat, and with them a download "
+                          "of tens of megabytes into every private home"),
             _features_off("features.image_generation", ("image_generation",),
                           "no seat is asked for an image, and each one spends the account's quota"),
             Probe("multi_agent_v2 thread limit",
