@@ -65,3 +65,59 @@ keeps the last five baselines. The changelog and release dates are cached
 under `~/.cache/agent-toolbox/`; Claude Code's own cache is read, never
 written. Pass `--offline` to forbid the network, accepting a possibly stale
 changelog, which the utility will say.
+
+## Reading the digest
+
+Read it in two passes before writing anything.
+
+1. Go release by release and note every bullet that touches this machine:
+   each bullet whose tag names something the environment block shows
+   configured, and each `[-]` bullet that changes what a key, a prompt or a
+   dialog does for everyone. With `defaultMode=auto`, every `auto-mode`
+   bullet is noted; with `editor=vim`, every `vim` bullet.
+2. Place each noted bullet in one group, or drop it with a reason you could
+   state. Related fixes may share one entry, but a fix to a configured
+   feature is never dropped to save space.
+
+Settle what the block already settles:
+
+- The plugins line lists enabled plugins only. Never suggest enabling a
+  plugin it names.
+- A bullet that offers a variable to opt out (`0` turns it off, a
+  `DISABLE_` name) describes behavior that is on by default. It applies here
+  unless the env vars line shows that variable set.
+- Whole-tool rules are listed separately from scoped ones. A bullet about
+  whole-tool rules does not apply when the block lists none for that tool.
+
+## Deciding what goes under Act on this
+
+Ask of each candidate: if the user does nothing, does something on this
+machine now behave differently from what they rely on, in a way they may
+want to change? Only a yes belongs there. These are never Act on this:
+
+- a new switch that turns off something the user already allows
+- a price, a model's new default, or a version the user is already running
+- a layout or wording change in a menu or dialog
+- an option the entry itself says changes nothing here
+
+They go under Worth knowing, or nowhere.
+
+## Report layout
+
+Use these headings, in this order:
+
+1. One plain sentence saying whether anything needs a decision.
+2. `## Act on this`, always present. When nothing qualifies, it holds the
+   single line "Nothing here needs a decision."
+3. `## Could not check`, `## Fixed for you` and `## Worth knowing`, each
+   only when it has entries.
+4. `## Counts and baseline`: the withheld count with its breakdown, the
+   unmatched count, the version the baseline moved from, and the `--since`
+   version that re-reads this window.
+
+A topic trace uses its own layout: when the feature first appears, the arc
+of later changes with dates, and a coverage line. The coverage line says how
+many entries matched and whether you read them all; the utility shows only
+the 40 most recent unless you pass `--limit 0`. Name entries that use the
+feature's words for a different feature, and never date the feature from
+them.

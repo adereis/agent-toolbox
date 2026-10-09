@@ -17,9 +17,11 @@ to that canonical source both in the checkout and when installed.
 The `whats-new` skill follows the same split and stays model-invocable, so a
 question about what changed reaches it. It supplies the Claude Code command
 line and state locations for the shared workflow under `skills/whats-new/`,
-and reports the releases published since its last digest against this
-machine's configuration. Installing it without the `scripts` component leaves
-the skill without the utility it drives.
+plus the reader's own rules: a two-pass coverage read, what the environment
+block settles, a test for "Act on this", and a fixed report layout. It reports
+the releases published since its last digest against this machine's
+configuration. Installing it without the `scripts` component leaves the skill
+without the utility it drives.
 
 The skill runs in a forked Sonnet sub-agent at high effort, so the raw
 digest and the workflow never enter the calling session; only the finished
