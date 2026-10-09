@@ -144,7 +144,7 @@ def attributed(text, plan):
 def collect_made(root, plan, seat, n):
     """Move the seat's declared files out of its outbox, and capture its worktree."""
     name = seat["id"]
-    outbox = Path(root) / "work" / name / "outbox"
+    outbox = runs.seat_work(root, plan, name) / "outbox"
     asked = deliverable(plan, n)
     for file in declared_files(plan):
         written = outbox / file
@@ -159,7 +159,7 @@ def collect_made(root, plan, seat, n):
         event(root, round=n, seat=name, event="made" if file == asked else "revised",
               file=file, bytes=kept.stat().st_size, sha256=digest(kept))
     if seat["workspace"] == "worktree":
-        patch = workspace.capture(Path(root) / "work" / name / workspace.REPO,
+        patch = workspace.capture(runs.seat_work(root, plan, name) / workspace.REPO,
                                   plan["base_commit"])
         if patch.strip():
             kept = made_path(root, name, n, CHANGES)

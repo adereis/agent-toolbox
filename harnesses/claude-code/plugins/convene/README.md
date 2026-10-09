@@ -137,7 +137,7 @@ $convene continue NAME skeptic       # once the window resets
 $convene promote NAME 2              # or: promote NAME 2 --absent
 $convene run NAME                    # the remaining rounds
 $convene extend NAME 6               # more rounds than the plan declared
-$convene prune NAME                  # remove seat repositories and private homes; records stay
+$convene prune NAME                  # remove the run's environment; records stay
 ```
 
 `convene status` reads the records and changes nothing. Its header counts
@@ -184,9 +184,27 @@ Use `--round N` for a specific turn that has started. A missing turn fails
 immediately with a pointer to `convene status`; it does not wait for a
 future round.
 
-`convene --help` lists every verb. Runs live under
+`convene --help` lists every verb. A run's records (its plan, board,
+receipts and transcripts) live under
 `$XDG_STATE_HOME/agent-toolbox/convene/<project-key>/<run>/` (default
-`~/.local/state`), never inside the project, on both Linux and macOS.
+`~/.local/state`). Its environment, the seats' workspaces, repository
+clones and private homes, lives under
+`$XDG_CACHE_HOME/agent-toolbox/convene/<project-key>/<run>/` (default
+`~/.cache`), on the `environment:` line of `convene status`. Neither is
+ever inside the project, on both Linux and macOS.
+
+The split is for backups. The records are small and are the run's
+evidence, so keep them. The environment is large, holds a harness login
+while a turn runs, and is worth nothing once the run is over. Its root
+carries a `CACHEDIR.TAG`, which `borg`, `restic` and GNU `tar` skip under
+`--exclude-caches`, and some backup tools (Déjà Dup among them) leave out
+`~/.cache` by default. On macOS, Time Machine leaves out `~/Library/Caches`
+but not `~/.cache`; `tmutil addexclusion ~/.cache/agent-toolbox` adds it.
+
+`convene prune NAME` removes a run's environment and keeps its records.
+Once the environment is gone, whether pruned or with a cleared cache, the
+run refuses every further turn and promotion by name, and `board` and
+`export` still work.
 
 ## What a seat gets, and what it cannot reach
 

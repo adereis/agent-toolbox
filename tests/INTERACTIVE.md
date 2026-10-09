@@ -198,11 +198,13 @@ first session, the drafter's in round two and the other's in round three
 prepares as the newest Luna its catalog lists, printed as `<slug> (from
 luna)`, and needs no pin. The drafter's `changes.patch` appears under
 `board/made/drafter/r002/` and on the round-two digest, holding both the
-committed and the uncommitted files. Its `work/drafter/repo` is a clone
-with its own `.git` directory, no remote and a `convene seat` commit;
-`git -C <project> worktree list` never shows it, and the operator's
-checkout has no changes. `bin/convene prune NAME` removes the clone and
-the private homes.
+committed and the uncommitted files. Its `work/drafter/repo`, under the
+path on the `environment:` line of `convene status` (in `~/.cache`, not
+beside the records in `~/.local/state`), is a clone with its own `.git`
+directory, no remote and a `convene seat` commit; `git -C <project>
+worktree list` never shows it, and the operator's checkout has no changes.
+`bin/convene prune NAME` removes that environment whole, and `status`
+then reads `environment: gone (it was pruned)`.
 
 **Hold and continue:** only when a quota window is genuinely exhausted:
 `status` reports HELD with the seat, `continue NAME SEAT` after the reset

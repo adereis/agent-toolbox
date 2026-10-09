@@ -1,8 +1,14 @@
 """Where runs live and how a name becomes a directory.
 
-State never lives inside the project. Runs sit under
+State never lives inside the project. A run's records sit under
 `$XDG_STATE_HOME/agent-toolbox/convene/<project-key>/<run>/`, and a bare
 name resolves there; anything spelled as a path is taken literally.
+
+What its seats run in, their workspaces and private homes, sits under
+`$XDG_CACHE_HOME` instead, at the path the frozen plan names. The records
+are the run's evidence and a backup should keep them. The environment is
+large, holds a harness login while a turn runs, and is worth nothing once
+the run is over, so it lives where backups skip.
 """
 
 from __future__ import annotations
@@ -12,7 +18,14 @@ import subprocess
 from pathlib import Path
 
 from convene import SCHEMA, platform
-from convene.storage import digest, identifier, read, write
+from convene.storage import digest, identifier, read, trail, write, write_text
+
+# https://bford.info/cachedir/: borg, restic and GNU tar skip a directory
+# holding this file when asked to exclude caches, wherever it sits.
+CACHEDIR_TAG = ("Signature: 8a477f597d28d172789f06886806bc55\n"
+                "# This file is a cache directory tag created by convene.\n"
+                "# Seat workspaces and private homes; a run's records are elsewhere.\n"
+                "# For information about cache directory tags see https://bford.info/cachedir/\n")
 
 
 def project_root(start=None):
@@ -37,6 +50,66 @@ def register(project, env=None):
     if not marker.exists():
         write(marker, {"root": str(Path(project).resolve())})
     return directory
+
+
+def environment_for(project, name, env=None):
+    """Where a new run's seats will run, under a tagged cache directory."""
+    base = platform.cache_home(env)
+    if not (base / "CACHEDIR.TAG").exists():
+        write_text(base / "CACHEDIR.TAG", CACHEDIR_TAG)
+    return base / platform.project_key(project) / name
+
+
+def environment(root, plan):
+    """The directory holding a run's `work/` and `homes/`.
+
+    A plan prepared before environments moved to the cache names none, and
+    its seats ran inside the run directory itself.
+    """
+    named = plan.get("environment")
+    return Path(named) if named else Path(root)
+
+
+def seat_work(root, plan, name):
+    return environment(root, plan) / "work" / name
+
+
+def seat_home(root, plan, name):
+    return environment(root, plan) / "homes" / name
+
+
+def environment_gone(root, plan):
+    """Why the run's seats can no longer run, or None while they can.
+
+    `prune` removes the environment on purpose; clearing the cache removes
+    it without the run knowing. A standing assignment is written once, at
+    prepare, and nothing recreates it, so a missing one means the
+    workspace went with the rest.
+    """
+    if any(row.get("event") == "pruned" for row in trail(root)):
+        return "it was pruned"
+    missing = [s["id"] for s in plan["seats"]
+               if not (seat_work(root, plan, s["id"]) / "START.md").is_file()]
+    if missing:
+        return (f"{environment(root, plan)} no longer holds the workspace of "
+                f"{', '.join(missing)}; the cache was cleared or the directory removed")
+    return None
+
+
+def require_environment(root, plan):
+    """Refuse a turn or a promotion once the environment is gone.
+
+    A turn would resume a session that no longer exists, and a promotion
+    would read empty outboxes and file the seats' work as unmade.
+    """
+    why = environment_gone(root, plan)
+    if why:
+        name = plan["name"]
+        raise RuntimeError(
+            f"run {name} can play no more turns and promote no more rounds: {why}. "
+            "Its seats' sessions, workspaces and unpromoted files are gone. Its records "
+            f"are intact, so convene board {name} and convene export {name} DIR still work; "
+            "prepare a new run to go on")
 
 
 def spelled_as_path(value):

@@ -7,11 +7,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from convene_support import Sandbox
+from convene_support import Sandbox, environment_of
 
 from convene import board, plan, platform, round as round_, runs, workspace
 from convene.cli import main
-from convene.storage import read, trail, write
+from convene.storage import digest, read, trail, write
 
 
 class RoundTests(unittest.TestCase):
@@ -49,10 +49,10 @@ class RoundTests(unittest.TestCase):
             first = self.receipt(root, seat, 1)["session_id"]
             self.assertIn(first, calls[1]["argv"], "round two resumes round one's session")
             self.assertEqual(self.receipt(root, seat, 2)["session_id"], first)
-            self.assertTrue((root / "work" / seat / "board/round-001/digest.md").exists())
+            self.assertTrue((environment_of(root) / "work" / seat / "board/round-001/digest.md").exists())
         self.assertIn("The board has moved: board/round-001/digest.md", self.prompt(root, "a", 2))
         self.assertIn("Nobody has posted yet", self.prompt(root, "a", 1))
-        self.assertFalse(list((root / "work/blind/board").iterdir()), "a blind seat sees no board")
+        self.assertFalse(list((environment_of(root) / "work/blind/board").iterdir()), "a blind seat sees no board")
         self.assertIn("You do not see the others' posts", self.prompt(root, "blind", 2))
         self.assertIn("I read round-001", board.post_path(root, "a", 2).read_text())
         digest = (root / "board/rounds/r002/digest.md").read_text()
@@ -77,7 +77,7 @@ class RoundTests(unittest.TestCase):
         self.assertIn("Draft it now.", self.prompt(root, "a", 2))
         made = root / "board/made/a/r002/draft.md"
         self.assertTrue(made.is_file())
-        self.assertFalse((root / "work/a/outbox/draft.md").exists(), "moved, not copied")
+        self.assertFalse((environment_of(root) / "work/a/outbox/draft.md").exists(), "moved, not copied")
         digest = (root / "board/rounds/r002/digest.md").read_text()
         self.assertIn("### draft.md", digest)
         self.assertIn("Deliverable draft.md", digest)
@@ -127,7 +127,7 @@ class RoundTests(unittest.TestCase):
         first = self.receipt(root, "a", 1)["model"]
         self.assertEqual(first, "claude-opus-5-20260601")
         # A newer Opus ships while the room waits between rounds.
-        next(root.glob("homes/a/**/stub-calls.jsonl")).with_name("stub-new-opus").touch()
+        next(environment_of(root).glob("homes/a/**/stub-calls.jsonl")).with_name("stub-new-opus").touch()
         round_.run_round(root, 2)
         second = self.receipt(root, "a", 2)
         self.assertEqual(second["status"], "answered", second.get("error"))
@@ -184,7 +184,7 @@ class RoundTests(unittest.TestCase):
         root, frozen = self.prepare(rounds=1, seats=[
             {"id": "d", "persona": "connie-tinuity", "tools": "write", "workspace": "worktree"}],
             brief={"text": "[[stub:edit-repo]] Build it."})
-        tree = root / "work/d/repo"
+        tree = environment_of(root) / "work/d/repo"
         self.assertTrue((tree / "app.py").is_file())
         # A private clone: the operator's repository never records it, and
         # nothing in it points back there.
@@ -203,24 +203,89 @@ class RoundTests(unittest.TestCase):
         self.assertIn("A checkout of the repository is at repo/", self.prompt(root, "d", 1))
         self.assertIn("build output and caches included, so delete any you do not mean to submit",
                       self.prompt(root, "d", 1))
-        removed = round_.prune(root)
-        self.assertIn(str(tree), removed)
-        self.assertFalse(tree.exists())
-        self.assertFalse((root / "homes/d").exists())
+        environment = environment_of(root)
+        self.assertEqual(round_.prune(root), [str(environment)])
+        self.assertFalse(environment.exists(), "workspaces, clones and homes go together")
         self.assertTrue((root / "records/d/r001/receipt.json").exists(), "records are kept")
+        self.assertTrue((root / "board/made/d/r001/changes.patch").exists(), "the board is kept")
+
+    def as_older_run(self, root):
+        """Give a fresh run the layout of one prepared before environments
+        moved to the cache: workspaces and homes inside the run directory,
+        and a plan that names no environment."""
+        import shutil
+        environment = environment_of(root)
+        for part in ("work", "homes"):
+            shutil.move(str(environment / part), str(root / part))
+        shutil.rmtree(environment)
+        frozen = read(root / "plan.json")
+        del frozen["environment"]
+        write(root / "plan.json", frozen)
+        write(root / "plan-digest.json", {"sha256": digest(root / "plan.json")})
 
     def test_prune_unregisters_a_linked_worktree_from_an_older_run(self):
         """Runs prepared before private clones hold linked worktrees, which
-        the operator's repository keeps a registration for."""
+        the operator's repository keeps a registration for. They also predate
+        the cache, so their workspaces stay and only repositories and homes go."""
         root, _ = self.prepare(rounds=1, seats=[
             {"id": "d", "persona": "connie-tinuity", "tools": "write", "workspace": "worktree"}])
+        self.as_older_run(root)
         tree = root / "work/d/repo"
         __import__("shutil").rmtree(tree)
         self.box.git("worktree", "add", "--detach", "-q", str(tree), "HEAD")
         self.assertIn(str(tree), self.box.git("worktree", "list"))
-        self.assertIn(str(tree), round_.prune(root))
+        self.assertEqual(round_.prune(root), [str(tree), str(root / "homes/d")])
         self.assertFalse(tree.exists())
         self.assertNotIn(str(tree), self.box.git("worktree", "list"))
+        self.assertTrue((root / "work/d/START.md").exists(), "an older run's workspace stays")
+        # Its assignment survived, so only the trail can say the run is over.
+        self.assertEqual(round_.status(root)["environment"]["gone"], "it was pruned")
+
+    def test_a_pruned_run_keeps_its_board_and_refuses_to_play_on(self):
+        """Extending a pruned run would resume sessions whose homes are gone."""
+        import contextlib
+        import io
+        root, _ = self.prepare(rounds=1, seats=[{"id": "a", "persona": "archie-tecture"}])
+        round_.run(root)
+        round_.prune(root)
+        board.extend(root, 2)
+        with self.assertRaisesRegex(RuntimeError, r"no more turns .*: it was pruned\. "
+                                    r".*convene board .* still work"):
+            round_.run(root)
+        data = round_.status(root)
+        self.assertEqual(data["environment"]["gone"], "it was pruned")
+        self.assertEqual(data["next"], f"convene board {root.name}, then convene export "
+                         f"{root.name} DIR; no seat can take another turn, because the "
+                         "run's environment is gone (it was pruned)")
+        self.assertIn("  environment: gone (it was pruned)", round_.render_status(data))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(main(["--project", str(self.box.project), "board", root.name]), 0)
+        self.assertIn("Stub finding", out.getvalue())
+
+    def test_a_cleared_cache_stops_turns_and_promotion_by_name(self):
+        """Clearing the cache removes the environment without the run knowing.
+        A promotion would then read empty outboxes and file the seats' work as
+        unmade, and a turn would resume nothing, so both refuse instead."""
+        import shutil
+        root, _ = self.prepare(rounds=2, seats=[{"id": "a", "persona": "archie-tecture"}],
+                               brief={"text": "[[stub:quota-refused-once]] Discuss."})
+        played, why = round_.run(root)
+        self.assertEqual(why, "held on a")
+        self.assertIn("environment: " + str(environment_of(root)),
+                      round_.render_status(round_.status(root)))
+        shutil.rmtree(environment_of(root))
+        for attempt in (lambda: round_.continue_seat(root, 1, "a"),
+                        lambda: round_.promote_absent(root, 1),
+                        lambda: round_.promote_held(root, 1),
+                        lambda: round_.run_round(root, 1)):
+            with self.assertRaisesRegex(RuntimeError, "no longer holds the workspace of a; "
+                                        "the cache was cleared"):
+                attempt()
+        self.assertFalse(environment_of(root).exists(), "nothing recreated the workspace")
+        self.assertNotIn("unmade", [r.get("event") for r in trail(root)])
+        self.assertTrue(round_.status(root)["next"].startswith(
+            f"convene board {root.name}, then convene export {root.name} DIR; no seat"))
 
     def test_prune_refuses_a_live_seat(self):
         root, _ = self.prepare(rounds=1, seats=[{"id": "a", "persona": "archie-tecture"}])
@@ -290,23 +355,23 @@ class RoundTests(unittest.TestCase):
         root, _ = self.prepare(rounds=2, seats=[{"id": "a", "persona": "archie-tecture"},
                                                 {"id": "late", "persona": "quinn-t-shun"}],
                                brief={"text": "Discuss."})
-        (root / "work/late/START.md").write_text("[[stub:quota-refused]] " + (root / "work/late/START.md").read_text())
+        (environment_of(root) / "work/late/START.md").write_text("[[stub:quota-refused]] " + (environment_of(root) / "work/late/START.md").read_text())
         from convene.storage import digest, write
         _, frozen = runs.load(root)
         for seat in frozen["seats"]:
             if seat["id"] == "late":
-                seat["start_sha256"] = digest(root / "work/late/START.md")
+                seat["start_sha256"] = digest(environment_of(root) / "work/late/START.md")
         write(root / "plan.json", frozen)
         write(root / "plan-digest.json", {"sha256": digest(root / "plan.json")})
         played, why = round_.run(root)
         self.assertEqual(why, "held on late")
         round_.promote_absent(root, 1)
         # The seat's assignment is rewritten so its second turn succeeds.
-        (root / "work/late/START.md").write_text((root / "work/late/START.md").read_text().replace("[[stub:quota-refused]] ", ""))
+        (environment_of(root) / "work/late/START.md").write_text((environment_of(root) / "work/late/START.md").read_text().replace("[[stub:quota-refused]] ", ""))
         _, frozen = runs.load(root)
         for seat in frozen["seats"]:
             if seat["id"] == "late":
-                seat["start_sha256"] = digest(root / "work/late/START.md")
+                seat["start_sha256"] = digest(environment_of(root) / "work/late/START.md")
         write(root / "plan.json", frozen)
         write(root / "plan-digest.json", {"sha256": digest(root / "plan.json")})
         played, why = round_.run(root)
@@ -379,7 +444,7 @@ class RoundTests(unittest.TestCase):
         self.assertIn("round 2: a=answered; published", text)
         self.assertIn("budget is now 3 rounds", text)
         self.assertIn("The board -- round 2", text)
-        self.assertIn(str(root / "homes/a"), text)
+        self.assertIn("removed:\n  " + str(environment_of(root)), text)
 
 
 class StatusRenderingTests(unittest.TestCase):

@@ -94,8 +94,16 @@ home, session lookup and receipt; do not add a second argv builder for a
 CLI that already has one. Isolation tiers must attest what they enforced
 and the receipt carries the attestation; `strongest` resolves at prepare
 time and the resolved tier is frozen. A run never claims more than it
-enforced. Run state lives under `$XDG_STATE_HOME/agent-toolbox/convene`,
-never inside the project, and credentials never enter a record.
+enforced. A run's records live under `$XDG_STATE_HOME/agent-toolbox/convene`
+and are what a backup should keep. Its environment, the seats' workspaces,
+clones and private homes, lives under `$XDG_CACHE_HOME/agent-toolbox/convene`
+at the path the frozen plan names, below a `CACHEDIR.TAG` so backups can
+skip it: it is large, holds a staged login during a turn, and is what
+`prune` removes. Neither is inside the project, and credentials never enter
+a record. Only `runs.py` names the `work/` and `homes/` directories; every
+caller asks it for a seat's paths, and every verb that plays a turn or
+promotes a round first calls `runs.require_environment`, because a cleared
+cache would otherwise resume nothing or file a seat's work as unmade.
 
 The jail is an allow-list all the way down, and the root is no exception.
 It binds a fixed set of system trees read-only at their own paths (`/usr`,

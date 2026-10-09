@@ -5,7 +5,7 @@ import contextlib
 import io
 import unittest
 
-from convene_support import Sandbox
+from convene_support import Sandbox, environment_of
 
 from convene import board, export, plan, round as round_, runs, seal
 from convene.cli import main
@@ -31,11 +31,11 @@ class FanoutTests(unittest.TestCase):
         for seat in frozen["seats"]:
             self.assertEqual((seat["visibility"], seat["workspace"], seat["tools"]),
                              ("blind", "worktree", "write"))
-            self.assertTrue((root / "work" / seat["id"] / "repo/app.py").exists())
+            self.assertTrue((environment_of(root) / "work" / seat["id"] / "repo/app.py").exists())
         self.assertEqual(frozen["phases"], [{"name": "attempt", "rounds": 1, "deliverable": "report.md"}])
         self.assertEqual(frozen["instrument"]["profile"]["id"], "implement")
         self.assertIn("You work on your own; you will not see what the others write",
-                      (root / "work/one/START.md").read_text())
+                      (environment_of(root) / "work/one/START.md").read_text())
         with self.assertRaisesRegex(ValueError, "fixes visibility"):
             self.prepare(visibility="board")
 
@@ -111,7 +111,7 @@ class FanoutTests(unittest.TestCase):
         root, frozen = self.prepare(seats=[{"id": "one", "persona": "connie-tinuity"}],
                                     brief={"text": "[[stub:commit-repo]] Implement it."})
         round_.run(root)
-        tree = root / "work/one/repo"
+        tree = environment_of(root) / "work/one/repo"
         self.assertNotEqual(self.box.git("-C", str(tree), "rev-parse", "HEAD").strip(),
                             frozen["base_commit"], "the seat's commit landed")
         patch = (root / "board/made/one/r001/changes.patch").read_text()
@@ -154,12 +154,12 @@ class FanoutTests(unittest.TestCase):
         root, _ = self.prepare(seats=[{"id": "one", "persona": "connie-tinuity"},
                                       {"id": "two", "persona": "archie-tecture"}],
                                brief={"text": "Implement it."})
-        (root / "work/two/START.md").write_text("[[stub:killed]] " + (root / "work/two/START.md").read_text())
+        (environment_of(root) / "work/two/START.md").write_text("[[stub:killed]] " + (environment_of(root) / "work/two/START.md").read_text())
         from convene.storage import digest, write
         _, frozen = runs.load(root)
         for seat in frozen["seats"]:
             if seat["id"] == "two":
-                seat["start_sha256"] = digest(root / "work/two/START.md")
+                seat["start_sha256"] = digest(environment_of(root) / "work/two/START.md")
         write(root / "plan.json", frozen)
         write(root / "plan-digest.json", {"sha256": digest(root / "plan.json")})
         round_.run(root)
@@ -183,7 +183,7 @@ class FanoutTests(unittest.TestCase):
         self.assertEqual((synth["visibility"], synth["workspace"], synth["tools"]), ("board", "none", "read"))
         # A live synthesizer told it was one of the people on the brief, and
         # handed the attempts' instrument, tried to implement it instead.
-        start = (root / "work/synth/START.md").read_text()
+        start = (environment_of(root) / "work/synth/START.md").read_text()
         self.assertIn("You are synthesizing what the 2 others convened", start)
         self.assertNotIn("one of 3 people", start)
         self.assertNotIn("Report what you built", start)
@@ -198,8 +198,8 @@ class FanoutTests(unittest.TestCase):
         # The seat keeps the read tool set, which cannot write a file, so
         # the synthesis travels as its post rather than as outbox/synthesis.md.
         self.assertNotIn("outbox/", prompt)
-        self.assertTrue((root / "work/synth/board/round-001/digest.md").exists())
-        self.assertFalse(list((root / "work/one/board").iterdir()), "attempt seats stay blind")
+        self.assertTrue((environment_of(root) / "work/synth/board/round-001/digest.md").exists())
+        self.assertFalse(list((environment_of(root) / "work/one/board").iterdir()), "attempt seats stay blind")
         self.assertTrue(board.post_path(root, "synth", 2).exists())
         self.assertFalse((root / "board/made/synth").exists())
         self.assertEqual(len(self.box.calls("synth", "claude")), 1)
@@ -253,7 +253,7 @@ class FanoutTests(unittest.TestCase):
                          ("sealed", "none", "read"))
         self.assertEqual([(p["name"], p.get("seats"), p.get("deliverable")) for p in frozen["phases"]],
                          [("attempt", ["one", "two"], "report.md"), ("judgment", ["judge"], None)])
-        start = (root / "work/judge/START.md").read_text()
+        start = (environment_of(root) / "work/judge/START.md").read_text()
         self.assertIn("You are judging 2 attempts", start)
         self.assertNotIn("Report what you built", start, "the attempts' instrument is not the judge's")
         played, why = round_.run(root)
@@ -262,14 +262,14 @@ class FanoutTests(unittest.TestCase):
         # The engine sealed the attempts before the judge's round opened and
         # staged the letters' own files, never the key beside them.
         self.assertEqual(sorted(read(root / "sealed/r001/identity-key.json").values()), ["one", "two"])
-        staged = root / "work/judge/sealed"
+        staged = environment_of(root) / "work/judge/sealed"
         self.assertEqual(sorted(p.name for p in staged.iterdir()), ["A", "B"])
         for letter in "AB":
             self.assertEqual(sorted(p.name for p in (staged / letter).iterdir()),
                              sorted(p.name for p in (root / "sealed/r001" / letter).iterdir()))
-        names = {p.name for p in (root / "work/judge").rglob("*")}
+        names = {p.name for p in (environment_of(root) / "work/judge").rglob("*")}
         self.assertFalse(names & {"identity-key.json", "seal.json"}, "the key never reaches the judge")
-        self.assertFalse(list((root / "work/judge/board").iterdir()), "the judge sees no board")
+        self.assertFalse(list((environment_of(root) / "work/judge/board").iterdir()), "the judge sees no board")
         self.assertIn("You are judging, not competing",
                       (root / "records/judge/r002/prompt.md").read_text())
         # Its post is the judgment, filed where unseal looks for one.
@@ -319,7 +319,7 @@ class FanoutTests(unittest.TestCase):
         round_.run(root)
         self.assertEqual(board.published_rounds(root), [1, 2, 3])
         self.assertEqual(seal.sealed_rounds(root), [1])
-        self.assertIn("(judge)", (root / "work/synth/board/round-002/digest.md").read_text())
+        self.assertIn("(judge)", (environment_of(root) / "work/synth/board/round-002/digest.md").read_text())
         self.assertEqual(round_.status(root)["withheld"], [1, 2, 3])
         seal.unseal(root)
         self.assertEqual(round_.status(root)["withheld"], [])

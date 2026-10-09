@@ -463,16 +463,26 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         base = None
 
     directory = runs.register(project_root, environ)
+
+    def taken(candidate):
+        # Taken while either half of a run exists: records whose environment
+        # was pruned, or an environment whose records were deleted.
+        return (candidate.exists()
+                or runs.environment_for(project_root, candidate.name, environ).exists())
+
     if name:
         identifier(name)
         root = directory / name
-        if root.exists():
-            raise ValueError(f"run exists: {root}; pick another --name")
+        if taken(root):
+            raise ValueError(f"run exists: {root} or its environment "
+                             f"{runs.environment_for(project_root, name, environ)}; "
+                             "pick another --name")
     else:
         stem = f"{datetime.date.today().isoformat()}-{kind}-{runs.slug(title)}"
         root, n = directory / stem, 2
-        while root.exists():
+        while taken(root):
             root, n = directory / f"{stem}-{n}", n + 1
+    environment = runs.environment_for(project_root, root.name, environ)
 
     frozen = {
         "schema": SCHEMA, "kind": kind, "title": title.strip(), "name": root.name,
@@ -485,16 +495,17 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         "materials": [{k: v for k, v in m.items() if k != "content"} for m in common],
         "defaults": {k: defaults[k] for k in SEAT_FIELDS + ACCESS_FIELDS},
         "config_sources": config_sources, "overrides": overrides or {},
-        "seats": [], "prepared_at": time.time(),
+        "environment": str(environment), "seats": [], "prepared_at": time.time(),
     }
     root.mkdir(parents=True, mode=0o700)
+    environment.mkdir(parents=True, mode=0o700)
     (root / "board" / "posts").mkdir(parents=True)
     (root / "board" / "rounds").mkdir(parents=True)
     (root / "board" / "made").mkdir(parents=True)
     (root / "chair").mkdir()
     for seat in seats:
         private = seat.pop("_private")
-        work = root / "work" / seat["id"]
+        work = runs.seat_work(root, frozen, seat["id"])
         for sub in ("outbox", "board"):
             (work / sub).mkdir(parents=True)
         if seat["workspace"] == "worktree":
@@ -504,7 +515,7 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         seat["reads"] = [m["path"] for m in staged]
         seat["input_hashes"] = hashes(work / "materials")
         (root / "board" / "posts" / seat["id"]).mkdir(parents=True)
-        (root / "homes" / seat["id"]).mkdir(parents=True, mode=0o700)
+        runs.seat_home(root, frozen, seat["id"]).mkdir(parents=True, mode=0o700)
         write(root / "records" / seat["id"] / "state.json", {
             "status": "prepared", "session_id": None, "rounds": {},
             "persona": personas.identity(seat["persona"])})
@@ -512,14 +523,17 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
     # Second pass: the roster names every seat, which is knowable only once
     # all of them exist.
     for seat in frozen["seats"]:
-        start = root / "work" / seat["id"] / "START.md"
+        start = runs.seat_work(root, frozen, seat["id"]) / "START.md"
         private = [m for m in seat["materials"]]
         write_text(start, _start_text(frozen, seat, frozen["materials"], private))
         seat["start_sha256"] = digest(start)
     write(root / "plan.json", frozen)
     write(root / "plan-digest.json", {"sha256": digest(root / "plan.json")})
     (root / ".gitignore").write_text(
-        "# A run holds private harness homes with credentials staged for a turn.\n*\n")
+        "# A run's records hold seat transcripts; they are never project files.\n*\n")
+    (environment / ".gitignore").write_text(
+        "# A run's environment holds private harness homes with credentials staged "
+        "for a turn.\n*\n")
     event(root, event="prepared", seats=[s["id"] for s in seats], rounds=rounds,
           isolation={s["id"]: s["isolation"] for s in seats})
     return root, frozen

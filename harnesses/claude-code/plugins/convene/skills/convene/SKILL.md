@@ -13,8 +13,10 @@ The engine is the `convene` command. Inside Claude Code it is
 `${CLAUDE_PLUGIN_ROOT}/bin/convene`; with the toolbox's `commands`
 component installed it is `convene` on PATH; in a checkout it is
 `harnesses/claude-code/plugins/convene/bin/convene`. `convene --help` lists
-every verb. State lives under `~/.local/state/agent-toolbox/convene/`, never
-in the project. Seats run on Claude Code, Codex or Antigravity; the
+every verb. A run's records live under `~/.local/state/agent-toolbox/convene/`
+and its seats' workspaces and private homes under
+`~/.cache/agent-toolbox/convene/`; neither is in the project. Seats run on
+Claude Code, Codex or Antigravity; the
 operator may be any of them.
 
 ## The loop
@@ -91,8 +93,9 @@ operator may be any of them.
 9. **Report.** Report to the user:
    the synthesis, then the receipts (served model per seat, isolation
    tier, tool calls, usage) and every red flag verbatim. Offer
-   `convene prune NAME` once the export is in hand: it removes the seat
-   repositories and private homes and keeps every record.
+   `convene prune NAME` once the export is in hand: it removes the run's
+   environment (seat workspaces, repositories and private homes) and keeps
+   every record.
 
 ## Reading a sealed round
 

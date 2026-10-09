@@ -21,7 +21,7 @@ convene: multi-seat panels over native coding-agent CLIs.
   continue RUN SEAT [--round N]               retake a quota-stopped turn
   promote RUN N [--absent]                    close a round by hand
   extend RUN ROUNDS                           raise the round budget
-  prune RUN [--force]                         remove seat repositories and private homes
+  prune RUN [--force]                         remove the run's environment; records stay
   follow RUN SEAT [--round N] [--thinking]    tail a seat's turn as it runs
   seal RUN [--round N]                        letter a blind round's drafts for reading
   unseal RUN [--round N]                      print the key, once judgment.md is written
@@ -39,9 +39,13 @@ This list names each verb's common options; `convene VERB --help` gives
 that verb's own help in full, and `convene status --help` reads a status
 line by line.
 
-State lives under $XDG_STATE_HOME/agent-toolbox/convene (default
-~/.local/state), never inside the project. --project DIR names the
-project when it is not the current directory's git checkout.
+A run's records (plan, board, receipts, transcripts) live under
+$XDG_STATE_HOME/agent-toolbox/convene (default ~/.local/state). Its
+environment, the seats' workspaces, repositories and private homes, lives
+under $XDG_CACHE_HOME/agent-toolbox/convene (default ~/.cache), which
+carries a CACHEDIR.TAG so backups can skip it. Neither is ever inside the
+project. --project DIR names the project when it is not the current
+directory's git checkout.
 """
 
 
@@ -53,6 +57,7 @@ type next. A worked example:
 
   Review the jail change  [panel, 2026-09-21-panel-review]
     /home/you/.local/state/agent-toolbox/convene/<key>/<run>
+    environment: /home/you/.cache/agent-toolbox/convene/<key>/<run>
     rounds: 2 of 4 published (1-2)      two rounds are on the board
     novelty: r001 100%, r002 41%        how much round 2 added to round 1
     red flags: 1 (marked ! below)       count of the ! lines further down
@@ -62,6 +67,11 @@ type next. A worked example:
       r001: answered, served gpt-5.6-terra, 47.2s, 25 tool calls, tier enforced
       r002: quota
   next: convene continue <run> skeptic once the window resets, ...
+
+The first path holds the run's records and the environment line names
+where its seats run. That line reads `gone` once `convene prune` removed
+the environment or the cache was cleared; from then on no seat takes a
+turn and no round is promoted, and the board and export still work.
 
 A seat's counts run over the rounds its phase lets it speak in; a seat
 that only listens in a round owes no turn there. A turn prints only the
@@ -132,7 +142,8 @@ def main(argv=None):
     p.add_argument("run")
     p.add_argument("rounds", type=int)
 
-    p = sub.add_parser("prune", help="remove seat repositories and private homes; keep the records")
+    p = sub.add_parser("prune", help="remove the run's environment (workspaces, repositories, "
+                                     "private homes); keep the records")
     p.add_argument("run")
     p.add_argument("--force", action="store_true")
 

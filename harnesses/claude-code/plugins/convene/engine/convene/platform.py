@@ -25,6 +25,19 @@ def state_home(env=None):
     return base / "agent-toolbox" / "convene"
 
 
+def cache_home(env=None):
+    """`$XDG_CACHE_HOME/agent-toolbox/convene`, on every platform.
+
+    Where seats run: their workspaces, repositories and private homes. XDG
+    here too, for the reason `state_home` gives; macOS's Time Machine skips
+    `~/Library/Caches` but not `~/.cache`, which the README says how to add.
+    """
+    env = os.environ if env is None else env
+    home = Path(env.get("HOME") or Path.home())
+    base = Path(env.get("XDG_CACHE_HOME") or home / ".cache").expanduser()
+    return base / "agent-toolbox" / "convene"
+
+
 def project_key(root):
     """A stable directory name for one project's runs."""
     return hashlib.sha256(str(Path(root).resolve()).encode()).hexdigest()[:12]

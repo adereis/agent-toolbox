@@ -53,5 +53,6 @@ Then:
    the revision.
 6. `convene export NAME DIR`, write `synthesis.md` there, report the
    receipts and every red flag verbatim, and offer `convene prune NAME`
-   to remove the seat repositories and private homes once the user has
+   to remove the run's environment (seat workspaces, repositories and
+   private homes) once the user has
    what they need. The patch stays in the export.

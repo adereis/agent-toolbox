@@ -13,7 +13,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from convene_support import REPO, STUBS, Sandbox
+from convene_support import REPO, STUBS, Sandbox, environment_of
 
 from convene import doctor, harnesses, isolation, platform, plan, round as round_
 from convene.harnesses import claude as claude_, codex as codex_
@@ -273,7 +273,7 @@ class RealJailTests(unittest.TestCase):
                 self.assertEqual(got["isolation"]["tier"], "enforced")
                 self.assertIn("/usr", got["isolation"]["root_read_only"])
                 self.assertIsNone(got["isolation"]["session_bus"])
-                self.assertTrue(list((root / "homes/s/claude/projects").rglob("*.jsonl")),
+                self.assertTrue(list((environment_of(root) / "homes/s/claude/projects").rglob("*.jsonl")),
                                 "the seat's session landed in its private home")
 
     def test_a_codex_seat_is_inventoried_inside_its_own_jail(self):
@@ -286,7 +286,7 @@ class RealJailTests(unittest.TestCase):
         self.assertEqual(got["status"], "answered", (played, got.get("error")))
         self.assertEqual(got["mcp_servers"], {})
         (asked,) = [json.loads(line) for line in
-                    (root / "homes/x/codex/stub-app-server.jsonl").read_text().splitlines()]
+                    (environment_of(root) / "homes/x/codex/stub-app-server.jsonl").read_text().splitlines()]
         self.assertEqual(asked["cwd"], f"{self.box.home}/workspace")
 
 
@@ -340,7 +340,7 @@ class RealJailWorktreeTests(unittest.TestCase):
         self.assertNotIn(str(self.box.project), " ".join(got["isolation"]["read_only_binds"]),
                          "nothing of the operator's repository is bound for a clone")
         round_.prune(root)
-        self.assertFalse((root / "work/d/repo").exists())
+        self.assertFalse((environment_of(root) / "work/d/repo").exists())
 
     def test_seats_commit_in_the_jail_and_never_see_each_others_commits(self):
         """Linked worktrees shared the operator's .git: under the jail its

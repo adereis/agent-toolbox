@@ -104,7 +104,7 @@ def stage_for_judge(root, plan, n):
     if not is_sealed(root, m):
         seal(root, m)
     letters = read(sealed_dir(root, m) / "seal.json")["letters"]
-    target = root / "work" / judge / "sealed"
+    target = runs.seat_work(root, plan, judge) / "sealed"
     if target.exists():
         shutil.rmtree(target)
     for letter in letters:

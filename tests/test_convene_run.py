@@ -6,7 +6,7 @@ import sys
 import unittest
 from pathlib import Path
 
-from convene_support import Sandbox
+from convene_support import Sandbox, environment_of
 
 from convene import board, export, harnesses, plan, round as round_, runs
 from convene.cli import main
@@ -68,19 +68,19 @@ class RunTests(unittest.TestCase):
                                brief={"text": "[[stub:canary]] Review."})
         round_.run(root)
         call = self.box.calls("skeptic", "claude")[0]
-        self.assertEqual(call["env"]["HOME"], str(root / "homes/skeptic"))
-        self.assertEqual(call["env"]["CLAUDE_CONFIG_DIR"], str(root / "homes/skeptic/claude"))
+        self.assertEqual(call["env"]["HOME"], str(environment_of(root) / "homes/skeptic"))
+        self.assertEqual(call["env"]["CLAUDE_CONFIG_DIR"], str(environment_of(root) / "homes/skeptic/claude"))
         self.assertEqual(call["env"]["CLAUDE_CODE_OAUTH_TOKEN"], "sk-ant-oat-fake-access")
         self.assertIsNone(call["env"]["SECRET_FROM_OPERATOR"], "the environment is an allow-list")
-        self.assertEqual(call["cwd"], str(root / "work/skeptic"))
+        self.assertEqual(call["cwd"], str(environment_of(root) / "work/skeptic"))
         answer = (root / "records/skeptic/r001/answer.md").read_text()
         self.assertIn("READ=ok", answer, "repo-ro is advisory here: the tree is readable")
         self.assertIn("TOKEN=yes SECRET=no", answer)
         launch = read(root / "records/skeptic/r001/launch.json")
         self.assertIn("CLAUDE_CODE_OAUTH_TOKEN", launch["environment"])
         self.assertNotIn("sk-ant", json.dumps(launch), "values never enter the record")
-        self.assertTrue((root / "homes/skeptic/claude/.claude.json").exists())
-        self.assertFalse((root / "homes/skeptic/claude/.credentials.json").exists(),
+        self.assertTrue((environment_of(root) / "homes/skeptic/claude/.claude.json").exists())
+        self.assertFalse((environment_of(root) / "homes/skeptic/claude/.credentials.json").exists(),
                          "the refresh token never enters a seat")
         argv = launch["argv"]
         self.assertIn("--setting-sources", argv)
@@ -95,8 +95,8 @@ class RunTests(unittest.TestCase):
         round_.run(root)
         call = self.box.calls("m", "codex")[0]
         self.assertTrue(call["had_auth"])
-        self.assertFalse((root / "homes/m/codex/auth.json").exists())
-        self.assertTrue(list((root / "homes/m/codex/sessions").rglob("*.jsonl")))
+        self.assertFalse((environment_of(root) / "homes/m/codex/auth.json").exists())
+        self.assertTrue(list((environment_of(root) / "homes/m/codex/sessions").rglob("*.jsonl")))
         argv = call["argv"]
         self.assertEqual(argv[argv.index("-s") + 1], "read-only")
         self.assertIn("--ignore-user-config", argv)
@@ -163,7 +163,7 @@ class RunTests(unittest.TestCase):
         state = read(root / "records" / "skeptic" / "state.json")
         self.assertEqual(state["model_served"], "claude-opus-5-20260601")
         # A newer Opus ships while the seat waits out its quota window.
-        next(root.glob("homes/skeptic/**/stub-calls.jsonl")).with_name("stub-new-opus").touch()
+        next(environment_of(root).glob("homes/skeptic/**/stub-calls.jsonl")).with_name("stub-new-opus").touch()
         self.assertEqual(round_.continue_seat(root, 1, "skeptic"), "answered")
         got = self.receipt(root, "skeptic")
         self.assertEqual(got["model"], "claude-opus-5-20260601")
@@ -212,7 +212,7 @@ class RunTests(unittest.TestCase):
 
     def test_tampered_materials_stop_the_turn(self):
         root, _ = self.prepare(seats=[{"id": "skeptic", "persona": "quinn-t-shun"}])
-        (root / "work/skeptic/materials/diff.patch").write_text("edited\n")
+        (environment_of(root) / "work/skeptic/materials/diff.patch").write_text("edited\n")
         played, _ = round_.run(root)
         self.assertIn("stopped: seat materials changed", played[0][1]["skeptic"])
         self.assertEqual(self.box.calls("skeptic", "claude"), [])
@@ -372,14 +372,14 @@ class GrantTests(unittest.TestCase):
         root, _ = self.prepare([{"id": "c", "persona": "quinn-t-shun", "grants": ["mcp"]},
                                 {"id": "w", "persona": "sec-urity", "grants": ["web"]}],
                                brief={"text": "[[stub:mcp]] Review."})
-        (root / "work/w/START.md").write_text("[[stub:web]] Review.\n")
+        (environment_of(root) / "work/w/START.md").write_text("[[stub:web]] Review.\n")
         # The standing assignment is hashed, so edit the frozen digest to match
         # this deliberate test edit rather than defeating the check.
         from convene.storage import digest, write
         _, frozen = runs.load(root)
         for seat in frozen["seats"]:
             if seat["id"] == "w":
-                seat["start_sha256"] = digest(root / "work/w/START.md")
+                seat["start_sha256"] = digest(environment_of(root) / "work/w/START.md")
         write(root / "plan.json", frozen)
         write(root / "plan-digest.json", {"sha256": digest(root / "plan.json")})
         round_.run(root)
@@ -521,7 +521,7 @@ class CodexInventoryTests(unittest.TestCase):
         self.assertIn("no model was called", results["x"])
         self.assertEqual(self.box.calls("x", "codex"), [], "the turn never started")
         self.assertFalse((root / "records/x/r001/events.jsonl").exists())
-        self.assertFalse(list((root / "homes/x").rglob("auth.json")), "the login is unstaged")
+        self.assertFalse(list((environment_of(root) / "homes/x").rglob("auth.json")), "the login is unstaged")
 
     def test_an_inventory_that_cannot_be_read_refuses_the_seat(self):
         _, results = self.run_seat(env=self.passthrough("CONVENE_STUB_APP_SERVER", "broken"))

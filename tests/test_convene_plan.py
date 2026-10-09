@@ -5,7 +5,7 @@ import os
 import unittest
 from pathlib import Path
 
-from convene_support import PLUGIN, Sandbox  # noqa: F401  (sets sys.path)
+from convene_support import PLUGIN, Sandbox, environment_of  # noqa: F401  (sets sys.path)
 
 from convene import harnesses, instruments, personas, plan, round as round_, runs
 from convene.presets import panel
@@ -33,15 +33,34 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(seat["tools"], "read")
         self.assertEqual(seat["model"], "opus")
         self.assertEqual(sorted(seat["reads"]), ["diff.patch", "docs.md", "log.txt"])
-        start = (root / "work/skeptic/START.md").read_text()
+        start = (environment_of(root) / "work/skeptic/START.md").read_text()
         self.assertIn("Quinn T. Shun", start)
         self.assertIn("the design note (materials/docs.md)", start)
-        self.assertIn("Break addition", (root / "work/skeptic/materials/log.txt").read_text())
-        self.assertIn("-    return a + b", (root / "work/skeptic/materials/diff.patch").read_text())
+        self.assertIn("Break addition", (environment_of(root) / "work/skeptic/materials/log.txt").read_text())
+        self.assertIn("-    return a + b", (environment_of(root) / "work/skeptic/materials/diff.patch").read_text())
         self.assertNotIn("opus", start.lower(), "model names never reach a seat")
         self.assertIn("Report findings", start)
         self.assertTrue((root / ".gitignore").exists())
         self.assertTrue(str(root).startswith(str(self.box.state)), "state lives under XDG, not the project")
+
+    def test_records_stay_in_state_and_the_environment_goes_to_a_tagged_cache(self):
+        """A backup keeps the records and can skip what the seats ran in."""
+        root, frozen = self.prepare(self.box.plan())
+        base = self.box.cache / "agent-toolbox/convene"
+        environment = base / root.parent.name / root.name
+        self.assertEqual(frozen["environment"], str(environment))
+        self.assertEqual(root.parent.parent, self.box.state / "agent-toolbox/convene")
+        self.assertTrue((environment / "work/skeptic/START.md").is_file())
+        self.assertTrue((environment / "homes/skeptic").is_dir())
+        self.assertEqual(oct((environment / "homes/skeptic").stat().st_mode & 0o777), "0o700")
+        self.assertFalse((root / "work").exists(), "no workspace among the records")
+        self.assertFalse((root / "homes").exists(), "no private home among the records")
+        tag = (base / "CACHEDIR.TAG").read_text()
+        self.assertTrue(tag.startswith("Signature: 8a477f597d28d172789f06886806bc55\n"),
+                        "the exact signature tag-aware backups test for")
+        self.assertIn("*", (environment / ".gitignore").read_text())
+        self.assertEqual(runs.environment(root, frozen), environment)
+        self.assertEqual(runs.seat_work(root, frozen, "skeptic"), environment / "work/skeptic")
 
     def test_run_names_are_dated_and_do_not_collide(self):
         first, _ = self.prepare(self.box.plan())
@@ -50,6 +69,14 @@ class PlanTests(unittest.TestCase):
         self.assertTrue(second.name.endswith("-2"))
         with self.assertRaisesRegex(ValueError, "run exists"):
             self.prepare(self.box.plan(), name=first.name)
+        # An environment outlives its deleted records: the name stays taken,
+        # so a new run never inherits an old run's homes and workspaces.
+        orphan = environment_of(second)
+        __import__("shutil").rmtree(second)
+        with self.assertRaisesRegex(ValueError, f"or its environment {orphan}"):
+            self.prepare(self.box.plan(), name=second.name)
+        third, _ = self.prepare(self.box.plan())
+        self.assertTrue(third.name.endswith("-3"))
 
     def test_tools_none_cannot_take_materials(self):
         with self.assertRaisesRegex(ValueError, "cannot read materials"):
@@ -231,7 +258,7 @@ class PlanTests(unittest.TestCase):
             "description": "project override", "tags": ["skeptic"], "prompt": "You are Local Quinn."}))
         root, frozen = self.prepare(self.box.plan())
         self.assertEqual(frozen["seats"][0]["persona"]["profile"]["revision"], 7)
-        self.assertIn("You are Local Quinn.", (root / "work/skeptic/START.md").read_text())
+        self.assertIn("You are Local Quinn.", (environment_of(root) / "work/skeptic/START.md").read_text())
 
     def test_instruction_files_never_travel_as_materials(self):
         for path in ("AGENTS.md", "docs/../CLAUDE.md", ".claude/settings.json"):

@@ -20,6 +20,11 @@ if str(ENGINE) not in sys.path:
     sys.path.insert(0, str(ENGINE))
 
 
+def environment_of(root):
+    """Where a run's seats work: its `work/` and `homes/`, named by its plan."""
+    return Path(json.loads((Path(root) / "plan.json").read_text())["environment"])
+
+
 class Sandbox:
     """Everything a run touches, redirected into one temporary directory."""
 
@@ -33,8 +38,12 @@ class Sandbox:
         self.home.mkdir()
         (self.home / "tmp").mkdir()
         self.state = self.root / "state"
+        # Explicit rather than left to default under HOME, so a test that
+        # finds an environment here knows the engine looked the variable up.
+        self.cache = self.root / "cache"
         (self.root / "run").mkdir()
         env = {"HOME": str(self.home), "XDG_STATE_HOME": str(self.state),
+               "XDG_CACHE_HOME": str(self.cache),
                # A private runtime directory and a bus address the fake proxy
                # never dials, so no test touches the operator's session bus.
                "XDG_RUNTIME_DIR": str(self.root / "run"),
@@ -141,7 +150,7 @@ class Sandbox:
         return path
 
     def calls(self, seat, harness):
-        path = self.state / "agent-toolbox/convene"
+        path = self.cache / "agent-toolbox/convene"
         found = list(path.rglob(f"homes/{seat}/{harness}/stub-calls.jsonl"))
         if not found:
             return []

@@ -47,7 +47,7 @@ def turn_prompt(root, plan, seat, n, *, cold=False):
     """
     name = seat["id"]
     phase = board.phase_for(plan, n)
-    start = (Path(root) / "work" / name / "START.md").read_text(encoding="utf-8")
+    start = (runs.seat_work(root, plan, name) / "START.md").read_text(encoding="utf-8")
     first = next((r for r in range(1, n + 1) if name in board.acting(plan, r)), n)
     if n == 1:
         text = start + "\nNobody has posted yet. Post now."
@@ -111,7 +111,7 @@ def open_round(root, plan, n):
     for seat in plan["seats"]:
         if seat["visibility"] != "board":
             continue
-        target = Path(root) / "work" / seat["id"] / "board" / f"round-{n - 1:03d}"
+        target = runs.seat_work(root, plan, seat["id"]) / "board" / f"round-{n - 1:03d}"
         target.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target / "digest.md")
     event(root, round=n, event="board-published", digest_sha256=digest(source))
@@ -142,7 +142,7 @@ def _terminate(proc):
 
 def run_seat(root, plan, seat, n, *, timeout=None):
     name = seat["id"]
-    work = Path(root) / "work" / name
+    work = runs.seat_work(root, plan, name)
     state = read(state_path(root, name))
     if str(n) in state["rounds"]:
         return state["rounds"][str(n)]["status"]
@@ -183,7 +183,7 @@ def launch(root, plan, seat, n, prompt, mode, session_id, *, timeout=None):
         # release between rounds cannot switch the seat's model.
         seat = {**seat, "model_pinned": pinned}
     tier = isolation.get(seat["isolation"])
-    work, seat_home = root / "work" / name, root / "homes" / name
+    work, seat_home = runs.seat_work(root, plan, name), runs.seat_home(root, plan, name)
     record = root / "records" / name / f"r{n:03d}"
     record.mkdir(parents=True, exist_ok=True)
     write_text(record / "prompt.md", prompt)
@@ -327,6 +327,7 @@ def continue_seat(root, n, name, *, timeout=None):
     """
     root, plan = runs.load(root)
     seat = seat_named(plan, name)
+    runs.require_environment(root, plan)
     record = root / "records" / name / f"r{n:03d}"
     state = read(state_path(root, name))
     attempt = state.get("rounds", {}).get(str(n))
@@ -376,6 +377,9 @@ def run_round(root, n, *, jobs=None, timeout=None):
             raise ValueError(f"round {n} is already published")
         if n > 1 and (n - 1) not in board.published_rounds(root):
             raise ValueError(f"round {n - 1} is not published yet")
+        # Before open_round, which would recreate the board folders of a
+        # workspace that is gone and leave it looking present.
+        runs.require_environment(root, plan)
         jobs = jobs or plan.get("jobs") or 1
         # Concurrency is capped per harness, not only overall: seats sharing
         # one account meet the same quota wall together, while seats on
@@ -449,6 +453,7 @@ def promote_held(root, n):
     with lock(root / "run.lock"):
         if n in board.published_rounds(root):
             raise ValueError(f"round {n} is already published")
+        runs.require_environment(root, plan)
         waiting = [s["id"] for s in plan["seats"] if s["id"] in board.acting(plan, n)
                    and read(state_path(root, s["id"])).get("rounds", {}).get(str(n), {}).get("status") == "quota"]
         if waiting:
@@ -463,6 +468,7 @@ def promote_absent(root, n):
     with lock(root / "run.lock"):
         if n in board.published_rounds(root):
             raise ValueError(f"round {n} is already published")
+        runs.require_environment(root, plan)
         for seat in plan["seats"]:
             state = read(state_path(root, seat["id"]))
             turn = state.get("rounds", {}).get(str(n))
@@ -485,16 +491,22 @@ def _spans(numbers):
     return ", ".join(str(a) if a == b else f"{a}-{b}" for a, b in spans)
 
 
-def next_step(root, plan, *, published, budget, held, withheld, converged):
+def next_step(root, plan, *, published, budget, held, withheld, converged, gone=None):
     """The one command to type next.
 
     Every other verb ends by naming the verb that follows it; status read
     the state and stopped, so a prepared run and a finished one ended the
     same way and neither told the operator what to do. The branches mirror
     `run`'s stop rule and `seal.guard`'s wording, so a reader is never sent
-    to a command the engine would refuse.
+    to a command the engine would refuse. `gone`, when set, says why the
+    environment no longer exists; then no seat takes a turn and no round is
+    promoted, and only reading the board is left.
     """
     name = plan["name"]
+    ended = (f"convene board {name}, then convene export {name} DIR; no seat can take "
+             f"another turn, because the run's environment is gone ({gone})")
+    if held and gone:
+        return ended
     if held:
         waiting = held[0].get("waiting_on") or []
         first = waiting[0] if waiting else "SEAT"
@@ -504,7 +516,9 @@ def next_step(root, plan, *, published, budget, held, withheld, converged):
     if withheld:
         n = seal.pending(root, plan)[-1]
         rules = seal.judge_round(root, plan, n)
-        if rules and rules not in published:
+        # Without an environment the judge seat cannot rule, and the round is
+        # read sealed by hand like any other.
+        if rules and rules not in published and not gone:
             # A judge seat rules before anybody reads the letters, so the
             # next step is its round, not `seal`.
             return f"convene run {name}; the judge {seal.judge_of(plan)} reads round {n} sealed next"
@@ -516,6 +530,8 @@ def next_step(root, plan, *, published, budget, held, withheld, converged):
             return f"convene seal {name}"
         return (f"read {root}/sealed/r{n:03d}/, write its {seal.JUDGMENT}, "
                 f"then convene unseal {name}")
+    if len(published) < budget and gone:
+        return ended
     if len(published) < budget and not converged:
         return f"convene run {name}"
     if converged and len(published) < budget:
@@ -591,7 +607,9 @@ def status(root):
     converged = unphased and bool(signals) and signals[-1]["converged"]
     flags = sum(len(got.get("red_flags") or [])
                 for one in seats.values() for got in one["receipts"].values())
+    gone = runs.environment_gone(root, plan)
     return {"run": str(root), "name": plan["name"], "title": plan["title"], "kind": plan["kind"],
+            "environment": {"path": str(runs.environment(root, plan)), "gone": gone},
             "sealed": seal.sealed_rounds(root), "withheld": withheld,
             "rounds": budget, "declared_rounds": plan["rounds"],
             "phases": plan["phases"], "published_rounds": published, "held": still_held,
@@ -600,7 +618,7 @@ def status(root):
                       "queued": [r for r in spoken if r not in published]},
             "seats": seats, "last_events": rows[-8:],
             "next": next_step(root, plan, published=published, budget=budget, held=still_held,
-                              withheld=withheld, converged=converged)}
+                              withheld=withheld, converged=converged, gone=gone)}
 
 
 def _turn_line(n, got):
@@ -670,7 +688,13 @@ def render_status(data):
         rounds += f" ({_spans(published)})"
     if budget != data["declared_rounds"]:
         rounds += f"; budget raised from the {data['declared_rounds']} declared"
-    lines = [f"{data['title']}  [{data['kind']}, {data['name']}]", f"  {data['run']}", rounds]
+    lines = [f"{data['title']}  [{data['kind']}, {data['name']}]", f"  {data['run']}"]
+    environment = data["environment"]
+    if environment["gone"]:
+        lines.append(f"  environment: gone ({environment['gone']})")
+    elif environment["path"] != data["run"]:
+        lines.append(f"  environment: {environment['path']}")
+    lines.append(rounds)
     if len(data["phases"]) > 1 or data["phases"][0].get("seats"):
         lines.append("  phases: " + ", ".join(f"{p['name']} x{p['rounds']}"
                                               + (f" [{', '.join(p['seats'])}]" if p.get("seats") else "")
@@ -735,14 +759,21 @@ def usage(root):
 
 
 def prune(root, *, force=False):
-    """Remove the run's seat repositories and private homes, keeping every record.
+    """Remove the run's environment, keeping every record.
 
+    The environment is each seat's workspace, repository and private home.
     A private home is the harness's own state, bound over the real one so a
     seat cannot reach the operator's; it is large and nothing else collects
     it. A seat's repository is a clone of the operator's, and its work is
-    already captured as changes.patch. Neither is evidence: the receipts
-    beside them already hold what was read from them. A seat still running is never pruned; a machine that cannot say
-    whether one is running keeps everything unless forced.
+    already captured as changes.patch. None of it is evidence: the receipts
+    and the board already hold what was read from it, and a material is
+    named in the plan by its path and hash. A seat still running is never
+    pruned; a machine that cannot say whether one is running keeps
+    everything unless forced.
+
+    A run prepared before environments moved to the cache keeps its
+    workspaces inside the run directory, so only its repositories and homes
+    go.
     """
     root, plan = runs.load(root)
     live = []
@@ -759,12 +790,19 @@ def prune(root, *, force=False):
     if live:
         raise RuntimeError("seats still running: " + ", ".join(f"{s} (pid {p})" for s, p in live))
     removed = []
+    environment = runs.environment(root, plan)
+    if environment != root:
+        if environment.exists():
+            shutil.rmtree(environment)
+            removed.append(str(environment))
+        event(root, event="pruned", removed=removed)
+        return removed
     for seat in plan["seats"]:
-        tree = root / "work" / seat["id"] / workspace.REPO
+        tree = runs.seat_work(root, plan, seat["id"]) / workspace.REPO
         if seat["workspace"] == "worktree" and tree.exists():
             workspace.remove(plan["project_root"], tree)
             removed.append(str(tree))
-        home = root / "homes" / seat["id"]
+        home = runs.seat_home(root, plan, seat["id"])
         if home.exists():
             shutil.rmtree(home)
             removed.append(str(home))
