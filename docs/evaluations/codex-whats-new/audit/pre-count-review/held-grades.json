@@ -1,0 +1,619 @@
+[
+  {
+    "label": "R01",
+    "case": "held-topic",
+    "checks": {
+      "common-topic.layout": true,
+      "common-topic.coverage": false,
+      "common-topic.baseline": true,
+      "common-topic.no-false-impact": true,
+      "held-topic.introduction": true,
+      "held-topic.rename": true,
+      "held-topic.trust-fix": true,
+      "held-topic.reversal": true,
+      "held-topic.collisions": true
+    },
+    "failures": {
+      "common-topic.coverage": "Missing the six matches / six shown-and-read coverage count."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R02",
+    "case": "held-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": false,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": false,
+      "common-window.deduplication": true,
+      "held-public.no-decisions": true,
+      "held-public.queued-messages": true,
+      "held-public.history": true,
+      "held-public.sqlite": true,
+      "held-public.copy": false,
+      "held-public.plan-hint": false,
+      "held-public.content-filter": false,
+      "held-public.capabilities": true,
+      "held-public.x11": true,
+      "held-public.unsupported-integrations": true,
+      "held-public.testing-only": true
+    },
+    "failures": {
+      "common-window.bounds": "\"The report says the baseline is 0.159.3 and remains unchanged. No baseline has been recorded yet.\" The report records baseline 0.159.3; the answer gives contradictory baseline status.",
+      "common-window.no-false-impact": "\"Your statusline is enabled, so this is a visible UI refinement\" presents the Plan-mode hint as visible here without establishing fullscreen mode.",
+      "held-public.copy": "Missing inline-code copying as plain text and quoted-selection copying without blockquote markers.",
+      "held-public.plan-hint": "\"The status line gained a Plan-mode cycling hint. Your statusline is enabled, so this is a visible UI refinement.\" Missing the fullscreen condition; local visibility is asserted.",
+      "held-public.content-filter": "Missing recovery guidance for content-filter retries."
+    },
+    "false_actions": [],
+    "false_impacts": [
+      "Your statusline is enabled, so this is a visible UI refinement."
+    ]
+  },
+  {
+    "label": "R03",
+    "case": "held-topic",
+    "checks": {
+      "common-topic.layout": true,
+      "common-topic.coverage": true,
+      "common-topic.baseline": true,
+      "common-topic.no-false-impact": true,
+      "held-topic.introduction": true,
+      "held-topic.rename": true,
+      "held-topic.trust-fix": true,
+      "held-topic.reversal": true,
+      "held-topic.collisions": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R04",
+    "case": "held-topic",
+    "checks": {
+      "common-topic.layout": true,
+      "common-topic.coverage": false,
+      "common-topic.baseline": true,
+      "common-topic.no-false-impact": true,
+      "held-topic.introduction": true,
+      "held-topic.rename": true,
+      "held-topic.trust-fix": true,
+      "held-topic.reversal": true,
+      "held-topic.collisions": true
+    },
+    "failures": {
+      "common-topic.coverage": "Missing the six matches / six shown-and-read coverage count."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R05",
+    "case": "held-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": false,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-conditions.hook-action": true,
+      "held-conditions.memory-off": true,
+      "held-conditions.hint-value": true,
+      "held-conditions.plugin-scope": true,
+      "held-conditions.statusline": true,
+      "held-conditions.bookmarks": true,
+      "held-conditions.hidden": true,
+      "held-conditions.terminal": true
+    },
+    "failures": {
+      "common-window.counts": "Missing supplied withheld breakdown: one Windows entry and one macOS entry."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R06",
+    "case": "held-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-public.no-decisions": true,
+      "held-public.queued-messages": true,
+      "held-public.history": true,
+      "held-public.sqlite": true,
+      "held-public.copy": false,
+      "held-public.plan-hint": false,
+      "held-public.content-filter": true,
+      "held-public.capabilities": true,
+      "held-public.x11": true,
+      "held-public.unsupported-integrations": true,
+      "held-public.testing-only": true
+    },
+    "failures": {
+      "held-public.copy": "Missing inline-code copying as plain text and quoted-selection copying without blockquote markers.",
+      "held-public.plan-hint": "\"Since your statusline is enabled, it can now show the Plan-mode cycling hint.\" Missing the fullscreen condition."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R07",
+    "case": "held-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-conditions.hook-action": true,
+      "held-conditions.memory-off": true,
+      "held-conditions.hint-value": true,
+      "held-conditions.plugin-scope": true,
+      "held-conditions.statusline": true,
+      "held-conditions.bookmarks": true,
+      "held-conditions.hidden": true,
+      "held-conditions.terminal": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R08",
+    "case": "held-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": false,
+      "common-window.limits": false,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": false,
+      "common-window.deduplication": true,
+      "held-conditions.hook-action": true,
+      "held-conditions.memory-off": true,
+      "held-conditions.hint-value": true,
+      "held-conditions.plugin-scope": false,
+      "held-conditions.statusline": true,
+      "held-conditions.bookmarks": true,
+      "held-conditions.hidden": true,
+      "held-conditions.terminal": true
+    },
+    "failures": {
+      "common-window.counts": "Missing supplied withheld breakdown: one Windows entry and one macOS entry.",
+      "common-window.limits": "\"reference-plugin is listed as enabled here\" infers activation from the plugin inventory despite the general file-inventory disclaimer.",
+      "common-window.no-false-impact": "\"reference-plugin is listed as enabled here\" invents an enabled-plugin state; the inventory establishes presence only.",
+      "held-conditions.plugin-scope": "\"reference-plugin is listed as enabled here\" treats inventory presence as enabled status."
+    },
+    "false_actions": [],
+    "false_impacts": [
+      "`reference-plugin` is listed as enabled here."
+    ]
+  },
+  {
+    "label": "R09",
+    "case": "held-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-public.no-decisions": true,
+      "held-public.queued-messages": true,
+      "held-public.history": true,
+      "held-public.sqlite": true,
+      "held-public.copy": true,
+      "held-public.plan-hint": true,
+      "held-public.content-filter": true,
+      "held-public.capabilities": true,
+      "held-public.x11": true,
+      "held-public.unsupported-integrations": true,
+      "held-public.testing-only": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R10",
+    "case": "held-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": false,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-conditions.hook-action": true,
+      "held-conditions.memory-off": true,
+      "held-conditions.hint-value": true,
+      "held-conditions.plugin-scope": true,
+      "held-conditions.statusline": true,
+      "held-conditions.bookmarks": true,
+      "held-conditions.hidden": true,
+      "held-conditions.terminal": true
+    },
+    "failures": {
+      "common-window.limits": "Missing the general file-inventory versus effective-runtime limitation and unresolved overrides/defaults. Local snapshot coverage is disclosed."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R11",
+    "case": "held-topic",
+    "checks": {
+      "common-topic.layout": true,
+      "common-topic.coverage": true,
+      "common-topic.baseline": true,
+      "common-topic.no-false-impact": true,
+      "held-topic.introduction": true,
+      "held-topic.rename": true,
+      "held-topic.trust-fix": true,
+      "held-topic.reversal": true,
+      "held-topic.collisions": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R12",
+    "case": "held-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-conditions.hook-action": true,
+      "held-conditions.memory-off": true,
+      "held-conditions.hint-value": true,
+      "held-conditions.plugin-scope": true,
+      "held-conditions.statusline": true,
+      "held-conditions.bookmarks": true,
+      "held-conditions.hidden": true,
+      "held-conditions.terminal": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R13",
+    "case": "held-topic",
+    "checks": {
+      "common-topic.layout": true,
+      "common-topic.coverage": true,
+      "common-topic.baseline": true,
+      "common-topic.no-false-impact": true,
+      "held-topic.introduction": true,
+      "held-topic.rename": true,
+      "held-topic.trust-fix": true,
+      "held-topic.reversal": true,
+      "held-topic.collisions": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R14",
+    "case": "held-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": false,
+      "common-window.limits": false,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-conditions.hook-action": true,
+      "held-conditions.memory-off": true,
+      "held-conditions.hint-value": true,
+      "held-conditions.plugin-scope": true,
+      "held-conditions.statusline": true,
+      "held-conditions.bookmarks": true,
+      "held-conditions.hidden": false,
+      "held-conditions.terminal": true
+    },
+    "failures": {
+      "common-window.counts": "\"Hidden unmatched: 0 reported\" contradicts the report’s four unmatched entries not shown, even though the preceding bullet correctly mentions those four.",
+      "common-window.limits": "Missing the general file-inventory versus effective-runtime limitation and unresolved overrides/defaults. Local snapshot coverage is disclosed.",
+      "held-conditions.hidden": "\"Hidden unmatched: 0 reported\" contradicts the four hidden unmatched entries and the answer’s own preceding not-shown count."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R15",
+    "case": "held-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-public.no-decisions": true,
+      "held-public.queued-messages": true,
+      "held-public.history": true,
+      "held-public.sqlite": false,
+      "held-public.copy": false,
+      "held-public.plan-hint": true,
+      "held-public.content-filter": false,
+      "held-public.capabilities": false,
+      "held-public.x11": true,
+      "held-public.unsupported-integrations": true,
+      "held-public.testing-only": true
+    },
+    "failures": {
+      "held-public.sqlite": "Missing SQLite connection/logging stalls and visible initialization errors.",
+      "held-public.copy": "Missing inline-code copying as plain text and quoted-selection copying without blockquote markers.",
+      "held-public.content-filter": "Missing recovery guidance for content-filter retries.",
+      "held-public.capabilities": "Missing projectless sessions with workspace defaults when policy permits and saved permissions restored on resume; command-center pagination is covered."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R16",
+    "case": "held-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-public.no-decisions": true,
+      "held-public.queued-messages": true,
+      "held-public.history": true,
+      "held-public.sqlite": false,
+      "held-public.copy": true,
+      "held-public.plan-hint": true,
+      "held-public.content-filter": false,
+      "held-public.capabilities": true,
+      "held-public.x11": true,
+      "held-public.unsupported-integrations": true,
+      "held-public.testing-only": true
+    },
+    "failures": {
+      "held-public.sqlite": "Missing SQLite connection/logging stalls and visible initialization errors.",
+      "held-public.content-filter": "Missing recovery guidance for content-filter retries."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R17",
+    "case": "held-topic",
+    "checks": {
+      "common-topic.layout": true,
+      "common-topic.coverage": true,
+      "common-topic.baseline": true,
+      "common-topic.no-false-impact": true,
+      "held-topic.introduction": true,
+      "held-topic.rename": true,
+      "held-topic.trust-fix": true,
+      "held-topic.reversal": true,
+      "held-topic.collisions": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R18",
+    "case": "held-topic",
+    "checks": {
+      "common-topic.layout": true,
+      "common-topic.coverage": true,
+      "common-topic.baseline": true,
+      "common-topic.no-false-impact": true,
+      "held-topic.introduction": true,
+      "held-topic.rename": true,
+      "held-topic.trust-fix": true,
+      "held-topic.reversal": true,
+      "held-topic.collisions": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R19",
+    "case": "held-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-public.no-decisions": true,
+      "held-public.queued-messages": true,
+      "held-public.history": true,
+      "held-public.sqlite": false,
+      "held-public.copy": false,
+      "held-public.plan-hint": true,
+      "held-public.content-filter": false,
+      "held-public.capabilities": true,
+      "held-public.x11": true,
+      "held-public.unsupported-integrations": true,
+      "held-public.testing-only": true
+    },
+    "failures": {
+      "held-public.sqlite": "Missing SQLite connection/logging stalls and visible initialization errors.",
+      "held-public.copy": "Missing inline-code copying as plain text and quoted-selection copying without blockquote markers.",
+      "held-public.content-filter": "Missing recovery guidance for content-filter retries."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R20",
+    "case": "held-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-conditions.hook-action": true,
+      "held-conditions.memory-off": true,
+      "held-conditions.hint-value": true,
+      "held-conditions.plugin-scope": true,
+      "held-conditions.statusline": true,
+      "held-conditions.bookmarks": true,
+      "held-conditions.hidden": true,
+      "held-conditions.terminal": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R21",
+    "case": "held-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-public.no-decisions": true,
+      "held-public.queued-messages": true,
+      "held-public.history": true,
+      "held-public.sqlite": false,
+      "held-public.copy": true,
+      "held-public.plan-hint": false,
+      "held-public.content-filter": true,
+      "held-public.capabilities": true,
+      "held-public.x11": true,
+      "held-public.unsupported-integrations": true,
+      "held-public.testing-only": true
+    },
+    "failures": {
+      "held-public.sqlite": "Missing SQLite connection/logging stalls and visible initialization errors.",
+      "held-public.plan-hint": "\"the status line now shows a Plan-mode cycling hint\" omits the fullscreen condition."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R22",
+    "case": "held-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-conditions.hook-action": true,
+      "held-conditions.memory-off": true,
+      "held-conditions.hint-value": true,
+      "held-conditions.plugin-scope": true,
+      "held-conditions.statusline": true,
+      "held-conditions.bookmarks": true,
+      "held-conditions.hidden": true,
+      "held-conditions.terminal": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R23",
+    "case": "held-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-public.no-decisions": true,
+      "held-public.queued-messages": true,
+      "held-public.history": true,
+      "held-public.sqlite": false,
+      "held-public.copy": false,
+      "held-public.plan-hint": true,
+      "held-public.content-filter": false,
+      "held-public.capabilities": true,
+      "held-public.x11": true,
+      "held-public.unsupported-integrations": true,
+      "held-public.testing-only": true
+    },
+    "failures": {
+      "held-public.sqlite": "Missing SQLite connection/logging stalls and visible initialization errors.",
+      "held-public.copy": "Missing inline-code copying as plain text and quoted-selection copying without blockquote markers.",
+      "held-public.content-filter": "Missing recovery guidance for content-filter retries."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R24",
+    "case": "held-topic",
+    "checks": {
+      "common-topic.layout": true,
+      "common-topic.coverage": true,
+      "common-topic.baseline": true,
+      "common-topic.no-false-impact": true,
+      "held-topic.introduction": true,
+      "held-topic.rename": true,
+      "held-topic.trust-fix": true,
+      "held-topic.reversal": true,
+      "held-topic.collisions": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  }
+]

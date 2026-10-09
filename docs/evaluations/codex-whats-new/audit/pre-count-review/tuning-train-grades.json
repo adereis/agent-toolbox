@@ -1,0 +1,387 @@
+[
+  {
+    "label": "R01",
+    "case": "train-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-conditions.memory-action": true,
+      "train-conditions.legacy-question": true,
+      "train-conditions.vim": true,
+      "train-conditions.subagents": true,
+      "train-conditions.disabled-hooks": true,
+      "train-conditions.telemetry": true,
+      "train-conditions.missing-mcp": true,
+      "train-conditions.capabilities": true,
+      "train-conditions.terminal": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R02",
+    "case": "train-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": false,
+      "common-window.deduplication": false,
+      "train-public.opt-in": true,
+      "train-public.model": true,
+      "train-public.warning-retention": true,
+      "train-public.permissions": true,
+      "train-public.copy-and-drafts": true,
+      "train-public.mcp-boundaries": true,
+      "train-public.mcp-resources": false,
+      "train-public.mcp-status": true,
+      "train-public.skills": true,
+      "train-public.compaction": true,
+      "train-public.terminal": true,
+      "train-public.suggestions": true,
+      "train-public.absent-integrations": true
+    },
+    "failures": {
+      "common-window.no-false-impact": "\"MCP app-resource URIs retain their intended display mode\" substitutes display-mode preservation for the supplied URI-preservation fix without defaulting a display mode.",
+      "common-window.deduplication": "Copied Markdown tables and whitespace appear as fixes under \"Several ordinary TUI rough edges\" and again under \"Transcript interaction and terminal polish improved\".",
+      "train-public.mcp-resources": "\"MCP app-resource URIs retain their intended display mode\" does not cover preservation of resource URIs themselves; the source separately says not to default display mode."
+    },
+    "false_actions": [],
+    "false_impacts": [
+      "MCP app-resource URIs retain their intended display mode"
+    ]
+  },
+  {
+    "label": "R03",
+    "case": "train-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-conditions.memory-action": true,
+      "train-conditions.legacy-question": true,
+      "train-conditions.vim": true,
+      "train-conditions.subagents": true,
+      "train-conditions.disabled-hooks": true,
+      "train-conditions.telemetry": true,
+      "train-conditions.missing-mcp": true,
+      "train-conditions.capabilities": true,
+      "train-conditions.terminal": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R04",
+    "case": "train-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": false,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-conditions.memory-action": true,
+      "train-conditions.legacy-question": false,
+      "train-conditions.vim": true,
+      "train-conditions.subagents": true,
+      "train-conditions.disabled-hooks": true,
+      "train-conditions.telemetry": true,
+      "train-conditions.missing-mcp": true,
+      "train-conditions.capabilities": true,
+      "train-conditions.terminal": true
+    },
+    "failures": {
+      "common-window.counts": "\"2 unmatched entries ... They were not shown and were not read.\" The report explicitly says Not shown: 0 unmatched entries.",
+      "train-conditions.legacy-question": "Missing a Could not check question about legacy_access with its replacement consequence; the migration appears only under Worth knowing."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R05",
+    "case": "train-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": false,
+      "common-window.deduplication": true,
+      "train-public.opt-in": true,
+      "train-public.model": true,
+      "train-public.warning-retention": true,
+      "train-public.permissions": true,
+      "train-public.copy-and-drafts": true,
+      "train-public.mcp-boundaries": false,
+      "train-public.mcp-resources": true,
+      "train-public.mcp-status": false,
+      "train-public.skills": true,
+      "train-public.compaction": true,
+      "train-public.terminal": true,
+      "train-public.suggestions": true,
+      "train-public.absent-integrations": true
+    },
+    "failures": {
+      "common-window.no-false-impact": "\"MCP credentials are preserved across reconnects\" describes credential retention, whereas the supplied fix preserves executor MCP credential boundaries.",
+      "train-public.mcp-boundaries": "\"MCP credentials are preserved across reconnects\" omits the credential-boundary/isolation safeguard.",
+      "train-public.mcp-status": "Missing single-server MCP status discovery with thread connection reuse."
+    },
+    "false_actions": [],
+    "false_impacts": [
+      "MCP credentials are preserved across reconnects."
+    ]
+  },
+  {
+    "label": "R06",
+    "case": "train-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-conditions.memory-action": true,
+      "train-conditions.legacy-question": false,
+      "train-conditions.vim": true,
+      "train-conditions.subagents": true,
+      "train-conditions.disabled-hooks": true,
+      "train-conditions.telemetry": true,
+      "train-conditions.missing-mcp": true,
+      "train-conditions.capabilities": true,
+      "train-conditions.terminal": true
+    },
+    "failures": {
+      "train-conditions.legacy-question": "Missing a Could not check question about legacy_access with its replacement consequence; the migration appears only under Worth knowing as having no established match."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R07",
+    "case": "train-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-conditions.memory-action": true,
+      "train-conditions.legacy-question": true,
+      "train-conditions.vim": true,
+      "train-conditions.subagents": true,
+      "train-conditions.disabled-hooks": true,
+      "train-conditions.telemetry": true,
+      "train-conditions.missing-mcp": true,
+      "train-conditions.capabilities": true,
+      "train-conditions.terminal": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R08",
+    "case": "train-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": false,
+      "common-window.counts": false,
+      "common-window.limits": false,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": false,
+      "train-public.opt-in": true,
+      "train-public.model": true,
+      "train-public.warning-retention": true,
+      "train-public.permissions": true,
+      "train-public.copy-and-drafts": true,
+      "train-public.mcp-boundaries": true,
+      "train-public.mcp-resources": true,
+      "train-public.mcp-status": true,
+      "train-public.skills": true,
+      "train-public.compaction": true,
+      "train-public.terminal": true,
+      "train-public.suggestions": true,
+      "train-public.absent-integrations": true
+    },
+    "failures": {
+      "common-window.bounds": "\"0.159.0 — Provider catalog\" attributes the GPT-6.1 Sol default addition to 0.159.0 instead of 0.159.1. \"0.159.1 — OpenAI endpoint override fix\" assigns the 0.159.0 override-metadata fix to 0.159.1.",
+      "common-window.counts": "\"0 unmatched entries were hidden, so those 78 were not read\" incorrectly derives non-reading from a zero hidden count; the utility displayed all unmatched entries.",
+      "common-window.limits": "Missing the file-inventory versus effective-runtime limitation and unresolved overrides/defaults.",
+      "common-window.deduplication": "Markdown-table/whitespace copying is repeated under \"TUI interaction and formatting\" and \"Terminal and display details\". Endpoint-override metadata preservation is also listed twice under different releases."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R09",
+    "case": "train-public",
+    "checks": {
+      "common-window.groups": false,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": false,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-public.opt-in": true,
+      "train-public.model": true,
+      "train-public.warning-retention": true,
+      "train-public.permissions": true,
+      "train-public.copy-and-drafts": true,
+      "train-public.mcp-boundaries": true,
+      "train-public.mcp-resources": false,
+      "train-public.mcp-status": true,
+      "train-public.skills": false,
+      "train-public.compaction": false,
+      "train-public.terminal": true,
+      "train-public.suggestions": true,
+      "train-public.absent-integrations": true
+    },
+    "failures": {
+      "common-window.groups": "The leading action section asks to \"review any workflow that intentionally accesses .aws\" without evidence that such a workflow exists.",
+      "common-window.no-false-actions": "\"Decide whether a workflow needs such access and, if so, adjust the workflow/location accordingly\" asks for action on an unresolved .aws-use condition.",
+      "train-public.mcp-resources": "Missing preserved MCP app resource URIs.",
+      "train-public.skills": "Missing stable skill catalogs across executor availability changes.",
+      "train-public.compaction": "Missing preserved model/access-program pairs during compaction."
+    },
+    "false_actions": [
+      "review any workflow that intentionally accesses `.aws` under a writable workspace."
+    ],
+    "false_impacts": []
+  },
+  {
+    "label": "R10",
+    "case": "train-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": false,
+      "common-window.limits": false,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-conditions.memory-action": true,
+      "train-conditions.legacy-question": true,
+      "train-conditions.vim": true,
+      "train-conditions.subagents": true,
+      "train-conditions.disabled-hooks": true,
+      "train-conditions.telemetry": true,
+      "train-conditions.missing-mcp": true,
+      "train-conditions.capabilities": true,
+      "train-conditions.terminal": true
+    },
+    "failures": {
+      "common-window.counts": "Missing supplied withheld breakdown: the one withheld entry belongs to Windows.",
+      "common-window.limits": "Missing the file-inventory versus effective-runtime limitation and unresolved overrides/defaults. Local snapshot coverage is disclosed."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R11",
+    "case": "train-public",
+    "checks": {
+      "common-window.groups": false,
+      "common-window.bounds": true,
+      "common-window.counts": false,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": false,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-public.opt-in": false,
+      "train-public.model": true,
+      "train-public.warning-retention": true,
+      "train-public.permissions": true,
+      "train-public.copy-and-drafts": true,
+      "train-public.mcp-boundaries": false,
+      "train-public.mcp-resources": false,
+      "train-public.mcp-status": false,
+      "train-public.skills": false,
+      "train-public.compaction": false,
+      "train-public.terminal": true,
+      "train-public.suggestions": true,
+      "train-public.absent-integrations": true
+    },
+    "failures": {
+      "common-window.groups": "\"the notes remove a setting, so there is one migration decision\" treats removal of tui.prompt_suggestions as an established local migration despite unknown configuration.",
+      "common-window.counts": "\"these unmatched entries were not shown\" contradicts the report’s Not shown: 0 unmatched entries.",
+      "common-window.no-false-actions": "\"check whether you have it configured; if so, choose how to handle its removal\" and \"Decide whether to opt in\" are unsupported action proposals.",
+      "train-public.opt-in": "\"Decide whether to opt in\" makes the explicitly disabled optional feature an action without an expressed need.",
+      "train-public.mcp-boundaries": "Missing preserved executor MCP credential boundaries across reconnects.",
+      "train-public.mcp-resources": "Missing preserved MCP app resource URIs.",
+      "train-public.mcp-status": "Missing single-server MCP status discovery with thread connection reuse.",
+      "train-public.skills": "Missing stable skill catalogs across executor availability changes.",
+      "train-public.compaction": "Missing preserved model/access-program pairs during compaction."
+    },
+    "false_actions": [
+      "check whether you have it configured; if so, choose how to handle its removal.",
+      "Decide whether to opt in if you want new input to interrupt or steer ongoing work."
+    ],
+    "false_impacts": []
+  },
+  {
+    "label": "R12",
+    "case": "train-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-public.opt-in": true,
+      "train-public.model": true,
+      "train-public.warning-retention": true,
+      "train-public.permissions": true,
+      "train-public.copy-and-drafts": true,
+      "train-public.mcp-boundaries": true,
+      "train-public.mcp-resources": false,
+      "train-public.mcp-status": true,
+      "train-public.skills": true,
+      "train-public.compaction": false,
+      "train-public.terminal": true,
+      "train-public.suggestions": true,
+      "train-public.absent-integrations": true
+    },
+    "failures": {
+      "train-public.mcp-resources": "Missing preserved MCP app resource URIs.",
+      "train-public.compaction": "Missing preserved model/access-program pairs during compaction; the answer omits the affected compaction paths instead."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  }
+]

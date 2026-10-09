@@ -1,0 +1,14 @@
+{
+  "R01": "train-conditions-C-terra-high-r1",
+  "R02": "train-public-C-terra-high-r1",
+  "R03": "train-conditions-C-luna-xhigh-r1",
+  "R04": "train-conditions-C-luna-medium-r1",
+  "R05": "train-public-C-luna-high-r1",
+  "R06": "train-conditions-C-terra-medium-r1",
+  "R07": "train-conditions-C-terra-low-r1",
+  "R08": "train-public-C-luna-xhigh-r1",
+  "R09": "train-public-C-terra-low-r1",
+  "R10": "train-conditions-C-luna-high-r1",
+  "R11": "train-public-C-luna-medium-r1",
+  "R12": "train-public-C-terra-medium-r1"
+}

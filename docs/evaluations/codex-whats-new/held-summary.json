@@ -1,0 +1,62 @@
+[
+  {
+    "variant": "A",
+    "family": "luna",
+    "effort": "high",
+    "n": 6,
+    "passed": 72,
+    "checks": 88,
+    "fraction": 0.8181818181818182,
+    "mean_seconds": 18.396666666666665,
+    "median_seconds": 19.38,
+    "mean_input_tokens": 11020,
+    "mean_output_tokens": 1368.1666666666667,
+    "false_actions": 0,
+    "false_impacts": 2
+  },
+  {
+    "variant": "B",
+    "family": "luna",
+    "effort": "high",
+    "n": 6,
+    "passed": 82,
+    "checks": 88,
+    "fraction": 0.9318181818181818,
+    "mean_seconds": 18.806666666666665,
+    "median_seconds": 18.990000000000002,
+    "mean_input_tokens": 11444,
+    "mean_output_tokens": 1447.5,
+    "false_actions": 0,
+    "false_impacts": 0
+  },
+  {
+    "variant": "B",
+    "family": "terra",
+    "effort": "high",
+    "n": 6,
+    "passed": 80,
+    "checks": 88,
+    "fraction": 0.9090909090909091,
+    "mean_seconds": 47.248333333333335,
+    "median_seconds": 42.795,
+    "mean_input_tokens": 10848,
+    "mean_output_tokens": 1457.8333333333333,
+    "false_actions": 0,
+    "false_impacts": 0
+  },
+  {
+    "variant": "C",
+    "family": "luna",
+    "effort": "high",
+    "n": 6,
+    "passed": 85,
+    "checks": 88,
+    "fraction": 0.9659090909090909,
+    "mean_seconds": 21.431666666666665,
+    "median_seconds": 20.07,
+    "mean_input_tokens": 11329,
+    "mean_output_tokens": 1702.5,
+    "false_actions": 0,
+    "false_impacts": 0
+  }
+]

@@ -1,0 +1,194 @@
+[
+  {
+    "id": "train-public-A-luna-medium-r1",
+    "case": "train-public",
+    "variant": "A",
+    "family": "luna",
+    "effort": "medium",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-A-luna-high-r1",
+    "case": "train-public",
+    "variant": "A",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-A-luna-xhigh-r1",
+    "case": "train-public",
+    "variant": "A",
+    "family": "luna",
+    "effort": "xhigh",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-A-terra-low-r1",
+    "case": "train-public",
+    "variant": "A",
+    "family": "terra",
+    "effort": "low",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-A-terra-medium-r1",
+    "case": "train-public",
+    "variant": "A",
+    "family": "terra",
+    "effort": "medium",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-A-terra-high-r1",
+    "case": "train-public",
+    "variant": "A",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-B-luna-medium-r1",
+    "case": "train-public",
+    "variant": "B",
+    "family": "luna",
+    "effort": "medium",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-B-luna-high-r1",
+    "case": "train-public",
+    "variant": "B",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-B-luna-xhigh-r1",
+    "case": "train-public",
+    "variant": "B",
+    "family": "luna",
+    "effort": "xhigh",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-B-terra-low-r1",
+    "case": "train-public",
+    "variant": "B",
+    "family": "terra",
+    "effort": "low",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-B-terra-medium-r1",
+    "case": "train-public",
+    "variant": "B",
+    "family": "terra",
+    "effort": "medium",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-B-terra-high-r1",
+    "case": "train-public",
+    "variant": "B",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-A-luna-medium-r1",
+    "case": "train-conditions",
+    "variant": "A",
+    "family": "luna",
+    "effort": "medium",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-A-luna-high-r1",
+    "case": "train-conditions",
+    "variant": "A",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-A-luna-xhigh-r1",
+    "case": "train-conditions",
+    "variant": "A",
+    "family": "luna",
+    "effort": "xhigh",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-A-terra-low-r1",
+    "case": "train-conditions",
+    "variant": "A",
+    "family": "terra",
+    "effort": "low",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-A-terra-medium-r1",
+    "case": "train-conditions",
+    "variant": "A",
+    "family": "terra",
+    "effort": "medium",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-A-terra-high-r1",
+    "case": "train-conditions",
+    "variant": "A",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-B-luna-medium-r1",
+    "case": "train-conditions",
+    "variant": "B",
+    "family": "luna",
+    "effort": "medium",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-B-luna-high-r1",
+    "case": "train-conditions",
+    "variant": "B",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-B-luna-xhigh-r1",
+    "case": "train-conditions",
+    "variant": "B",
+    "family": "luna",
+    "effort": "xhigh",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-B-terra-low-r1",
+    "case": "train-conditions",
+    "variant": "B",
+    "family": "terra",
+    "effort": "low",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-B-terra-medium-r1",
+    "case": "train-conditions",
+    "variant": "B",
+    "family": "terra",
+    "effort": "medium",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-B-terra-high-r1",
+    "case": "train-conditions",
+    "variant": "B",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1
+  }
+]

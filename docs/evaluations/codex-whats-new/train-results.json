@@ -1,0 +1,698 @@
+[
+  {
+    "id": "train-conditions-B-luna-medium-r1",
+    "case": "train-conditions",
+    "variant": "B",
+    "family": "luna",
+    "effort": "medium",
+    "repeat": 1,
+    "answer": "This window covers releases **9.2.0 through 9.3.0**, dated September 30, 2026. It includes the two releases requested; the report gives no reason beyond the explicit release-count selection. No item here needs a decision.\n\n### Act on this\n\nNothing here needs a decision.\n\n### Fixed for you\n\n- **9.3.0:** Fixed Vim input losing a draft after leaving scrollback. You have Vim enabled, so this setup could plausibly encounter the bug; the report does not establish that you did.\n- **9.2.0:** Fixed subagents reconnecting when `multi_agent` is enabled. The environment reports that feature as enabled, so this setup could plausibly encounter the bug; it does not establish that you did.\n\n### Worth knowing\n\n- **9.3.0:** Added `/rewind` to restore an earlier conversation turn. This is a new command and capability; no decision is needed.\n- **9.2.0:** Removed `features.memories`. The report says users who explicitly enabled it must migrate to `features.memory_v2`; the inventory reports memories enabled but does not establish that the removed setting was explicitly set, so a migration decision is not established.\n- **9.2.0:** Removed `sandbox_legacy`; users with an old `legacy_access` permission rule must replace that rule. The report does not establish whether such a rule exists, so no action is established.\n- **9.2.0:** Added `CODEX_DISABLE_TIPS=1` to suppress the new default startup tips. This is an optional choice; no need to disable tips is stated.\n- **9.3.0:** Fixed telemetry initialization only when telemetry is disabled. Telemetry is configured on here, so this conditional fix does not apply.\n- **9.3.0:** Fixed MCP OAuth refresh for an enabled server. The report says no MCP servers were found, so this does not apply to the reported inventory.\n- **9.2.0:** Fixed PreToolUse hook allow decisions bypassing an ask rule. Although a PreToolUse hook is listed, hooks are explicitly disabled in the files and the `hooks` feature is false, so the report does not show hooks running here.\n\n### Counts and coverage\n\n**Withheld:** 1 entry belonging to another platform (Windows: 1). **Unmatched:** 2 entries with no configuration signals; **hidden unmatched:** 0. These counts do not measure relevance or indicate omitted applicable items. The report is based on a local snapshot and file-based inventory, not the running session\u2019s effective configuration; CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are unresolved, and unset feature defaults remain unknown. The detected terminal is kitty; `TERM` is `xterm-256color` and does not name it, a configuration choice worth examining that places this setup in a combination tested less often. Archive coverage is limited to releases 9.2.0 through 9.3.0; releases outside the snapshot were not searched. The baseline is unrecorded and unchanged.\n",
+    "receipt": {
+      "model": "gpt-6-luna",
+      "effort": "medium",
+      "seconds": 9.16,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 11057,
+        "output_tokens": 644,
+        "reasoning_output_tokens": 0
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-public-A-terra-high-r1",
+    "case": "train-public",
+    "variant": "A",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1,
+    "answer": "The report\u2019s release window is **0.159.0 through 0.159.3**\u2014four releases dated September 29\u201330, 2026. It is bounded by the requested `--since 0.158.0 --through 0.159.3`, even though the locally installed CLI is now 0.160.1; this digest does not cover 0.160.x.\n\n## Act on this\n\n- **0.159.0 \u2014 Decide whether to enable `instant_interrupt`.**  \n  New input can now steer Codex while it is producing a model response or running a long code-mode call. Your file-based configuration explicitly has `instant_interrupt: false`, so this is off today and nothing changes unless you opt in. Enable it if being able to redirect an in-progress turn is more valuable to you than letting each response or call run without interruption.\n\n## Could not check\n\n- **0.159.0 \u2014 Do any writable roots contain an `.aws` directory that Codex is expected to modify?**  \n  With your `sandbox_mode: workspace-write` and `approval_policy: on-request`, this release now protects `.aws` directories by default under writable roots; it also preserves explicit filesystem denials when commands are approved. If the answer is yes, decide whether those files should remain protected or whether the workflow needs an authorized alternative for the required changes.\n\n## Fixed for you\n\n- **0.159.0 \u2014 MCP reconnection credential isolation.**  \n  Codex now preserves executor MCP credential boundaries across reconnects. Your inventory includes an MCP server (`reference`), so an MCP connection that uses an executor and reconnects could plausibly benefit from this safeguard. This does not establish that a credential-boundary problem occurred.\n\n- **0.159.0 \u2014 Skill catalog stability.**  \n  Skill catalogs are now kept stable when executor availability changes. You have a skill in the file-based inventory (`reference-skill`), so this can prevent catalog instability in sessions where executor availability changes; it does not imply that your installed skill was previously unavailable.\n\n- **0.159.0 \u2014 Compaction preserves model/access-program pairing.**  \n  Compaction now retains model and access-program pairs, and Guardian history is kept independent across parent compaction. You use sessions and have explicit model/provider configuration, so sessions that compact could plausibly benefit. The report does not show that you encountered incorrect compaction state.\n\n## Worth knowing\n\n- **0.159.0 \u2014 Session and transcript usability improved.**  \n  Since sessions are enabled, new sessions now have a more compact welcome screen and consistent headers; blank sessions retain drafts when switching tasks; and threads can be archived and listed before their first turn. You can also scroll the transcript while deciding whether to implement a plan.\n\n- **0.159.0 \u2014 The enabled status line can show short turn durations.**  \n  Your `statusline` setting is enabled, and TUI completion footers can now display short turn durations.\n\n- **0.159.0 \u2014 Kitty link interaction.**  \n  The detected terminal is **kitty** (via `KITTY_PID`), and Codex now shows a hand pointer over transcript links in Kitty. `TERM` is `xterm-kitty`, which agrees with the detected terminal; there is no TERM mismatch.\n\n- **0.159.0 \u2014 MCP status and resource handling improved.**  \n  For your configured MCP use, Codex added single-server MCP status discovery with thread connection reuse and preserves MCP app resource URIs without forcing a default display mode. These are capability/behavior improvements, not settings that require a decision.\n\n- **0.159.0 \u2014 Automatic follow-up prompt suggestions are gone.**  \n  Codex removed automatic follow-up suggestions and the `tui.prompt_suggestions` setting. The report does not show that you configured that setting, but suggestions will no longer appear automatically if they were part of your prior TUI workflow.\n\n- **0.159.0 \u2014 The bundled `plugin-creator` skill was removed.**  \n  You have plugins and skills in the inventory, but the report does not establish that you installed or used that specific bundled skill. This matters only if you relied on `plugin-creator`; it is no longer supplied with Codex.\n\n- **0.159.1 \u2014 GPT-6.1 Sol was added as the default model in the bundled catalog and in Amazon Bedrock Mantle/Runtime catalogs.**  \n  Your configured model remains `gpt-5.6-terra` with the OpenAI provider, so this catalog-default change does not by itself change the configured model for this setup.\n\nThis is a **local, frozen/synthetic archive snapshot** with archive coverage limited to **0.159.0 through 0.159.3**. The configuration evidence is a file-based inventory, not the running session\u2019s effective configuration: CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, hook trust, and defaults for unset features were not resolved. The baseline file is reported unchanged.\n\n**Withheld: 0 entries belonging to another platform. Unmatched: 78 entries matched no configuration signal. Hidden unmatched: 0 entries.**\n",
+    "receipt": {
+      "model": "gpt-5.6-terra",
+      "effort": "high",
+      "seconds": 137.84,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 12498,
+        "output_tokens": 3661,
+        "reasoning_output_tokens": 2588
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-conditions-A-luna-high-r1",
+    "case": "train-conditions",
+    "variant": "A",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1,
+    "answer": "This digest covers **Codex CLI 9.2.0 through 9.3.0**, the two releases selected by `--releases 2 --through 9.3.0`. The local archive covers that same span, so it does not show whether these changes began earlier. No baseline has been recorded yet; this report does not advance it.\n\n## Act on this\n\n- **9.2.0 \u2014 Migrate the memories setting.** The report shows memories enabled. The release removed `features.memories`; users who explicitly enabled it must migrate to `features.memory_v2`.\n\n## Could not check\n\n- **9.2.0 \u2014 Legacy permission rule:** Do you have an old `legacy_access` permission rule? The report does not show the rule\u2019s contents. If you do, replace it because `sandbox_legacy` was removed.\n\n## Fixed for you\n\n- **9.3.0 \u2014 Vim draft loss after scrollback.** The release fixed losing a Vim input draft after leaving scrollback. Vim is enabled in this setup. The summary and detailed changelog describe the same fix, so it is listed once.\n- **9.2.0 \u2014 Subagent reconnection.** The release fixed subagents reconnecting when `multi_agent` is enabled, and the report shows that feature enabled.\n\n## Worth knowing\n\n- **9.3.0 \u2014 `/rewind`:** A new command restores an earlier conversation turn.\n- **9.2.0 \u2014 Startup tips:** Tips are now shown by default. `CODEX_DISABLE_TIPS=1` suppresses them; the report shows no environment variables set, so that opt-out is not currently set.\n\nThe telemetry fix in 9.3.0 applies only when telemetry is disabled; telemetry is configured here, so that condition does not match. The 9.2.0 PreToolUse hook fix concerns allow decisions bypassing an ask rule, but hooks are disabled in the reported files, so it does not apply to running hooks. The MCP OAuth fix concerns an enabled server, and none was found.\n\n**Terminal note:** The detected terminal is kitty, but `TERM` is `xterm-256color`. That mismatch is a configuration choice worth examining and is a combination the harness tests less often.\n\nThis is a file-based configuration inventory, not the running session\u2019s effective configuration. CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are unresolved; unset features may have unknown runtime defaults. The report is a local snapshot, and releases outside the archive were not searched.\n\n**Withheld:** 1 entry belonging to another platform. **Unmatched:** 2 entries with no configuration signal; **hidden unmatched:** 0.\n",
+    "receipt": {
+      "model": "gpt-6-luna",
+      "effort": "high",
+      "seconds": 17.19,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 10633,
+        "output_tokens": 1507,
+        "reasoning_output_tokens": 942
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-conditions-B-luna-high-r1",
+    "case": "train-conditions",
+    "variant": "B",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1,
+    "answer": "This window covers releases **9.2.0 through 9.3.0**, the two releases ending at your installed version. A migration decision is needed if you explicitly enabled the old memories setting; another decision depends on whether you have an older permission rule.\n\n## Act on this\n\n- **9.2.0 \u2014 Memories setting migration:** The release removed `features.memories` and says users who explicitly enabled it must migrate to `features.memory_v2`. The environment reports memories enabled, so check that the setting uses the new name.\n\n## Could not check\n\n- **9.2.0 \u2014 Legacy permission rule:** Do you have an old `legacy_access` permission rule? The environment does not report permission-rule details. If yes, replace that rule because `sandbox_legacy` was removed.\n\n## Fixed for you\n\n- **9.3.0 \u2014 Vim draft loss:** Vim is enabled, and the release fixed draft loss after leaving scrollback. The same fix appears in both the summary and detailed changelog; counted once. This setup could have encountered the bug, but the report does not establish that it did.\n- **9.2.0 \u2014 Subagent reconnection:** Multi-agent is enabled, and the release fixed subagents reconnecting in that case. This setup could have encountered the bug, but the report does not establish that it did.\n\n## Worth knowing\n\n- **9.3.0 \u2014 `/rewind`:** A new command restores an earlier conversation turn.\n- **9.2.0 \u2014 Startup tips opt-out:** The release added `CODEX_DISABLE_TIPS=1` to suppress its new default startup tips. No environment-variable names are listed, so whether the opt-out is set is unknown.\n\nThe telemetry fix applies only when telemetry is disabled; telemetry is configured on here. The PreToolUse hook fix does not apply: hooks are disabled in the files, even though a hook file is listed. The MCP refresh fix names an enabled server, but none was found. These are omitted as not relevant to the reported setup.\n\nThe detected terminal is **kitty**, but `TERM` is `xterm-256color`, which does not name it. This is a configuration choice worth examining, and this combination is tested less often.\n\n## Counts and coverage\n\n**Withheld:** 1 entry belonging to another platform (Windows: 1). **Unmatched:** 2 entries matched no configuration signal. **Hidden unmatched:** 0. The report says 0 unmatched entries were not shown; the unmatched count does not mean those entries were irrelevant.\n\nThis is a local snapshot with file-based inventory, not the running session\u2019s effective configuration; CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are unresolved. The release window is 9.2.0 through 9.3.0; archive coverage is also 9.2.0 through 9.3.0, so older releases are not searched. **The baseline is unchanged**; it has not yet been recorded for this window.\n",
+    "receipt": {
+      "model": "gpt-6-luna",
+      "effort": "high",
+      "seconds": 19.41,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 11057,
+        "output_tokens": 1518,
+        "reasoning_output_tokens": 890
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-conditions-A-terra-low-r1",
+    "case": "train-conditions",
+    "variant": "A",
+    "family": "terra",
+    "effort": "low",
+    "repeat": 1,
+    "answer": "The release window is **9.2.0 through 9.3.0**\u2014the two releases ending at your installed Codex CLI version, **9.3.0**. This is the selected two-release window; it does not imply that a baseline was advanced.\n\n## Act on this\n\nNothing here needs a decision.\n\n## Could not check\n\n- **9.2.0 \u2014 PreToolUse hook allow decisions no longer bypass an ask rule.** You have a `PreToolUse` hook listed, but file-based configuration also says hooks are disabled, and the inventory cannot establish whether hooks are active in the running session or whether this hook ever returns an allow decision. **Does an active PreToolUse hook in your actual session ever return an allow decision?** If yes, review any workflows that expected that decision to bypass an ask rule; it will now be subject to the ask rule.\n\n## Fixed for you\n\n- **9.3.0 \u2014 Vim draft loss after leaving scrollback was fixed.** Vim mode is enabled here, so your workflow could plausibly have encountered a draft being lost when leaving scrollback. The repeated 9.3.0 Vim bullets describe the same fix.\n\n- **9.2.0 \u2014 Subagent reconnection when multi-agent is enabled was fixed.** Multi-agent is enabled, so this setup could plausibly have encountered subagents reconnecting unexpectedly.\n\n## Worth knowing\n\n- **9.3.0 \u2014 `/rewind` was added.** This new command restores an earlier conversation turn. It is available as a new capability; the report does not establish a need to adopt it.\n\n- **9.2.0 \u2014 `features.memories` was removed in favor of `features.memory_v2`.** Memories are enabled, but the report does not say this setup explicitly configured the removed `features.memories` setting. This matters only for configurations that explicitly enabled that old setting; those must migrate to `features.memory_v2`.\n\n- **9.2.0 \u2014 `CODEX_DISABLE_TIPS=1` can suppress default startup tips.** This is an optional new environment variable if you want to turn off the new default startup tips. No environment variables were found in the file-based inventory, so it is not currently indicated as configured.\n\n- **Terminal configuration note:** the detected terminal is **kitty** (via `KITTY_PID`), while `TERM` is `xterm-256color` and does not name the detected terminal. This mismatch is worth examining: it is a configuration combination the harness tests less often. No terminal-specific release entry appears in this window.\n\nThe telemetry initialization fix in **9.3.0** is not relevant from this report because telemetry is configured **on**, while the fix is explicitly limited to telemetry being disabled. The 9.2.0 `sandbox_legacy` removal is likewise not shown as applicable: the environment reports `sandbox_mode: workspace-write`, not the removed legacy setting. The MCP OAuth refresh fix is omitted because no MCP servers were found.\n\n**Coverage and limits:** this is a local snapshot covering only releases **9.2.0 through 9.3.0**; releases outside that archive were not searched. The configuration inventory is file-based rather than the running session\u2019s effective configuration, so CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, hook trust, and defaults for unset features are not resolved. In particular, hooks are disabled in files even though a `PreToolUse` hook is listed.\n\n**Not discussed:** **1** entry was withheld because it belongs to another platform (Windows), and **2** entries were unmatched to configuration signals. **0** unmatched entries were hidden. The baseline remains unchanged; it has not been recorded or moved.\n",
+    "receipt": {
+      "model": "gpt-5.6-terra",
+      "effort": "low",
+      "seconds": 25.33,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 10037,
+        "output_tokens": 775,
+        "reasoning_output_tokens": 0
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-conditions-A-terra-high-r1",
+    "case": "train-conditions",
+    "variant": "A",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1,
+    "answer": "## Release window\n\nThis digest covers **9.2.0 through 9.3.0**\u2014the two releases selected by `--releases 2 --through 9.3.0`. Both are dated **2026-09-30**. The installed CLI is 9.3.0. This is a local, frozen snapshot: archive coverage is only **9.2.0 through 9.3.0**, so releases outside that range were not searched.\n\n## Act on this\n\n- **9.2.0 \u2014 migrate the enabled memory feature setting.** `features.memories` was removed; users who explicitly enable it must move to `features.memory_v2`. This setup reports **memories enabled**, so update the configuration to use the replacement setting.\n\n- **Terminal configuration \u2014 examine the TERM mismatch.** The detected terminal is **kitty** (from `KITTY_PID`), but `TERM` is `xterm-256color` and does not name the detected terminal. This is a configuration combination the harness tests less often; decide whether the wrapper/profile that sets `TERM` should instead preserve an appropriate kitty terminal value.\n\n## Could not check\n\n- **9.2.0 \u2014 do any active permission rules still use `legacy_access`?** `sandbox_legacy` was removed, and an old `legacy_access` permission rule must be replaced. The report confirms the current sandbox mode is `workspace-write`, but does not establish whether such a legacy rule exists. **If yes, replace that rule before relying on its old behavior.**\n\n## Fixed for you\n\n- **9.3.0 \u2014 Vim drafts are retained after leaving scrollback.** Vim mode is enabled here, and 9.3.0 fixes draft text being lost when exiting scrollback. The summary and detailed changelog describe the same fix.\n\n- **9.2.0 \u2014 subagent reconnection behavior is fixed.** Multi-agent support is enabled here; this release fixes subagents reconnecting when multi-agent mode is enabled. This setup could plausibly have encountered that bug, though the report does not establish that it did.\n\n## Worth knowing\n\n- **9.3.0 \u2014 `/rewind` is available.** A new `/rewind` command can restore an earlier conversation turn. It is available as a new capability; no configuration change is required.\n\n- **9.2.0 \u2014 startup tips can be suppressed.** Startup tips are now on by default, and `CODEX_DISABLE_TIPS=1` suppresses them if they become unwanted.\n\nThe PreToolUse-hook fix is not included: although a PreToolUse hook is present in the file inventory, hooks are reported disabled, so the hook is not shown as running. The telemetry initialization fix applies only when telemetry is disabled; telemetry is configured here, so it does not apply.\n\n**Not discussed:** exactly **1** entry was withheld as belonging to another platform (Windows), and exactly **2** entries were unmatched because they had no configuration signal. **0** unmatched entries were hidden by `--relevant-only`. The inventory is file-based rather than the running session\u2019s effective configuration: CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, hook trust, and unset-feature runtime defaults are not resolved.\n",
+    "receipt": {
+      "model": "gpt-5.6-terra",
+      "effort": "high",
+      "seconds": 14.33,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 10037,
+        "output_tokens": 1196,
+        "reasoning_output_tokens": 516
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-conditions-B-terra-low-r1",
+    "case": "train-conditions",
+    "variant": "B",
+    "family": "terra",
+    "effort": "low",
+    "repeat": 1,
+    "answer": "The window covers **9.2.0 through 9.3.0**, the two releases ending at installed Codex CLI version 9.3.0. A decision is conditionally needed only if you still have the removed legacy permission rule; otherwise these releases mainly contain fixes relevant to your enabled Vim and multi-agent workflows.\n\n## Act on this\n\nNothing here needs a decision.\n\n## Could not check\n\n- **9.2.0 \u2014 Removed `sandbox_legacy`.** The release says users with an old `legacy_access` permission rule must replace that rule. Your reported approval policy is `on-request` and sandbox mode is `workspace-write`, but the file inventory does not say whether any `legacy_access` rule exists. **Do you have a `legacy_access` permission rule?** If yes, it must be replaced because `sandbox_legacy` has been removed.\n\n## Fixed for you\n\n- **9.3.0 \u2014 Vim draft is preserved after leaving scrollback.** Vim mode is enabled (`vim: True`), so this fixes a problem your configured input mode could plausibly have encountered: losing a draft after exiting scrollback.\n\n- **9.2.0 \u2014 Subagents reconnect correctly when multi-agent mode is enabled.** Multi-agent is enabled (`feature multi_agent: True`), so this resolves a reconnecting issue that this setup could plausibly have encountered.\n\n## Worth knowing\n\n- **9.3.0 \u2014 New `/rewind` command.** Codex can now restore an earlier conversation turn. This is a new general CLI capability; it may be useful when you want to undo or revisit a conversational branch, but it does not require a configuration change.\n\n- **9.2.0 \u2014 Memory feature setting migration.** `features.memories` was removed; anyone who had explicitly enabled it must migrate to `features.memory_v2`. Memories are shown as enabled in the inventory, but that inventory does not establish the effective runtime setting or show whether this was an explicit old-style enablement. The release note\u2019s migration requirement is therefore not established for this setup.\n\n- **9.2.0 \u2014 Startup tips can be suppressed.** `CODEX_DISABLE_TIPS=1` is available to suppress the newly default startup tips. No environment variables are reported, so this opt-out is not currently evidenced; it is simply available if the tips become unwanted.\n\n- **9.2.0 \u2014 PreToolUse hook allow decisions no longer bypass an ask rule.** A `PreToolUse` hook is listed, but hooks are explicitly disabled in files (`hooks_disabled: True`), so the inventory does not show that this hook actually runs. This is worth knowing if hooks are later enabled and a hook returns allow decisions alongside ask rules; no action follows from the present evidence.\n\n- **Terminal inventory note.** The detected terminal is **kitty** (via `KITTY_PID`), while `TERM` is `xterm-256color` and does not name the detected terminal. This mismatch is a configuration combination the harness tests less often and is worth examining independently; neither release in this window reports a terminal-specific change.\n\nThe telemetry initialization fix in **9.3.0** is not applicable from the supplied evidence: it applies only when telemetry is disabled, while telemetry is configured as enabled (`otel: True`). The MCP OAuth refresh fix is also not included because no MCP servers are found.\n\n## Counts and coverage\n\n- **Withheld:** 1 entry, belonging to another platform (**Windows: 1**).\n- **Unmatched:** 2 entries matched no configuration signal.\n- **Hidden unmatched:** 0 (`--relevant-only`).\n- This is a **local snapshot**: releases outside the supplied archive were not searched.\n- Archive coverage is exactly **9.2.0 through 9.3.0**, matching this release window.\n- The environment is a file-based inventory, not proof of the running session\u2019s effective configuration; CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, hook trust, and defaults for unset features are unresolved.\n- No baseline was recorded before this report, and the baseline remains unchanged.\n",
+    "receipt": {
+      "model": "gpt-5.6-terra",
+      "effort": "low",
+      "seconds": 27.5,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 10669,
+        "output_tokens": 854,
+        "reasoning_output_tokens": 0
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-public-A-luna-medium-r1",
+    "case": "train-public",
+    "variant": "A",
+    "family": "luna",
+    "effort": "medium",
+    "repeat": 1,
+    "answer": "# Luna release reader\n\nThis report covers **Codex CLI releases 0.159.0 through 0.159.3**, four releases, from a baseline of 0.158.0. That is the requested window, not a statement about why it was selected. The archive covers only 0.159.0 through 0.159.3; releases outside it were not searched. The installed CLI is 0.160.1, so it is newer than the releases in this window.\n\n**Act on this**\n\nNothing here needs a decision.\n\n**Fixed for you**\n\n- **0.159.0 \u2014 kitty transcript links:** The TUI now shows a hand pointer over transcript links in Kitty and Ghostty. This is relevant because the report detects Kitty. `TERM` is `xterm-kitty`, which does not match the detected terminal; that mismatch is a configuration choice worth examining and means this is a combination the harness tests less often.\n- **0.159.0 \u2014 approved-command filesystem denials:** Approved commands now retain explicit filesystem denials. This could matter because the configured sandbox is `workspace-write`; the report does not establish that you encountered a denied access.\n- **0.159.0 \u2014 `.aws` protection:** `.aws` directories are protected by default under writable roots. Your sandbox is `workspace-write`, so this may be relevant where a writable root contains such a directory; the report does not say whether one is present.\n- **0.159.0 \u2014 macOS TLS and proxy access:** The release fixed macOS TLS access in network-enabled sandboxes and remote environments that require proxy access. The configured sandbox allows workspace writes, but the report does not establish that it is network-enabled or that this Linux setup uses a remote environment requiring a proxy. No specific failure can be inferred from the note.\n\n**Worth knowing**\n\n- **0.159.0 \u2014 interrupting responses:** The opt-in `instant_interrupt` feature lets new input steer Codex during model responses or long-running code-mode calls. The report says it is disabled here, so this capability is not enabled by the listed configuration.\n- **0.159.0 \u2014 new-session presentation:** New sessions get a compact welcome screen and consistent headers, with occasional tips during and after turns. This is a TUI presentation change; no decision is called for by the report.\n- **0.159.0 \u2014 warning review:** Closing the warnings viewer dismisses reviewed warnings, and `k` keeps one for later. This changes how reviewed warnings are handled.\n- **0.159.0 \u2014 transcript scrolling:** You can scroll the transcript while deciding whether to implement a plan.\n- **0.159.0 \u2014 Mermaid rendering:** Native rendering supports more flowchart edges, labels, and node groups. The release notes also describe fixes to parsing Mermaid shapes, relationships, and state descriptions, plus preserving punctuation and semicolons in labels; together these describe the Mermaid rendering expansion and its parsing refinements.\n- **0.159.0 \u2014 thread history pagination:** App-server clients can paginate thread history from a specific item.\n- **0.159.0 \u2014 Windows process launches:** Windows launches avoid stray console windows for MCP servers, code-mode hosts, and piped commands, with an embedded-mode fallback under restrictive launchers. The environment is Linux, so this Windows-specific change does not apply here.\n- **0.159.0 \u2014 transcript copying:** Selecting transcript text preserves Markdown tables, formatting, and significant whitespace; more terminals also copy automatically on selection.\n- **0.159.0 \u2014 blank sessions and archives:** Blank sessions retain drafts when switching tasks, and threads can be archived and listed before their first turn.\n- **0.159.0 \u2014 local ChatGPT sign-in:** Browser sign-in is more reliable for local ChatGPT sign-in, and onboarding makes the login link easier to copy.\n- **0.159.0 \u2014 follow-up prompt suggestions:** Automatic follow-up prompt suggestions and the `tui.prompt_suggestions` setting were removed. This is a behavior change; the report does not show that the setting was configured.\n- **0.159.0 \u2014 bundled skill removal:** The bundled `plugin-creator` skill was removed. The inventory only reports a reference skill, not its identity or whether it includes this skill.\n- **0.159.1 \u2014 GPT-6.1 Sol catalog entry:** GPT-6.1 Sol was added as the default model in the bundled catalog and to Amazon Bedrock Mantle and Runtime catalogs. The configured model is `gpt-5.6-terra` with provider `openai`, so the notes do not show that this catalog addition changes the selected model here.\n- **0.159.3 \u2014 account-security reminders:** Eligible local sessions signed in with ChatGPT can show optional reminders to complete account security setup. This is scoped to eligible ChatGPT-signed-in local sessions; the report does not establish that condition.\n\n**Window counts:** Withheld: **0 entries** belonging to another platform. Unmatched: **78 entries** matched no configuration signal. Not shown: **0 unmatched entries**.\n\nThe configuration inventory is file-based, not the running session\u2019s effective configuration. CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are not resolved; unset features retain unknown runtime defaults. No hooks were found, and hooks are not disabled in files. The report lists MCP, plugins, and skills as references, so their contents are not established. These limitations and the archive coverage mean this digest does not claim to cover releases outside the stated window. Baseline status is unchanged; it has not been advanced.\n",
+    "receipt": {
+      "model": "gpt-6-luna",
+      "effort": "medium",
+      "seconds": 13.21,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 13094,
+        "output_tokens": 1158,
+        "reasoning_output_tokens": 0
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-conditions-B-luna-xhigh-r1",
+    "case": "train-conditions",
+    "variant": "B",
+    "family": "luna",
+    "effort": "xhigh",
+    "repeat": 1,
+    "answer": "This covers releases **9.2.0 through 9.3.0**; one decision is needed about the enabled memories setting, while a permission-rule change remains conditional on a detail the report does not settle.\n\n## Act on this\n\n- **9.2.0 \u2014** `features.memories` was removed. The environment reports `feature memories: True`, so this setup has memories enabled. Decide whether to migrate that setting to `features.memory_v2` to keep the feature enabled.\n\n## Could not check\n\n- **9.2.0 \u2014** Do you have an old `legacy_access` permission rule? The report does not show individual permission rules. If you do, replace that rule because `sandbox_legacy` was removed.\n\n## Fixed for you\n\n- **9.3.0 \u2014 Vim draft loss:** With `vim: True`, this setup could plausibly have encountered input losing its draft after leaving scrollback. The fix appears in both the summary and detailed changelog; I\u2019ve counted it once.\n- **9.2.0 \u2014 Subagent reconnection:** With `multi_agent: True`, this setup could plausibly have encountered subagents reconnecting. The release says this was fixed; it does not establish that you experienced the bug.\n\n## Worth knowing\n\n- **9.3.0 \u2014 `/rewind`:** A new command can restore an earlier conversation turn.\n- **9.2.0 \u2014 Startup tips:** `CODEX_DISABLE_TIPS=1` is available to suppress the new default startup tips. This is an option, not a change to adopt unless you want to suppress them.\n- **Environment note, not a release change:** The detected terminal is kitty (via `KITTY_PID`), but `TERM` is `xterm-256color` and does not name kitty. The workflow identifies this as a configuration choice worth examining and a combination the harness tests less often.\n\nThe telemetry initialization fix is conditional on telemetry being disabled, but the report shows `otel: True`. The `PreToolUse` fix does not apply here: although a hook file is listed, `hooks_disabled in files` is true and `feature hooks` is false. The MCP OAuth refresh fix is omitted because the report finds no MCP server.\n\n## Counts and coverage\n\nThe requested window is two releases through 9.3.0; its selection does not establish why any earlier release is absent. Archive coverage is **9.2.0 through 9.3.0**, from a local snapshot; releases outside that file were not searched. **Withheld: 1** entry belonging to another platform (**Windows: 1**). **Unmatched: 2** entries with no configuration signals; **hidden unmatched: 0** (`--relevant-only`). No baseline was recorded, and it remains unchanged.\n",
+    "receipt": {
+      "model": "gpt-6-luna",
+      "effort": "xhigh",
+      "seconds": 44.56,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 11057,
+        "output_tokens": 4726,
+        "reasoning_output_tokens": 4142
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-conditions-B-terra-medium-r1",
+    "case": "train-conditions",
+    "variant": "B",
+    "family": "terra",
+    "effort": "medium",
+    "repeat": 1,
+    "answer": "The last two releases in this window are **9.2.0 through 9.3.0** (both dated 2026-09-30). They bring two configuration migrations that may matter, fixes for your enabled Vim/memory/subagent/hook-related workflow, and a new conversation-rewind command. A decision is needed only if you explicitly enabled the now-removed memories flag or still use the removed legacy permission rule.\n\n## Act on this\n\n- **9.2.0 \u2014 Migrate an explicitly enabled memories setting, if present.** `features.memories` was removed; users who explicitly enabled it must move to `features.memory_v2`. The environment reports memories as enabled, but it is a file-based inventory and does not establish whether that was an explicit `features.memories` setting or another effective/default configuration. **Decide whether your configuration explicitly sets `features.memories`; if it does, replace it with `features.memory_v2`.**\n\n- **9.2.0 \u2014 Replace an old `legacy_access` permission rule, if you use one.** `sandbox_legacy` was removed, and an old `legacy_access` permission rule must be replaced. You use `approval_policy: on-request` and `sandbox_mode: workspace-write`, so permissions are part of this setup, but the report does not establish whether a `legacy_access` rule exists. **Decide whether you retain such a rule; if so, replace it.** The release notes do not specify its replacement syntax.\n\n## Could not check\n\n- **9.2.0 \u2014 PreToolUse allow decisions no longer bypass an ask rule.** A `PreToolUse` hook is listed, but hooks are explicitly disabled in files, so the listed hook is not evidence that it runs. **When hooks are enabled, does your PreToolUse hook ever return an allow decision where an ask rule should still apply?** If yes, review the hook/permission interaction: the fixed behavior will now preserve the ask requirement instead of bypassing it.\n\n## Fixed for you\n\n- **9.3.0 \u2014 Vim drafts are preserved after leaving scrollback.** Vim mode is enabled, so the fix for losing an input draft after leaving scrollback could affect your normal input workflow. The duplicate 9.3.0 Vim bullets describe the same fix.\n\n- **9.2.0 \u2014 Multi-agent subagents reconnect correctly.** Multi-agent support is enabled, so this fixes subagents reconnecting when `multi_agent` is enabled. It does not establish that you encountered the reconnect issue.\n\n- **9.3.0 \u2014 The telemetry-disabled initialization fix does not apply here.** Telemetry is reported configured (`otel: True`), while the fix is specifically for telemetry being disabled; no action or expected fix follows for this configuration.\n\n## Worth knowing\n\n- **9.3.0 \u2014 `/rewind` is available.** This new command restores an earlier conversation turn. It is a new general conversation capability; the notes do not require a configuration change.\n\n- **9.2.0 \u2014 Startup tips can now be suppressed.** `CODEX_DISABLE_TIPS=1` suppresses the new default startup tips. This is optional; adopt it only if the tips are unwanted.\n\n- **Terminal environment note \u2014 detected terminal is kitty, but `TERM` says `xterm-256color`.** The report detects kitty from `KITTY_PID` and explicitly says `TERM` does not name the detected terminal. That mismatch is a configuration choice worth examining, and it is a less-tested terminal combination. No release bullet in this window names a terminal-specific change, so this is context rather than a migration.\n\n## Counts and coverage\n\n- **Withheld:** 1 entry, belonging to another platform (**Windows: 1**).\n- **Unmatched:** 2 entries.\n- **Hidden unmatched:** 0 (`--relevant-only`).\n- The report is a **local snapshot**: releases outside its file were not searched. Archive coverage is exactly **9.2.0 through 9.3.0**, matching this release window.\n- The configuration inventory is file-based rather than a statement of the running session\u2019s effective configuration: CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, hook trust, and unset-feature defaults are unresolved.\n- No baseline was recorded before this window, and the baseline is **unchanged**; it has not been advanced.\n",
+    "receipt": {
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "seconds": 33.55,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 10461,
+        "output_tokens": 914,
+        "reasoning_output_tokens": 0
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-conditions-A-terra-medium-r1",
+    "case": "train-conditions",
+    "variant": "A",
+    "family": "terra",
+    "effort": "medium",
+    "repeat": 1,
+    "answer": "## Release window: 9.2.0 through 9.3.0\n\nThis covers the two releases ending at installed version **9.3.0**: **9.2.0** and **9.3.0**, both dated 2026-09-30. It is a selected two-release window, not evidence that a prior baseline determined its start.\n\nYour file-based configuration has memories and multi-agent support enabled, declares a `PreToolUse` hook, has hooks disabled in files, enables Vim mode and telemetry, and uses the kitty terminal as detected through `KITTY_PID`. `TERM` is `xterm-256color`, which does **not** name the detected terminal; that mismatch is worth examining because it is a less commonly tested terminal combination. This inventory does not establish the running session\u2019s effective configuration: overrides, cloud defaults, enforced requirements, and hook trust remain unresolved.\n\n## Act on this\n\nNothing here needs a decision.\n\n## Could not check\n\n- **9.2.0 \u2014 PreToolUse hook allow decisions no longer bypass an ask rule.** A `PreToolUse` hook is present in the file inventory, but hook files are also marked disabled, so the report does not establish that this hook runs. **Does an effective, enabled `PreToolUse` hook ever return an allow decision where an ask rule should still apply?** If yes, review that hook-and-rule workflow: the prior bypass has been fixed, so it may now prompt where it previously did not.\n\n## Fixed for you\n\n- **9.3.0 \u2014 Vim draft is retained after leaving scrollback.** You have Vim mode enabled. The release fixes loss of the input draft after leaving scrollback, so this setup could plausibly have encountered that issue. (The changelog states this same Vim fix twice; it is one change.)\n\n- **9.2.0 \u2014 Subagents reconnect correctly when multi-agent mode is enabled.** Multi-agent support is enabled in the file-based inventory. This setup could plausibly have encountered failed or incorrect subagent reconnection behavior; the release corrects it.\n\n## Worth knowing\n\n- **9.3.0 \u2014 `/rewind` restores an earlier conversation turn.** This is a new command that can be useful for revisiting a prior point in a session. It is available independently of any configuration signal in the report.\n\n- **9.2.0 \u2014 `features.memories` was removed in favor of `features.memory_v2` for users who explicitly enabled the old setting.** Memories are enabled in this inventory, but the report does not say that the removed `features.memories` setting was explicitly configured; it therefore does not establish that migration is needed. If your configuration explicitly set `features.memories`, that setting must be migrated to `features.memory_v2`.\n\n- **9.2.0 \u2014 `CODEX_DISABLE_TIPS=1` can suppress new default startup tips.** This is an optional environment-variable control if you want to turn off the newly default startup tips. The inventory reports no environment-variable names, so there is no indication it is currently in use.\n\nThe **9.3.0 telemetry initialization fix applies only when telemetry is disabled**; telemetry is configured here, so it is not relevant to this setup. The **9.2.0 legacy sandbox-rule migration applies only if an old `legacy_access` permission rule exists**; the report provides no such indication and does not make that optional migration an action item.\n\n**Coverage and limits:** this is a local frozen/synthetic archive covering only **9.2.0 through 9.3.0**; releases outside that range were not searched. The configuration inventory is file-based rather than an authoritative runtime configuration snapshot. The detected terminal is **kitty**, while `TERM` is **xterm-256color** and does not identify kitty.\n\n**Not discussed:** **1** entry was withheld because it belongs to another platform; **2** entries matched no configuration signal; **0** unmatched entries were hidden.\n",
+    "receipt": {
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "seconds": 30.46,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 10037,
+        "output_tokens": 831,
+        "reasoning_output_tokens": 0
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-public-A-terra-low-r1",
+    "case": "train-public",
+    "variant": "A",
+    "family": "terra",
+    "effort": "low",
+    "repeat": 1,
+    "answer": "The selected release window is **0.159.0 through 0.159.3** (four releases), compared with baseline **0.158.0**. This report is based on a local frozen archive that covers exactly that same range; it is not a search of releases outside it. Your installed CLI is **0.160.1**, so it is newer than the releases summarized here.\n\n## Act on this\n\nNothing here needs a decision.\n\n## Fixed for you\n\n- **0.159.0 \u2014 `.aws` protection under writable sandbox roots.** Approved commands now retain explicit filesystem denials, and `.aws` directories are protected by default under writable roots. This is relevant because you use `sandbox_mode: workspace-write` with `approval_policy: on-request`; it strengthens the handling of approved commands in that permission model. It does not establish that any command on this machine previously accessed or attempted to access `.aws` content.\n\n- **0.159.0 \u2014 Kitty link pointer behavior.** Codex now shows a hand pointer over transcript links in Kitty (and Ghostty). Your detected terminal is **kitty** via `KITTY_PID`, so this UI fix applies to your terminal use.\n\n- **0.159.0 \u2014 session/thread handling.** Blank sessions now retain drafts when switching tasks, and threads can be archived and listed before their first turn. This is relevant because sessions are enabled in the file-based inventory. It could prevent loss of an unsubmitted draft when changing tasks and makes empty threads manageable; it does not show that you experienced either issue.\n\n- **0.159.0 \u2014 status display.** The TUI completion footer now shows short turn durations. This applies because `statusline: True` is configured, although the note specifically describes the TUI completion footer rather than every statusline surface.\n\n## Worth knowing\n\n- **0.159.0 \u2014 optional interrupt/steering capability.** An opt-in `instant_interrupt` feature lets new input steer Codex while it is producing a model response or running a long code-mode call. The feature is presently reported as `False`, so it is not active under the inventoried configuration. If you later choose to enable it, it changes how readily a running turn can be redirected.\n\n- **0.159.0 \u2014 multi-agent-related session behavior.** New sessions receive a more compact welcome screen, consistent headers, and occasional tips during and after turns. This is relevant to the configured `multi_agent: True` workflow insofar as it affects the TUI session experience, but the release note does not say that multi-agent operation itself changed.\n\n- **0.159.0 \u2014 MCP reliability and observability updates.** Since an MCP configuration is present (`mcp: reference`), these changes are relevant to your integration surface:\n  - Windows MCP-server launches avoid stray console windows, with embedded-mode fallback under restrictive Windows launchers. Your platform is Linux, so that Windows-specific launch behavior is informational rather than a local fix.\n  - Credential boundaries are preserved across executor-MCP reconnects.\n  - Single-server MCP status discovery can reuse a thread connection.\n  - MCP app resource URIs retain their supplied form instead of defaulting a display mode.\n  - A Linux `ETXTBSY` race in MCP stdio tests was addressed. The note is about the test race and does not claim a runtime MCP-server fix for this setup.\n\n- **0.159.0 \u2014 skill and plugin catalog changes.** Your inventory includes `reference-skill` and `reference-plugin`. Skill catalogs were made stable across executor-availability changes, which may make configured skill discovery more consistent. Separately, Codex removed the **bundled** `plugin-creator` skill. This does not say that your installed reference skill or plugin was removed, and there is no evidence that you used the removed bundled skill.\n\n- **0.159.0 \u2014 provider/model catalog availability.** Tool metadata is preserved for OpenAI provider endpoint overrides. This is relevant to your `model_provider: openai`, but the report does not show that you use endpoint overrides. Separately, **0.159.1** added GPT-6.1 Sol as the default model in the bundled catalog and Amazon Bedrock Mantle and Runtime catalogs. Your configured model is `gpt-5.6-terra` through OpenAI, so this catalog-default change does not replace the configured model.\n\n- **0.159.0 \u2014 compaction-related preservation and display changes.** The release preserves model/access-program pairs during compaction, preserves independent Guardian history across parent compaction, retains usage-limit windows in compaction analytics, and shows hidden-output line counts in compact terminal activity. These are relevant because compaction is among the watched setup signals, but the report does not establish that compaction is enabled or active at runtime; unset feature behavior remains unknown.\n\n- **0.159.0 \u2014 transcript and terminal UI improvements.** Transcript selection copying now preserves Markdown tables, formatting, and significant whitespace, and more terminals auto-copy selections. Native Mermaid rendering also supports more flowchart syntax. These are general TUI capabilities that may improve ordinary use in Kitty, but neither requires configuration action.\n\n- **0.159.0 \u2014 removed prompt-suggestion setting.** Automatic follow-up prompt suggestions and the `tui.prompt_suggestions` setting were removed. The inventory does not list that setting, so this does not indicate a local configuration migration is needed.\n\n- **0.159.3 \u2014 optional account-security reminders.** Eligible local sessions signed in with ChatGPT can show optional reminders to complete account-security setup. The report does not establish eligibility, local-session sign-in state, or whether reminders are enabled; this is an optional capability, not an action requested by the release.\n\n**Terminal note:** The detected terminal is **kitty** (from `KITTY_PID`), and `TERM` is `xterm-kitty`; these agree, so no terminal-identification mismatch was reported. There is no multiplexer.\n\n**Inventory and freshness limits:** Configuration was inferred from files, not the running session\u2019s effective configuration. CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, hook trust, and defaults for unset features were not resolved. The inventory found no hooks and reports that hooks are not disabled in files; that is not proof that no hooks can be supplied elsewhere at runtime. The snapshot is local and frozen/synthetic, so releases outside **0.159.0\u20130.159.3** were not searched.\n\n**Coverage counts:** **0** entries were withheld as belonging to another platform. **78** entries matched no configuration signal, of which **0** were hidden as unmatched by `--relevant-only`.\n",
+    "receipt": {
+      "model": "gpt-5.6-terra",
+      "effort": "low",
+      "seconds": 47.15,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 12498,
+        "output_tokens": 1376,
+        "reasoning_output_tokens": 0
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-public-B-terra-high-r1",
+    "case": "train-public",
+    "variant": "B",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1,
+    "answer": "The requested window covers **0.159.0 through 0.159.3**\u2014the four releases after 0.158.0 and through the explicitly requested endpoint. **No decision is established by the reported setup, but one decision is conditional on whether you depended on a removed bundled skill.**\n\n## Act on this\n\nNothing here needs a decision.\n\n## Could not check\n\n- **0.159.0 \u2014 Did any workflow depend on the bundled `plugin-creator` skill?** This release removes that bundled skill. The file inventory lists a plugin and a skill, but it does **not** show that `plugin-creator` was installed, enabled, or used. If the answer is yes, decide how that workflow should be retained or changed; the supplied notes do not name a replacement.\n\n## Fixed for you\n\n- **0.159.0 \u2014 Approved commands now retain explicit filesystem denials, while `.aws` directories are protected by default under writable roots.** This is relevant because the configured approval policy is `on-request` and the sandbox is `workspace-write`. A command approved for execution should no longer lose an explicit filesystem denial during preparation. The `.aws` protection matters only for work attempting to access such a directory within a writable root; the report does not establish that this setup does so.\n\n- **0.159.0 \u2014 MCP credential boundaries are preserved across reconnects.** An MCP configuration is present (`mcp: reference`), so this could fix incorrect credential-boundary handling when that server reconnects. It does not establish that a reconnect or the bug actually occurred.\n\n- **0.159.0 \u2014 Multi-agent message-board SSE frames are bounded before parsing.** `multi_agent` is explicitly enabled in the inventory, so this could improve the handling of agent message-board traffic for this setup. The release note does not describe a particular user-visible failure mode.\n\n- **0.159.0 \u2014 Compaction retains the selected model and access-program pairing.** The setup explicitly selects `gpt-5.6-terra`; this preserves that model/access pairing if a session is compacted. It does not claim a compaction event occurred.\n\n- **0.159.0 \u2014 Several terminal rendering fixes are available to this CLI workflow.** These include retaining empty Markdown list markers, correcting certain math rendering (zero and big-wedge expressions), and using the terminal palette for ordered-list markers. They are relevant to ordinary terminal transcript viewing, but only affect outputs containing those constructs.\n\n## Worth knowing\n\n- **0.159.0 \u2014 `instant_interrupt` is now an opt-in capability.** It allows new input to steer Codex while a model response or long-running code-mode call is in progress. The inventory explicitly has `instant_interrupt: False`, so this release does **not** change current behavior for this setup.\n\n- **0.159.0 \u2014 The TUI\u2019s new-session and in-turn presentation changed.** New sessions have a more compact welcome screen and consistent headers, with occasional tips during and after turns. Reviewed warnings now dismiss when their viewer closes, with `k` available to keep a warning for later. These are ordinary interaction changes rather than settings changes.\n\n- **0.159.0 \u2014 Transcript interaction improved.** You can scroll the transcript while deciding whether to implement a plan. Copying selections now preserves Markdown tables, formatting, and significant whitespace, and more terminals automatically copy a selection. This is relevant to the reported Kitty terminal workflow.\n\n- **0.159.0 \u2014 Session handling gained several conveniences.** Blank sessions retain drafts when switching tasks, and threads can be archived and listed before their first turn. This is relevant because sessions are enabled in the reported inventory.\n\n- **0.159.0 \u2014 Native Mermaid rendering supports additional syntax.** Flowcharts gained more supported edges, labels, node groups, punctuation, and semicolons. This affects only transcripts containing Mermaid diagrams.\n\n- **0.159.0 \u2014 Automatic follow-up prompt suggestions and the `tui.prompt_suggestions` setting were removed.** The report does not show that setting as configured, but automatic suggestions themselves are no longer part of the TUI behavior.\n\n- **0.159.0 \u2014 MCP handling gained optional improvements.** MCP app resource URIs are preserved without forcing a default display mode, and Codex can discover the status of a single MCP server while reusing its thread connection. These matter if the configured MCP server exposes app resources or if its connection status is inspected.\n\n- **0.159.0 \u2014 Skill catalogs are stabilized across executor-availability changes.** A skill is listed in the file inventory, but that inventory is not proof that the skill is active or that executor availability changes occur. This is therefore informational rather than evidence of a fix already affecting a running workflow.\n\n- **0.159.0 \u2014 The completion UI can show short turn durations, and the status display was refined for long values.** This is relevant to the terminal/TUI use signaled by `statusline: True`, although the release specifically describes TUI completion footers and `/status` rendering rather than a change to the statusline setting itself.\n\n- **0.159.0 \u2014 Kitty now shows a hand pointer over transcript links.** The detected terminal is Kitty, so this terminal-specific visual interaction change applies.\n\n- **0.159.1 \u2014 GPT-6.1 Sol was added as the default model in the bundled catalog and in Amazon Bedrock Mantle and Runtime catalogs.** This does not change the configured selection here: the inventory explicitly sets the OpenAI-provider model to `gpt-5.6-terra`. The Bedrock catalog portion is not indicated as in use.\n\n- **0.159.3 \u2014 Eligible local sessions signed in with ChatGPT can show optional account-security setup reminders.** The reported profile is `subscription`, but the inventory does not establish that this is an eligible local ChatGPT-signed-in session. If it is, a reminder may appear; it is optional.\n\n## Counts and coverage\n\n- **Withheld:** 0 entries belonging to another platform.\n- **Unmatched:** 78 entries matched no configuration signal.\n- **Hidden unmatched:** 0 additional unmatched entries were not shown (`Not shown: 0 unmatched`).\n\nThe detected terminal is **Kitty** (via `KITTY_PID`); `TERM` is `xterm-kitty`, so the report shows no terminal/`TERM` mismatch.\n\nThis is a **local frozen snapshot**, not a live or complete release search: its archive coverage is exactly **0.159.0 through 0.159.3**, and releases outside that range were not searched. The environment is a file-based inventory, not proof of the effective running configuration: CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, hook trust, and defaults for unset features remain unresolved. The baseline at `/example/state/baseline.json` is **unchanged**.\n",
+    "receipt": {
+      "model": "gpt-5.6-terra",
+      "effort": "high",
+      "seconds": 199.96,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 12922,
+        "output_tokens": 6040,
+        "reasoning_output_tokens": 4615
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-public-B-terra-medium-r1",
+    "case": "train-public",
+    "variant": "B",
+    "family": "terra",
+    "effort": "medium",
+    "repeat": 1,
+    "answer": "The release window is **0.159.0 through 0.159.3** (four releases), selected with `--since 0.158.0 --through 0.159.3`. **No decision is currently required** for this setup.\n\n## Act on this\n\nNothing here needs a decision.\n\n## Fixed for you\n\n- **0.159.0 \u2014 MCP reconnect credential boundaries.** You have an MCP server configured (`reference`), and reconnects now preserve executor MCP credential boundaries. This fixes a problem this setup could plausibly have encountered when that server reconnects; it does not imply that credentials were previously exposed or that you saw the bug.\n\n- **0.159.0 \u2014 MCP resource URI handling and connection reuse.** MCP app resource URIs are now preserved without forcing a default display mode, and single-server MCP status discovery can reuse a thread connection. These fixes can matter to the configured MCP integration when it exposes app resources or when its status is queried from a thread.\n\n- **0.159.0 \u2014 Model/access selection survives compaction.** Compaction now preserves model and access-program pairs. Because this setup explicitly selects `gpt-5.6-terra` with `high` reasoning effort, a compaction during a session could previously have lost part of that selection context; this release preserves it.\n\n## Worth knowing\n\n- **0.159.0 \u2014 Interrupting responses is available but remains off here.** The new opt-in `instant_interrupt` feature lets new input steer Codex during a model response or a long-running code-mode call. Your inventory explicitly reports `instant_interrupt: False`, so the behavior has **not** changed for this setup unless that feature is enabled.\n\n- **0.159.0 \u2014 Session workflow and session UI were refreshed.** Sessions are enabled here. New sessions have a more compact welcome screen and consistent headers, with occasional in-session or post-turn tips. Blank sessions also retain drafts when you switch tasks, and you can archive and list a thread before its first turn. These are workflow/UI improvements rather than a configuration decision.\n\n- **0.159.0 \u2014 Follow-up prompt suggestions were removed.** Codex no longer automatically shows follow-up prompt suggestions, and the former `tui.prompt_suggestions` setting was removed. This is an ordinary TUI behavior change; the report does not establish that you had customized that removed setting.\n\n- **0.159.0 \u2014 Permission protections are stricter under your writable sandbox.** Your sandbox mode is `workspace-write` and approvals are `on-request`. Approved commands now retain explicit filesystem denials, and `.aws` directories are protected by default when they are under writable roots. This is a protective behavior change: an otherwise approved command will not override an explicit filesystem denial, and access to such an `.aws` directory may be denied if one falls under a writable root.\n\n- **0.159.0 \u2014 Turn durations are shown in TUI completion footers.** Statusline support is enabled in this inventory, and Codex now shows short turn durations in TUI completion footers. This is additional completion feedback, not a change to the configured statusline setting itself.\n\n- **0.159.0 \u2014 Kitty link interaction improved.** The detected terminal is **kitty**, and Codex now shows a hand pointer when hovering transcript links in Kitty. `TERM` is `xterm-kitty`, which is consistent with the detected terminal, so there is no TERM mismatch to flag.\n\n- **0.159.0 \u2014 Installed skill catalogs are more stable across executor availability changes.** A skill is listed in the file inventory (`reference-skill`), though that inventory does not prove it is active in the current session. If Codex\u2019s executor availability changes while skill catalogs are being used, their catalog should now remain stable.\n\n- **0.159.1 \u2014 GPT-6.1 Sol was added to the bundled and Bedrock catalogs.** Your selected provider is OpenAI and your configured model remains `gpt-5.6-terra`; this catalog/default addition does not by itself change that explicit model choice. It is relevant only if you later choose GPT-6.1 Sol from an available catalog.\n\n## Counts and coverage\n\n- **Withheld:** **0** entries belonging to another platform.\n- **Unmatched:** **78** entries matched no configuration signal.\n- **Hidden unmatched:** **0** (`--relevant-only` did not suppress any unmatched entries).\n\nThis is a **local frozen/synthetic archive snapshot**, not a search of releases outside the supplied file. Archive coverage is exactly **0.159.0 through 0.159.3**, the same as this release window. File-based inventory does not resolve CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, hook trust, or runtime defaults for unset features. The baseline at `/example/state/baseline.json` is **unchanged**; it has not been recorded as advanced.\n",
+    "receipt": {
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "seconds": 71.74,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 12922,
+        "output_tokens": 2056,
+        "reasoning_output_tokens": 1034
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-conditions-A-luna-medium-r1",
+    "case": "train-conditions",
+    "variant": "A",
+    "family": "luna",
+    "effort": "medium",
+    "repeat": 1,
+    "answer": "This window covers **9.2.0 through 9.3.0**, the two releases selected by `--releases 2 --through 9.3.0`. Archive coverage is also 9.2.0\u20139.3.0, so older releases are not represented here. No baseline is recorded; that does not tell us why this window was selected. The report is based on a local file inventory, not the running session\u2019s effective configuration. CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are unresolved; unset features may have unknown runtime defaults.\n\n## Act on this\n\nNothing here needs a decision.\n\n## Fixed for you\n\n- **9.2.0 \u2014 PreToolUse hook allow decisions bypassing an ask rule.** The report finds a `PreToolUse` hook, and hooks are disabled in the inventoried files. Because hook trust and the effective runtime configuration are unresolved, the report does not establish that this hook runs or that you could encounter the bug. The fix is relevant only if an applicable PreToolUse hook runs and makes an allow decision while an ask rule is in play.\n- **9.2.0 \u2014 Subagents reconnecting.** The report shows `feature:multi_agent` enabled. This fix is relevant to the configuration where multi-agent is enabled, though it does not establish that you experienced the bug.\n- **9.3.0 \u2014 Vim draft loss after scrollback.** Vim is configured on, so the fix for a draft being lost after leaving scrollback could plausibly matter. The release summary and detailed changelog describe the same fix; it is listed once.\n\n## Worth knowing\n\n- **9.2.0 \u2014 `features.memories` was removed.** The report says users who explicitly enabled it must migrate to `features.memory_v2`. Memories are enabled in the inventory, but it does not say whether this specific old feature was explicitly enabled; that runtime detail is unresolved. The migration applies if it was.\n- **9.2.0 \u2014 `sandbox_legacy` was removed.** The release says users with an old `legacy_access` permission rule must replace it. The report lists `on-request` approval and `workspace-write` sandbox settings, but does not establish whether such a rule exists. The replacement matters if it does.\n- **9.3.0 \u2014 `/rewind` was added** to restore an earlier conversation turn. This is a new command; the inventory does not establish whether you will use it.\n- **9.3.0 \u2014 Telemetry initialization was fixed when telemetry is disabled.** Telemetry is configured on in the inventory, so the stated condition for this fix is not met.\n- **9.3.0 \u2014 MCP OAuth refresh was fixed for an enabled server.** No MCP servers were found in the inventory, so this does not appear to apply.\n- **9.2.0 \u2014 `CODEX_DISABLE_TIPS=1` was added** to suppress the new default startup tips. No environment variables were detected, so this is an optional capability if you want to suppress those tips.\n\n## Terminal and inventory notes\n\nThe detected terminal is **kitty**, but `TERM` is `xterm-256color` and does not name it. That mismatch is a configuration choice worth examining, and this combination is tested less often. The report is a file-based inventory; it does not resolve effective runtime configuration, CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, or hook trust. Unset features retain unknown runtime defaults.\n\n**Withheld:** 1 entry belonging to another platform. **Unmatched:** 2 entries matched no configuration signal. **Hidden unmatched:** 0.\n",
+    "receipt": {
+      "model": "gpt-6-luna",
+      "effort": "medium",
+      "seconds": 9.74,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 10633,
+        "output_tokens": 768,
+        "reasoning_output_tokens": 0
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-conditions-B-terra-high-r1",
+    "case": "train-conditions",
+    "variant": "B",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1,
+    "answer": "The release window covers **9.2.0 through 9.3.0** (the two releases selected by `--releases 2 --through 9.3.0`). A decision is needed for the explicitly enabled memories setting, and one older permission-rule migration remains conditional.\n\n## Act on this\n\n- **9.2.0 \u2014 Migrate the explicitly enabled memories feature.** Your configuration lists `memories: True`, but 9.2.0 removed `features.memories`. The release notes say users who explicitly enable it must migrate to `features.memory_v2`. Decide whether to keep using memories under that replacement setting and update the configuration accordingly.\n\n## Could not check\n\n- **9.2.0 \u2014 Do you have an old `legacy_access` permission rule?** The report confirms your general approval and sandbox settings, but not whether that particular old rule exists. If the answer is yes, it must be replaced because `sandbox_legacy` was removed in 9.2.0.\n\n## Fixed for you\n\n- **9.3.0 \u2014 Vim draft loss after scrollback was fixed.** Vim is enabled here. If you left scrollback while composing input, this release fixes the draft being lost.\n- **9.2.0 \u2014 Multi-agent subagent reconnection was fixed.** `multi_agent` is enabled here, so this setup could have encountered subagents reconnecting incorrectly.\n\n## Worth knowing\n\n- **9.3.0 \u2014 `/rewind` is new.** It restores an earlier conversation turn, providing a built-in way to return to a prior point in a conversation.\n- **9.2.0 \u2014 Startup tips can now be suppressed.** `CODEX_DISABLE_TIPS=1` suppresses the new default startup tips if they become unwelcome.\n\nThe detected terminal is **kitty** (from `KITTY_PID`), while `TERM` is `xterm-256color`; `TERM` therefore does not name the detected terminal. This is a configuration combination worth examining and is less commonly covered by terminal testing.\n\n## Counts and coverage\n\n- **Withheld:** **1** entry belonging to another platform (**Windows: 1**).\n- **Unmatched:** **2** entries matched no configuration signal.\n- **Hidden unmatched:** **0** (`--relevant-only` did not hide any).\n- This is a **local snapshot**: CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, hook trust, and defaults for unset features were not resolved. The file inventory shows a `PreToolUse` hook name, but hooks are explicitly disabled in the files, so the hook-related fix was not treated as active here.\n- Archive coverage is limited to **9.2.0 through 9.3.0**, matching this release window; releases outside that snapshot were not searched.\n- No baseline was recorded, and the baseline remains unchanged.\n",
+    "receipt": {
+      "model": "gpt-5.6-terra",
+      "effort": "high",
+      "seconds": 54.45,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 10461,
+        "output_tokens": 1638,
+        "reasoning_output_tokens": 1034
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-public-B-luna-medium-r1",
+    "case": "train-public",
+    "variant": "B",
+    "family": "luna",
+    "effort": "medium",
+    "repeat": 1,
+    "answer": "The 0.159.0\u20130.159.3 window covers four releases after the stated 0.158.0 baseline. Nothing here requires a decision under a reported setting; a check is needed only to determine whether optional local-session security reminders are relevant.\n\n## Act on this\n\nNothing here needs a decision.\n\n## Could not check\n\n- **0.159.3 \u2014 Optional account-security reminders:** Do you use eligible local sessions signed in with ChatGPT? If yes, those sessions can show optional reminders to complete account security setup. The report does not establish whether you use eligible sessions.\n\n## Fixed for you\n\n- **0.159.0 \u2014 macOS TLS trust in network-enabled sandboxes:** The release allows TLS trust evaluation in network-enabled Seatbelt profiles. This setup is Linux, so that fix does not apply.\n- **0.159.0 \u2014 Proxy requirements in remote environments:** The release honors execution-environment proxy requirements. The report does not show that this setup is a remote environment requiring proxy access, so no specific impact is established.\n\n## Worth knowing\n\n- **0.159.0 \u2014 New-session experience:** New sessions get a compact welcome screen, consistent headers, and occasional tips. This is a TUI interaction change; no action is needed.\n- **0.159.0 \u2014 Warning review:** Closing the warnings viewer dismisses reviewed warnings, with `k` available to keep one for later.\n- **0.159.0 \u2014 Plan review:** You can scroll the transcript while deciding whether to implement a plan.\n- **0.159.0 \u2014 Mermaid rendering:** Native rendering supports more flowchart edges, labels, and node groups.\n- **0.159.0 \u2014 Transcript copying:** Selection copying preserves Markdown tables, formatting, and significant whitespace; more terminals copy automatically on selection. Kitty is the detected terminal, though the release note does not say whether this automatic-copy improvement covers Kitty.\n- **0.159.0 \u2014 Blank sessions and archiving:** Blank sessions retain drafts when switching tasks, and threads can be archived and listed before their first turn.\n- **0.159.0 \u2014 ChatGPT sign-in:** Local ChatGPT sign-in opens the browser more reliably, and onboarding makes the login link easier to copy.\n- **0.159.0 \u2014 MCP on Windows:** Windows launches avoid stray console windows for MCP servers, code-mode hosts, and piped commands, with an embedded-mode fallback for restrictive launchers. This setup is Linux.\n- **0.159.0 \u2014 MCP reconnect credentials:** Executor MCP credential boundaries are preserved across reconnects. The environment lists MCP as `reference`, but does not establish the specific server or reconnect behavior, so the release note does not support a more specific impact claim.\n- **0.159.0 \u2014 MCP status discovery:** Adds single-server status discovery with thread connection reuse. This is an MCP capability; the report lists MCP as `reference`.\n- **0.159.0 \u2014 App-server history:** App-server clients can paginate thread history from a specific item. No app-server client is identified in the environment.\n- **0.159.0 \u2014 TUI behavior:** The release removes automatic follow-up prompt suggestions and the `tui.prompt_suggestions` setting. No value for that setting is reported, so this is a behavior-change announcement rather than a decision under a known configuration.\n- **0.159.0 \u2014 Bundled skill removal:** The bundled `plugin-creator` skill was removed. The environment\u2019s skill and plugin entries are inventory, not proof that this skill is enabled or used.\n- **0.159.1 \u2014 Model catalog:** GPT-6.1 Sol was added as the default in the bundled catalog and Amazon Bedrock Mantle and Runtime catalogs. The configured model is `gpt-5.6-terra`; the note does not say this changes that selection.\n\n**Counts and coverage:** Withheld: **0** entries belonging to another platform. Unmatched: **78** entries matched no configuration signal; hidden unmatched: **0** (`--relevant-only` showed none hidden). The report is based on a local snapshot, and file inventory does not resolve running-session overrides, cloud defaults, enforced requirements, plugin-bundled content, or hook trust; unset features retain unknown runtime defaults. The requested release window is 0.159.0 through 0.159.3; archive coverage is also 0.159.0 through 0.159.3, so releases outside that archive were not searched. The baseline remains 0.158.0; it has not been advanced.\n",
+    "receipt": {
+      "model": "gpt-6-luna",
+      "effort": "medium",
+      "seconds": 11.17,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 13518,
+        "output_tokens": 940,
+        "reasoning_output_tokens": 0
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-public-A-luna-xhigh-r1",
+    "case": "train-public",
+    "variant": "A",
+    "family": "luna",
+    "effort": "xhigh",
+    "repeat": 1,
+    "answer": "## What this window means for your setup\n\nThe requested window is four releases, **0.159.0 through 0.159.3**, bounded by `--since 0.158.0 --through 0.159.3`. The report also lists baseline 0.158.0, but does not establish why these bounds were chosen. This is the release window, not the full archive: the local snapshot covers only 0.159.0\u20130.159.3.\n\n### Act on this\n\n- **0.159.0 \u2014 Decide whether to opt into `instant_interrupt`.** Your inventory reports `instant_interrupt: False`; enabling this opt-in feature would let new input steer Codex during model responses or long-running code-mode calls.\n\n### Fixed for you\n\n- **0.159.0 \u2014 Approval and filesystem protections.** With your `on-request` approval policy and `workspace-write` sandbox, approved commands now retain explicit filesystem denials, and `.aws` directories are protected by default under writable roots.\n- **0.159.0 \u2014 MCP reconnect credential boundaries.** You have an MCP server listed as `reference`; when an MCP connection reconnects, executor credential boundaries are now preserved.\n- **0.159.0 \u2014 Skill catalog stability.** You have `reference-skill` listed and multi-agent is enabled. When executor availability changes, skill catalogs are now stabilized.\n- **0.159.0 \u2014 Session handling fixes.** With sessions enabled, blank sessions are preserved when switching tasks, and archived threads with empty previews remain visible in listings.\n- **0.159.0 \u2014 Compaction metadata.** When compaction occurs after model or access-program changes, those pairs are now preserved.\n\n### Worth knowing\n\n- **0.159.0 \u2014 New-session presentation.** New sessions get a compact welcome screen, consistent headers, and occasional tips during and after turns. The same release also stops showing previous-session summaries when switching TUI sessions.\n- **0.159.0 \u2014 Session capabilities.** Threads can now be archived before their first turn.\n- **0.159.0 \u2014 MCP status discovery.** A single-server MCP status-discovery option can reuse a thread connection; this is relevant to your configured MCP server.\n- **0.159.0 \u2014 TUI changes.** Automatic follow-up prompt suggestions were removed, along with the `tui.prompt_suggestions` setting. Short turn durations can now appear in completion footers; your statusline is enabled.\n- **0.159.0 \u2014 Kitty links.** Hovering over transcript links in Kitty now shows a hand pointer. The detected terminal is Kitty, identified via `KITTY_PID`; `TERM=xterm-kitty` is consistent with it, with no mismatch reported.\n- **0.159.1 \u2014 Model catalog.** GPT-6.1 Sol was added as the default in the bundled catalog and in Amazon Bedrock Mantle and Runtime catalogs. The inventory reports your current model as `gpt-5.6-terra`; it does not show that your selection changed.\n- **0.159.0 and 0.159.3 \u2014 Local ChatGPT sign-in.** The 0.159.0 release made browser sign-in more reliable for local app servers. The 0.159.3 release added optional account-security reminders for eligible local sessions signed in with ChatGPT; the report does not establish whether such a session is in use.\n\n### Coverage and limits\n\nThe environment is a **file-based inventory**, not the running session\u2019s effective configuration. CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are unresolved; unset features may have unknown runtime defaults. The snapshot is local, and releases outside it were not searched. The report says the baseline is unchanged; no baseline update is claimed here.\n\n**Withheld:** 0 entries belonging to another platform.  \n**Unmatched:** 78 entries matched no configuration signal.  \n**Not shown:** 0 unmatched entries (`--relevant-only`).\n",
+    "receipt": {
+      "model": "gpt-6-luna",
+      "effort": "xhigh",
+      "seconds": 68.35,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 13094,
+        "output_tokens": 7047,
+        "reasoning_output_tokens": 6214
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-public-B-luna-xhigh-r1",
+    "case": "train-public",
+    "variant": "B",
+    "family": "luna",
+    "effort": "xhigh",
+    "repeat": 1,
+    "answer": "For this setup, the requested window is four releases, **0.159.0 through 0.159.3**, after 0.158.0. **Nothing here needs a decision.**\n\n## Act on this\n\nNothing here needs a decision.\n\n## Fixed for you\n\n- **0.159.0 \u2014 sandbox protection:** `.aws` directories are now protected by default under writable roots. This setup uses `workspace-write`, so that safeguard is relevant; the report doesn\u2019t establish that you encountered the bug.\n- **0.159.0 \u2014 MCP reconnects:** credential boundaries are preserved across MCP reconnects. The report lists an MCP server, so this could matter if it reconnects.\n- **0.159.0 \u2014 multi-agent message board:** message-board event frames are bounded before parsing, and message-board notifications no longer reopen final answers. `multi_agent` is explicitly enabled. These are message-board behaviors, not evidence that the separate `notifications` setting is enabled.\n- **0.159.0 \u2014 transcript copying and rendering:** copying selections now preserves Markdown tables, formatting, and significant whitespace; the TUI also preserves empty Markdown list markers. This is relevant to terminal transcript use. The release summary and detailed changelog describe the same table-and-whitespace fix, counted once.\n\n## Worth knowing\n\n- **0.159.0 \u2014 TUI additions:** new sessions get a compact welcome screen and consistent headers, with occasional tips. The warnings viewer can dismiss reviewed warnings when closed, or keep one for later with `k`; transcript scrolling is available while a plan modal is open. Mermaid rendering supports more flowchart syntax, labels, and node groups.\n- **0.159.0 \u2014 sessions and interaction:** blank sessions retain drafts when switching tasks, threads can be archived before their first turn, and switching sessions no longer shows the previous-session summary. The TUI also removed automatic follow-up prompt suggestions and the `tui.prompt_suggestions` setting, and removed the `current` badge from task rows. The report does not show that prompt suggestions were configured.\n- **0.159.0 \u2014 status and terminal:** with `statusline` enabled, completion footers can show short turn durations; `/status` is now borderless and wraps long values. Kitty is explicitly supported for showing a hand pointer over transcript links. Automatic selection-copy was also expanded to more terminals, but the note doesn\u2019t identify whether Kitty is among them.\n- **0.159.0 \u2014 MCP and scoped fixes:** the release adds single-server MCP status discovery with thread connection reuse. It also preserves MCP app resource URIs; that fix matters when an MCP server supplies those URIs. Other fixes are conditional: explicit filesystem denials are preserved when preparing approved commands; OpenAI tool metadata is preserved when using an endpoint override; and execution-environment proxy requirements are honored for environments that require a proxy. The report doesn\u2019t establish those specific conditions. Skill catalogs are stabilized across executor availability changes; the listed skill inventory doesn\u2019t establish that a skill is active.\n- **0.159.0 \u2014 opt-in interruption:** `instant_interrupt` lets new input steer Codex during model responses or long-running code-mode calls, but this setup explicitly has `instant_interrupt: False`, so it isn\u2019t an active change here.\n- **0.159.0 \u2014 local ChatGPT sign-in:** browser sign-in is more reliable for local app servers, and onboarding makes the login link easier to copy. This is scoped to that sign-in path; the subscription profile alone doesn\u2019t establish that it\u2019s used here.\n- **0.159.1 \u2014 model catalog:** GPT-6.1 Sol was added as the default model in the bundled catalog and in the Bedrock Mantle and Runtime catalogs. This setup reports provider `openai` and model `gpt-5.6-terra`; the release note doesn\u2019t indicate that this changes the configured model.\n- **0.159.3 \u2014 security reminders:** eligible local sessions signed in with ChatGPT can show optional account-security setup reminders. The report doesn\u2019t establish whether this session meets the eligibility conditions.\n\n## Counts and coverage\n\nWithheld: **0 entries belonging to another platform**. Unmatched: **78 entries** with no configuration signal; hidden unmatched: **0**. The terminal is detected as Kitty, and `TERM=xterm-kitty` is consistent with it.\n\nThis is a local snapshot, not the running session\u2019s effective configuration: CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are unresolved; unset features retain unknown runtime defaults. The installed CLI is 0.160.1, but this archive covers only **0.159.0 through 0.159.3**; releases outside the snapshot were not searched. The baseline remains **0.158.0**; it has not been advanced.\n",
+    "receipt": {
+      "model": "gpt-6-luna",
+      "effort": "xhigh",
+      "seconds": 117.31,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 13518,
+        "output_tokens": 12240,
+        "reasoning_output_tokens": 11243
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-public-A-terra-medium-r1",
+    "case": "train-public",
+    "variant": "A",
+    "family": "terra",
+    "effort": "medium",
+    "repeat": 1,
+    "answer": "## Release window\n\nThis covers **0.159.0 through 0.159.3** (four releases), after baseline **0.158.0**. It is a bounded comparison selected by the supplied `--since 0.158.0 --through 0.159.3` arguments; it does not indicate that a baseline has moved. The installed CLI is newer (**0.160.1**), so later changes are outside this report\u2019s window and archive coverage.\n\n## Act on this\n\n- **0.159.0 \u2014 decide whether to enable `instant_interrupt`.**  \n  This new opt-in feature lets new input steer Codex while it is producing a model response or running a long code-mode call. It is currently explicitly **disabled** (`feature instant_interrupt: False`). Enable it if interrupting or redirecting in-progress work is valuable in this workflow; leave it off if preserving the previous non-steering behavior is preferred.\n\n## Could not check\n\n- **0.159.0 \u2014 does work under a sandbox-writable root need access to a `.aws` directory?**  \n  With `sandbox_mode: workspace-write`, Codex now protects `.aws` directories by default when they are beneath writable roots; approved commands also continue to honor explicit filesystem denials. If the answer is yes, decide whether that access should be redesigned or explicitly handled through the applicable permission workflow, because commands that previously expected to use such a directory may now be denied.\n\n## Fixed for you\n\n- **0.159.0 \u2014 MCP credential boundaries are preserved across reconnects.**  \n  You have an MCP server configured (`mcp: reference`). This release fixes preservation of executor MCP credential boundaries during reconnects. It matters if that MCP setup reconnects through an executor and uses credentials; the change prevents those boundaries from being lost during that path.\n\n- **0.159.0 \u2014 skill catalogs are stabilized across executor-availability changes.**  \n  You have a configured skill (`skills: reference-skill`). The catalog should no longer vary merely because executor availability changes. This is a fix for setups that could see skills appear inconsistently as executor state changes.\n\n## Worth knowing\n\n- **0.159.0 \u2014 session and transcript workflow improvements.**  \n  Sessions are enabled here. New sessions have a more compact welcome screen and consistent headers; blank sessions survive task switching; and threads may be archived and listed before their first turn. You can also scroll the transcript while deciding whether to implement a plan. These are interface/workflow changes, not new required configuration.\n\n- **0.159.0 \u2014 the status display now shows short turn durations after completion.**  \n  `statusline` is enabled, so the TUI completion footer can now expose short elapsed turn durations.\n\n- **0.159.0 \u2014 Kitty gets a link-pointer refinement.**  \n  The detected terminal is **kitty** (from `KITTY_PID`), and release 0.159.0 shows a hand pointer over transcript links in Kitty. `TERM` is `xterm-kitty`, which is consistent with the detected terminal; there is no TERM mismatch to investigate.\n\n- **0.159.0 \u2014 automatic follow-up prompt suggestions were removed.**  \n  Codex no longer generates automatic follow-up prompt suggestions, and the `tui.prompt_suggestions` setting was removed. This is an interface behavior change rather than a configurable replacement feature in the supplied configuration.\n\n- **0.159.0 \u2014 native Mermaid rendering accepts more syntax.**  \n  Flowchart edges, labels, node groups, punctuation/semicolons in labels, and additional flowchart syntax have improved native rendering support. This is available when Mermaid diagrams appear in Codex output; no Mermaid-specific configuration was reported.\n\n- **0.159.1 \u2014 GPT-6.1 Sol was added as a default bundled and Bedrock-catalog model.**  \n  Your configured provider is OpenAI and your model remains explicitly set to `gpt-5.6-terra`, so this catalog-default addition does not change the selected model in the reported file configuration. It is relevant only if you later switch models or use the relevant bundled/Bedrock catalog.\n\n- **0.159.3 \u2014 eligible local ChatGPT sessions may show account-security setup reminders.**  \n  This is an optional reminder feature for eligible local sessions signed in with ChatGPT. The report\u2019s subscription profile is compatible with ChatGPT use, but it does not establish eligibility or active local sign-in; no action is required unless such a reminder appears.\n\n**Coverage and limits:** The local frozen archive covers exactly **0.159.0 through 0.159.3**; releases outside that range were not searched. Configuration is a file-based inventory, not the effective running session: CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, hook trust, and runtime defaults for unset features are not resolved.\n\n**Withheld:** 0 entries belonging to another platform.  \n**Unmatched:** 78 entries matched no configuration signal.  \n**Hidden unmatched:** 0 entries were not shown.\n",
+    "receipt": {
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "seconds": 81.65,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 12498,
+        "output_tokens": 2081,
+        "reasoning_output_tokens": 1034
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-public-B-luna-high-r1",
+    "case": "train-public",
+    "variant": "B",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1,
+    "answer": "The explicitly requested window is **0.159.0\u20130.159.3** (four releases), compared with baseline 0.158.0; the bounds come from `--since` and `--through`.\n\n## Act on this\n\nNothing here needs a decision.\n\n## Fixed for you\n\n- **0.159.0:** Approved commands now retain explicit filesystem denials, and `.aws` directories are protected by default under writable roots. This is relevant to your `workspace-write` sandbox setup; the change does not imply that any particular command or `.aws` directory was affected.\n- **0.159.0:** MCP credential boundaries are preserved across executor reconnects. You have an MCP server configured, so this fix could matter when an MCP connection reconnects.\n- **0.159.0:** Blank sessions retain drafts when switching tasks, and threads can be archived and listed before their first turn. These session-handling fixes are relevant with sessions enabled.\n\n## Worth knowing\n\n- **0.159.0:** `instant_interrupt` was added as an opt-in way for new input to steer Codex during a model response or a long-running code-mode call. Your feature setting is explicitly `False`, so this is not enabled by the reported configuration.\n- **0.159.0:** The TUI got a compact welcome screen for new sessions, consistent headers, and occasional tips during and after turns. The warnings viewer now dismisses reviewed warnings on close, with `k` to keep a warning for later; transcript scrolling is also available while deciding whether to implement a plan.\n- **0.159.0:** Transcript selection copying now preserves Markdown tables, formatting, and significant whitespace, and more terminals copy automatically on selection. Kitty also gets a hand pointer over transcript links.\n- **0.159.0:** Native Mermaid rendering supports more flowchart edges, labels, and node groups.\n- **0.159.0:** Short turn durations can now appear in TUI completion footers; your statusline is enabled.\n- **0.159.0:** Follow-up prompt suggestions and the `tui.prompt_suggestions` setting were removed. The report does not establish whether you used those suggestions.\n- **0.159.0:** MCP status discovery can now target a single server and reuse thread connections. The release also fixes MCP app resource URIs without defaulting display mode; that fix matters if your MCP server exposes app resource URIs.\n- **0.159.0:** Local ChatGPT sign-in now opens the browser more reliably, and onboarding makes the login link easier to copy. These changes concern the local ChatGPT sign-in flow.\n- **0.159.1:** GPT-6.1 Sol was added as the default in the bundled model catalog and in Amazon Bedrock Mantle and Runtime catalogs. Your reported model is `gpt-5.6-terra`; the catalog announcement does not say that your configured model changed.\n- **0.159.3:** Eligible local sessions signed in with ChatGPT can show optional reminders to complete account security setup.\n\n## Counts and coverage\n\nWithheld: **0** entries belonging to another platform. Unmatched: **78** entries matched no configuration signal; hidden unmatched: **0**. The report is a file-based configuration inventory, not the running session\u2019s effective configuration: CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are unresolved, and unset features retain unknown runtime defaults. The detected terminal is **Kitty**; `TERM=xterm-kitty` matches it.\n\nThe local archive covers **0.159.0\u20130.159.3**; releases outside that snapshot were not searched. The baseline remains **0.158.0** and has not been advanced.\n",
+    "receipt": {
+      "model": "gpt-6-luna",
+      "effort": "high",
+      "seconds": 46.19,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 13518,
+        "output_tokens": 4331,
+        "reasoning_output_tokens": 3556
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-conditions-A-luna-xhigh-r1",
+    "case": "train-conditions",
+    "variant": "A",
+    "family": "luna",
+    "effort": "xhigh",
+    "repeat": 1,
+    "answer": "The requested two-release window is **9.2.0 through 9.3.0**, ending at the installed CLI version 9.3.0. Both releases are dated 2026-09-30.\n\nThe configuration inventory is file-based, not a view of the running session: CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are unresolved; unset features retain unknown runtime defaults. The report says hooks are disabled in files. The detected terminal is kitty, but `TERM=xterm-256color` does not name it; that configuration is worth examining, and this combination is tested less often.\n\n**Act on this**\n\n- **9.2.0 \u2014 Migrate the memory setting.** The report shows memories enabled; 9.2.0 removed `features.memories`, and users who explicitly enabled it must migrate to `features.memory_v2`.\n\n**Could not check**\n\n- **9.2.0 \u2014 Do you have an old `legacy_access` permission rule?** If yes, replace that rule: 9.2.0 removed `sandbox_legacy`. The report gives the approval policy but does not inventory individual permission rules.\n\n**Fixed for you**\n\n- **9.3.0 \u2014 Vim draft loss after scrollback.** The report shows Vim enabled; this release fixed input losing the draft after leaving scrollback. The summary and detailed changelog describe the same fix.\n\n- **9.2.0 \u2014 Subagent reconnections.** The report shows `multi_agent` enabled; this release fixed subagents reconnecting when that feature is enabled.\n\n**Worth knowing**\n\n- **9.3.0 \u2014 `/rewind`.** A new command restores an earlier conversation turn.\n\n- **9.2.0 \u2014 Startup tips.** New default startup tips can be suppressed with `CODEX_DISABLE_TIPS=1`.\n\nThe telemetry initialization fix in 9.3.0 applies only when telemetry is disabled; the report shows telemetry configured. The PreToolUse hook fix in 9.2.0 is not included because hooks are disabled in files. No MCP server is found, so the enabled-server OAuth refresh fix does not apply to the reported inventory.\n\nArchive coverage is 9.2.0\u20139.3.0, the same as this window; releases outside the local snapshot were not searched. The source is described as a frozen public archive or explicitly synthetic fixture. No baseline is recorded, and this digest has not advanced one.\n\n**Withheld:** 1 entry belonging to another platform. **Unmatched:** 2 entries with no configuration signal. **Hidden unmatched:** 0.\n",
+    "receipt": {
+      "model": "gpt-6-luna",
+      "effort": "xhigh",
+      "seconds": 26.13,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 10633,
+        "output_tokens": 2617,
+        "reasoning_output_tokens": 2070
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-public-A-luna-high-r1",
+    "case": "train-public",
+    "variant": "A",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1,
+    "answer": "## Release window\n\nThis report covers the four releases from **0.159.0 (September 29, 2026) through 0.159.3 (September 30, 2026)**, as requested with `--since 0.158.0 --through 0.159.3`. It describes the changes in that version window; the local archive coverage is also 0.159.0\u20130.159.3, so it does not establish when features first appeared before then.\n\n**Terminal:** Kitty, detected via `KITTY_PID`. `TERM=xterm-kitty` names Kitty; no mismatch is indicated. The environment is a file-based inventory, not the running session\u2019s effective configuration. CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are unresolved; unset features retain unknown runtime defaults. No hooks were found, and hooks are not disabled in the files.\n\n## Act on this\n\n- **0.159.0 \u2014 `instant_interrupt` (opt-in):** You have `instant_interrupt` set to `False`. Decide whether to opt in: enabling it lets new input steer Codex during model responses or long-running code-mode calls.\n\n## Fixed for you\n\n- **0.159.0 \u2014 Filesystem denials and `.aws` directories:** With `sandbox_mode=workspace-write`, approved commands now retain explicit filesystem denials, and `.aws` directories are protected by default under writable roots. The report does not establish whether your project has an `.aws` directory.\n- **0.159.0 \u2014 MCP credential boundaries:** The detailed changelog says reconnects now preserve executor MCP credential boundaries. The environment lists MCP as `reference`, so this is relevant to your configured MCP setup; it does not establish that you encountered the issue.\n- **0.159.0 \u2014 Blank sessions and archived threads:** Blank sessions now retain drafts when switching tasks, and threads can be archived and listed before their first turn. You have sessions enabled, so these session-handling changes could apply to your workflow.\n- **0.159.0 \u2014 Kitty transcript links:** Kitty is detected, and the TUI now shows a hand pointer over transcript links in Kitty and Ghostty.\n\n## Worth knowing\n\n- **0.159.1 \u2014 GPT-6.1 Sol in model catalogs:** It was added as the default in the bundled catalog and in Amazon Bedrock Mantle and Runtime catalogs. Your configured model is `gpt-5.6-terra` with provider `openai`; this release note does not say your selected model changed.\n- **0.159.0 \u2014 New-session welcome screen and tips:** New sessions get a compact welcome screen and consistent headers, with occasional tips during and after turns. This is a TUI presentation change; sessions are enabled.\n- **0.159.0 \u2014 Statusline turn durations:** The TUI completion footer can show short turn durations. Your statusline is enabled.\n- **0.159.0 \u2014 MCP status discovery:** The detailed changelog adds single-server MCP status discovery with thread connection reuse. This concerns MCP usage; the report lists MCP as `reference`.\n- **0.159.0 \u2014 Local ChatGPT sign-in:** Browser sign-in for local ChatGPT app servers was fixed, and onboarding makes the login link easier to copy. This applies if you use local ChatGPT sign-in; the report does not establish that you do.\n- **0.159.0 \u2014 Removed `plugin-creator`:** The bundled skill was removed. This matters if your workflow relied on that bundled skill; the inventory\u2019s `reference-skill` does not establish that it was active or used.\n- **0.159.3 \u2014 Account security reminders:** Eligible local sessions signed in with ChatGPT can show optional account-security setup reminders. The report does not establish whether you use such a session.\n\nOther summarized changes include Windows-specific console behavior and macOS TLS/proxy handling, which do not match the reported Linux platform, plus TUI, Mermaid, and app-server capabilities without a concrete setup signal here.\n\n**Counts:** Withheld for another platform: **0**. Unmatched configuration signals: **78**. Hidden unmatched entries: **0**. The archive is local and frozen (or an explicitly synthetic fixture); releases outside this snapshot were not searched. The baseline remains unchanged; it has not yet been recorded for this window.\n",
+    "receipt": {
+      "model": "gpt-6-luna",
+      "effort": "high",
+      "seconds": 27.1,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 13094,
+        "output_tokens": 2456,
+        "reasoning_output_tokens": 1552
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  },
+  {
+    "id": "train-public-B-terra-low-r1",
+    "case": "train-public",
+    "variant": "B",
+    "family": "terra",
+    "effort": "low",
+    "repeat": 1,
+    "answer": "The release window is **0.159.0 through 0.159.3** (four releases), selected with `--since 0.158.0 --through 0.159.3`. For this Linux setup, no immediate decision is required, but two changes depend on whether you use affected workflows.\n\n## Act on this\n\nNothing here needs a decision.\n\n## Could not check\n\n- **0.159.0 \u2014 `.aws` directories are now protected by default under sandbox writable roots.** You use `sandbox_mode: workspace-write` and approval is enabled, so this changes the handling of an `.aws` directory if one is inside a writable root. **Do any Codex tasks need to read or modify an `.aws` directory under a writable workspace root?** If yes, decide how that work should be handled given the new default protection; the notes do not specify a replacement setting or exception mechanism.\n\n- **0.159.0 \u2014 the bundled `plugin-creator` skill was removed.** Your file inventory contains a plugin and a skill, but it does not establish that you use the removed bundled `plugin-creator` skill. **Do you rely on Codex\u2019s bundled `plugin-creator` skill to create or maintain plugins?** If yes, that workflow needs a replacement or adjustment because the bundled skill is no longer present.\n\n## Fixed for you\n\n- **0.159.0 \u2014 approved commands retain explicit filesystem denials.** This is relevant because you use command approvals with a workspace-write sandbox. Explicit filesystem denials should no longer be lost when commands are approved. This is a fix you could plausibly encounter when an approved command still has a specifically denied filesystem path; it does not mean that you experienced the issue.\n\n- **0.159.0 \u2014 MCP credential boundaries are preserved across reconnects.** You have an MCP configuration (`reference`). If it uses executor MCP credentials and reconnects, credential boundaries are now retained across that reconnect. The inventory does not establish that this MCP server uses those credentials or reconnects, so this is a scoped fix rather than evidence of an affected session.\n\n- **0.159.0 \u2014 skill catalogs are stabilized across executor-availability changes.** A skill is present in the file inventory (`reference-skill`). If executor availability changes during use, the skill catalog should remain stable. Installed inventory does not prove the skill is active in a running session.\n\n## Worth knowing\n\n- **0.159.0 \u2014 `instant_interrupt` is available as an opt-in feature.** It lets new input steer Codex while a model response or long-running code-mode call is in progress. Your recorded setting is explicitly `instant_interrupt: False`, so this behavior is **not enabled for this setup**; the release only makes the opt-in available.\n\n- **0.159.0 \u2014 session and transcript interaction was refined.** Since sessions are enabled, new sessions receive a more compact welcome screen and consistent headers, blank sessions retain drafts when switching tasks, and threads can be archived and listed before their first turn. You can also scroll the transcript while deciding whether to implement a plan. These are interface/workflow changes, not configuration decisions.\n\n- **0.159.0 \u2014 native Mermaid rendering supports additional flowchart syntax.** Flowchart edges, labels, node groups, punctuation, and semicolons have broader native rendering support. This is available when Mermaid content is rendered; the report does not establish that you use Mermaid diagrams.\n\n- **0.159.0 \u2014 the warnings viewer now dismisses reviewed warnings on close, with `k` available to keep one for later.** This changes the warnings-viewer interaction without requiring a setting change.\n\n- **0.159.0 \u2014 copied transcript selections better preserve Markdown tables, formatting, and significant whitespace.** More terminals also copy automatically on selection. This is ordinary CLI interaction and may improve copying from the TUI.\n\n- **0.159.0 \u2014 Kitty link hover feedback was added.** Your detected terminal is **kitty** (via `KITTY_PID`), and transcript links now show a hand pointer in Kitty. `TERM` is `xterm-kitty`, which is consistent with the detected terminal; no TERM mismatch is reported.\n\n- **0.159.0 \u2014 completion footers can show short turn durations.** Your statusline is enabled, so this TUI status/completion presentation change is relevant to your interface, though it requires no action.\n\n- **0.159.1 \u2014 GPT-6.1 Sol was added as the default model in the bundled catalog and in Amazon Bedrock Mantle and Runtime catalogs.** Your configured provider is OpenAI and your explicit model is `gpt-5.6-terra`, so this catalog-default announcement does not replace your configured model.\n\n- **0.159.3 \u2014 eligible local sessions signed in with ChatGPT may show optional account-security setup reminders.** Your profile is `subscription`, but the file inventory cannot establish whether a particular local session is signed in with ChatGPT or eligible. These are optional reminders, not a required configuration change.\n\n## Counts and coverage\n\n- **Withheld:** 0 entries belonging to another platform.\n- **Unmatched:** 78 entries matched no configuration signal.\n- **Hidden unmatched:** 0 entries were not shown (`--relevant-only`).\n- This is a **local frozen snapshot**, not a statement about the running session\u2019s effective configuration: CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust were not resolved. Unset feature defaults remain unknown.\n- The archive searched covers exactly **0.159.0 through 0.159.3**; releases outside that range were not searched.\n- The baseline is **0.158.0** and remains unchanged.\n",
+    "receipt": {
+      "model": "gpt-5.6-terra",
+      "effort": "low",
+      "seconds": 21.43,
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 12922,
+        "output_tokens": 1702,
+        "reasoning_output_tokens": 516
+      },
+      "tool_calls": 0,
+      "tools_used": [],
+      "mcp_servers": {},
+      "compaction_observed": false,
+      "red_flags": [],
+      "status": "answered",
+      "inputs_intact": true
+    },
+    "isolation": "enforced"
+  }
+]

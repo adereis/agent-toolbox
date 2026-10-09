@@ -1,0 +1,269 @@
+[
+  {
+    "label": "R01",
+    "case": "held-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-public.no-decisions": true,
+      "held-public.queued-messages": true,
+      "held-public.history": true,
+      "held-public.sqlite": false,
+      "held-public.copy": true,
+      "held-public.plan-hint": true,
+      "held-public.content-filter": false,
+      "held-public.capabilities": true,
+      "held-public.x11": true,
+      "held-public.unsupported-integrations": true,
+      "held-public.testing-only": true
+    },
+    "failures": {
+      "held-public.sqlite": "Missing SQLite connection/logging stalls and visible initialization errors.",
+      "held-public.content-filter": "Missing recovery guidance for content-filter retries."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R02",
+    "case": "train-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": false,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-conditions.memory-action": true,
+      "train-conditions.legacy-question": true,
+      "train-conditions.vim": true,
+      "train-conditions.subagents": true,
+      "train-conditions.disabled-hooks": true,
+      "train-conditions.telemetry": true,
+      "train-conditions.missing-mcp": true,
+      "train-conditions.capabilities": true,
+      "train-conditions.terminal": true
+    },
+    "failures": {
+      "common-window.counts": "Missing supplied withheld breakdown: the one withheld entry belongs to Windows."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R03",
+    "case": "held-topic",
+    "checks": {
+      "common-topic.layout": true,
+      "common-topic.coverage": true,
+      "common-topic.baseline": true,
+      "common-topic.no-false-impact": true,
+      "held-topic.introduction": true,
+      "held-topic.rename": true,
+      "held-topic.trust-fix": true,
+      "held-topic.reversal": true,
+      "held-topic.collisions": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R04",
+    "case": "held-topic",
+    "checks": {
+      "common-topic.layout": true,
+      "common-topic.coverage": true,
+      "common-topic.baseline": true,
+      "common-topic.no-false-impact": true,
+      "held-topic.introduction": true,
+      "held-topic.rename": true,
+      "held-topic.trust-fix": true,
+      "held-topic.reversal": true,
+      "held-topic.collisions": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R05",
+    "case": "train-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": false,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-conditions.memory-action": true,
+      "train-conditions.legacy-question": true,
+      "train-conditions.vim": true,
+      "train-conditions.subagents": true,
+      "train-conditions.disabled-hooks": true,
+      "train-conditions.telemetry": true,
+      "train-conditions.missing-mcp": true,
+      "train-conditions.capabilities": true,
+      "train-conditions.terminal": true
+    },
+    "failures": {
+      "common-window.counts": "\"breakdown: another platform, 1\" repeats the total category rather than preserving the supplied Windows: 1 breakdown."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R06",
+    "case": "held-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-conditions.hook-action": true,
+      "held-conditions.memory-off": true,
+      "held-conditions.hint-value": true,
+      "held-conditions.plugin-scope": true,
+      "held-conditions.statusline": true,
+      "held-conditions.bookmarks": true,
+      "held-conditions.hidden": true,
+      "held-conditions.terminal": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R07",
+    "case": "train-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-public.opt-in": true,
+      "train-public.model": true,
+      "train-public.warning-retention": true,
+      "train-public.permissions": true,
+      "train-public.copy-and-drafts": true,
+      "train-public.mcp-boundaries": true,
+      "train-public.mcp-resources": false,
+      "train-public.mcp-status": true,
+      "train-public.skills": false,
+      "train-public.compaction": false,
+      "train-public.terminal": true,
+      "train-public.suggestions": true,
+      "train-public.absent-integrations": true
+    },
+    "failures": {
+      "train-public.mcp-resources": "\"MCP app-resource URIs no longer default the display mode\" covers the no-default-display-mode behavior but omits preservation of resource URIs themselves.",
+      "train-public.skills": "Missing stable skill catalogs across executor availability changes.",
+      "train-public.compaction": "Missing preserved model/access-program pairs during compaction."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R08",
+    "case": "held-conditions",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-conditions.hook-action": true,
+      "held-conditions.memory-off": true,
+      "held-conditions.hint-value": true,
+      "held-conditions.plugin-scope": true,
+      "held-conditions.statusline": true,
+      "held-conditions.bookmarks": true,
+      "held-conditions.hidden": true,
+      "held-conditions.terminal": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R09",
+    "case": "train-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "train-public.opt-in": true,
+      "train-public.model": true,
+      "train-public.warning-retention": true,
+      "train-public.permissions": true,
+      "train-public.copy-and-drafts": true,
+      "train-public.mcp-boundaries": true,
+      "train-public.mcp-resources": true,
+      "train-public.mcp-status": true,
+      "train-public.skills": true,
+      "train-public.compaction": false,
+      "train-public.terminal": true,
+      "train-public.suggestions": true,
+      "train-public.absent-integrations": true
+    },
+    "failures": {
+      "train-public.compaction": "Missing preserved model/access-program pairs during compaction."
+    },
+    "false_actions": [],
+    "false_impacts": []
+  },
+  {
+    "label": "R10",
+    "case": "held-public",
+    "checks": {
+      "common-window.groups": true,
+      "common-window.bounds": true,
+      "common-window.counts": true,
+      "common-window.limits": true,
+      "common-window.baseline": true,
+      "common-window.no-false-actions": true,
+      "common-window.no-false-impact": true,
+      "common-window.deduplication": true,
+      "held-public.no-decisions": true,
+      "held-public.queued-messages": true,
+      "held-public.history": true,
+      "held-public.sqlite": true,
+      "held-public.copy": true,
+      "held-public.plan-hint": true,
+      "held-public.content-filter": true,
+      "held-public.capabilities": true,
+      "held-public.x11": true,
+      "held-public.unsupported-integrations": true,
+      "held-public.testing-only": true
+    },
+    "failures": {},
+    "false_actions": [],
+    "false_impacts": []
+  }
+]

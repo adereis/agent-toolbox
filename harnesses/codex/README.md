@@ -60,6 +60,18 @@ enabled. An unresolved consequential condition belongs under Could not
 check. If the harness cannot spawn Luna at high effort, the skill reports
 that limitation instead of substituting a different model.
 
+The reader accounts for relevant fixes before condensing the report. It
+treats an explicitly configured feature as evidence for a required migration,
+while an installed plugin alone does not prove activation. Optional features
+need an expressed user need before becoming action items. The parent also
+checks that paraphrases preserve what was fixed and that shown unmatched
+entries are not described as hidden or unread.
+
+Live comparisons covered Luna at medium, high and extra-high effort and
+Terra at low, medium and high. Luna at high remains the default. The
+[reader comparison](../../docs/evaluations/codex-whats-new/results.md) retains
+the frozen inputs, blinded grades, native measurements and limitations.
+
 The skill is installed as a directory symlink containing a regular
 `SKILL.md`; Codex skips individual entry-point file symlinks. An earlier
 installation using file links needs the [migration](../../docs/migration.md#codex-release-digest-discovery)

@@ -32,11 +32,11 @@ Check the returned digest against the report before relaying it. Every
 impact claim needs both release evidence and a matching configuration
 condition. Inventory alone does not establish runtime activation. Look for
 missed new capabilities or fixes for enabled settings, repeated entries,
-unsupported action items, and incorrect withheld or unmatched counts. Have
-Luna revise unsupported claims. When a missing condition can be settled,
-the parent
-makes one narrow check per question under the shared workflow's rules and
-passes only that answer back. Otherwise retain it under Could not check.
+unsupported action items, changed meanings in paraphrases, and incorrect
+counts or claims about which entries were hidden. Have Luna revise omissions
+and unsupported claims. When a missing condition can be settled,
+the parent makes one narrow check per question under the shared workflow's
+rules and passes only that answer back. Otherwise retain it under Could not check.
 
 ## Collecting evidence
 

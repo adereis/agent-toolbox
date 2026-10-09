@@ -1,0 +1,17 @@
+[
+  {
+    "variant": "D",
+    "family": "luna",
+    "effort": "high",
+    "n": 10,
+    "passed": 156,
+    "checks": 164,
+    "fraction": 0.9512195121951219,
+    "mean_seconds": 28.017,
+    "median_seconds": 31.060000000000002,
+    "mean_input_tokens": 11715.4,
+    "mean_output_tokens": 2314.9,
+    "false_actions": 0,
+    "false_impacts": 0
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "train-public-D-luna-high-r1",
+    "case": "train-public",
+    "variant": "D",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-D-luna-high-r2",
+    "case": "train-public",
+    "variant": "D",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "train-conditions-D-luna-high-r1",
+    "case": "train-conditions",
+    "variant": "D",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-D-luna-high-r2",
+    "case": "train-conditions",
+    "variant": "D",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-public-D-luna-high-r1",
+    "case": "held-public",
+    "variant": "D",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-public-D-luna-high-r2",
+    "case": "held-public",
+    "variant": "D",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-conditions-D-luna-high-r1",
+    "case": "held-conditions",
+    "variant": "D",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-conditions-D-luna-high-r2",
+    "case": "held-conditions",
+    "variant": "D",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-topic-D-luna-high-r1",
+    "case": "held-topic",
+    "variant": "D",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-topic-D-luna-high-r2",
+    "case": "held-topic",
+    "variant": "D",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  }
+]

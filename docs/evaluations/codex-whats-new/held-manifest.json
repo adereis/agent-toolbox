@@ -1,0 +1,194 @@
+[
+  {
+    "id": "held-public-A-luna-high-r1",
+    "case": "held-public",
+    "variant": "A",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-public-A-luna-high-r2",
+    "case": "held-public",
+    "variant": "A",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-public-B-luna-high-r1",
+    "case": "held-public",
+    "variant": "B",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-public-B-luna-high-r2",
+    "case": "held-public",
+    "variant": "B",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-public-C-luna-high-r1",
+    "case": "held-public",
+    "variant": "C",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-public-C-luna-high-r2",
+    "case": "held-public",
+    "variant": "C",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-public-B-terra-high-r1",
+    "case": "held-public",
+    "variant": "B",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-public-B-terra-high-r2",
+    "case": "held-public",
+    "variant": "B",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-conditions-A-luna-high-r1",
+    "case": "held-conditions",
+    "variant": "A",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-conditions-A-luna-high-r2",
+    "case": "held-conditions",
+    "variant": "A",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-conditions-B-luna-high-r1",
+    "case": "held-conditions",
+    "variant": "B",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-conditions-B-luna-high-r2",
+    "case": "held-conditions",
+    "variant": "B",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-conditions-C-luna-high-r1",
+    "case": "held-conditions",
+    "variant": "C",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-conditions-C-luna-high-r2",
+    "case": "held-conditions",
+    "variant": "C",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-conditions-B-terra-high-r1",
+    "case": "held-conditions",
+    "variant": "B",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-conditions-B-terra-high-r2",
+    "case": "held-conditions",
+    "variant": "B",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-topic-A-luna-high-r1",
+    "case": "held-topic",
+    "variant": "A",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-topic-A-luna-high-r2",
+    "case": "held-topic",
+    "variant": "A",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-topic-B-luna-high-r1",
+    "case": "held-topic",
+    "variant": "B",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-topic-B-luna-high-r2",
+    "case": "held-topic",
+    "variant": "B",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-topic-C-luna-high-r1",
+    "case": "held-topic",
+    "variant": "C",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-topic-C-luna-high-r2",
+    "case": "held-topic",
+    "variant": "C",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 2
+  },
+  {
+    "id": "held-topic-B-terra-high-r1",
+    "case": "held-topic",
+    "variant": "B",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "held-topic-B-terra-high-r2",
+    "case": "held-topic",
+    "variant": "B",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 2
+  }
+]

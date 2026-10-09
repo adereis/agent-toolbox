@@ -1,0 +1,98 @@
+[
+  {
+    "id": "train-public-C-luna-medium-r1",
+    "case": "train-public",
+    "variant": "C",
+    "family": "luna",
+    "effort": "medium",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-C-luna-high-r1",
+    "case": "train-public",
+    "variant": "C",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-C-luna-xhigh-r1",
+    "case": "train-public",
+    "variant": "C",
+    "family": "luna",
+    "effort": "xhigh",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-C-terra-low-r1",
+    "case": "train-public",
+    "variant": "C",
+    "family": "terra",
+    "effort": "low",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-C-terra-medium-r1",
+    "case": "train-public",
+    "variant": "C",
+    "family": "terra",
+    "effort": "medium",
+    "repeat": 1
+  },
+  {
+    "id": "train-public-C-terra-high-r1",
+    "case": "train-public",
+    "variant": "C",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-C-luna-medium-r1",
+    "case": "train-conditions",
+    "variant": "C",
+    "family": "luna",
+    "effort": "medium",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-C-luna-high-r1",
+    "case": "train-conditions",
+    "variant": "C",
+    "family": "luna",
+    "effort": "high",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-C-luna-xhigh-r1",
+    "case": "train-conditions",
+    "variant": "C",
+    "family": "luna",
+    "effort": "xhigh",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-C-terra-low-r1",
+    "case": "train-conditions",
+    "variant": "C",
+    "family": "terra",
+    "effort": "low",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-C-terra-medium-r1",
+    "case": "train-conditions",
+    "variant": "C",
+    "family": "terra",
+    "effort": "medium",
+    "repeat": 1
+  },
+  {
+    "id": "train-conditions-C-terra-high-r1",
+    "case": "train-conditions",
+    "variant": "C",
+    "family": "terra",
+    "effort": "high",
+    "repeat": 1
+  }
+]

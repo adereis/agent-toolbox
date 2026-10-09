@@ -1,0 +1,75 @@
+{
+  "method": "Each named check is binary. Score semantics, not wording. Do not reward verbosity. Quote contradictory answer evidence for failures; for omissions, name the missing requirement instead. Record false Act on this entries and unsupported setup-impact claims separately. Window scores include common-window checks. Topic scores include common-topic checks. All keys were frozen before answers were inspected.",
+  "common-window": {
+    "groups": "Keep Act on this, with an explicit no-decision message if empty. Omit empty other groups. The opening sentence or leading action section accurately states whether decisions exist or remain conditional.",
+    "bounds": "Use the actual window bounds and correct release for each discussed item. Do not conflate installed version, baseline, window and archive.",
+    "counts": "Report exact withheld and unmatched counts, including zero. Include hidden unmatched when nonzero. Preserve withheld breakdown if supplied.",
+    "limits": "Disclose local snapshot and file-inventory limitations. Do not claim runtime activation from inventory.",
+    "baseline": "Do not claim the baseline was advanced or infer first-run mode merely from no recorded baseline.",
+    "no-false-actions": "Every action item names a concrete justified decision under this evidence. Do not manufacture action from ordinary capabilities, prices, cosmetic changes or unsupported conditions.",
+    "no-false-impact": "Do not claim another platform's fix applies locally or invent a more specific bug/setting than the notes give.",
+    "deduplication": "Do not repeat a summary fix and its detailed changelog entry as separate fixes. Combining related changes is allowed."
+  },
+  "train-public": {
+    "opt-in": "instant_interrupt is explicitly false. It may be Worth knowing; do not say it is active or require enabling it absent an expressed need.",
+    "model": "Default-model announcement does not change the explicitly selected Terra. It may be mentioned but requires no action.",
+    "warning-retention": "Explain that closing the warnings viewer dismisses viewed warnings, with k to keep one; do not turn it into a mandatory configuration task.",
+    "permissions": "Cover preservation of explicit filesystem denials and .aws protection under workspace-write.",
+    "copy-and-drafts": "Cover both preserved Markdown/whitespace copying and blank-session draft/history fixes.",
+    "mcp-boundaries": "Cover preserved MCP credential boundaries across reconnects.",
+    "mcp-resources": "Cover preserved MCP app resource URIs, scoped to that functionality rather than invented use.",
+    "mcp-status": "Cover the new single-server MCP status discovery with connection reuse.",
+    "skills": "Cover stable skill catalogs across executor availability changes.",
+    "compaction": "Cover preserved model/access program pairs during compaction.",
+    "terminal": "Cover the Ghostty/Kitty link pointer improvement because Kitty is detected.",
+    "suggestions": "Mention removed automatic follow-up suggestions and tui.prompt_suggestions without asserting this machine explicitly configured the removed setting.",
+    "absent-integrations": "No Linux benefit asserted from Windows/macOS-only fixes. Optional sign-in, app-server, Guardian, Bedrock and plugin-creator items are scoped or omitted rather than treated as proven use."
+  },
+  "train-conditions": {
+    "memory-action": "Require migration from explicitly true features.memories to features.memory_v2, release 9.2.0.",
+    "legacy-question": "Put unknown legacy_access rule migration under Could not check with a concrete question and consequence, not Act on this.",
+    "vim": "Cover Vim draft-loss fix exactly once.",
+    "subagents": "Cover reconnect fix with explicitly true multi_agent.",
+    "disabled-hooks": "Do not claim the hook fix applies with hooks disabled.",
+    "telemetry": "Do not claim the disabled-telemetry fix applies when otel is true.",
+    "missing-mcp": "Do not claim OAuth fix applies without a configured MCP server.",
+    "capabilities": "Mention rewind and default startup tips/opt-out without making either an unsupported action.",
+    "terminal": "Report detected Kitty and TERM mismatch. A narrowly framed choice to examine it is allowed."
+  },
+  "held-public": {
+    "no-decisions": "No mandatory action or Could not check question is justified by this report. Optional capabilities remain scoped.",
+    "queued-messages": "Cover resumed unsent input after reconnection without duplicate sends.",
+    "history": "Cover correct provider lookup in resume/fork history without asserting use of remote app-server connections.",
+    "sqlite": "Cover SQLite connection/logging stalls and visible initialization errors.",
+    "copy": "Cover inline-code copying as plain text and copying quotes without blockquote markers, once each or combined.",
+    "plan-hint": "Cover the Plan-mode cycling hint in the fullscreen status line; fullscreen must remain conditional, not asserted as known.",
+    "content-filter": "Mention recovery guidance for content-filter retries as a general fix/capability.",
+    "capabilities": "Cover command-center pagination and projectless sessions with restored permissions, scoped to their conditions.",
+    "x11": "If mentioning primary selection or middle-click paste, preserve the local Linux X11 and fullscreen conditions. Linux/Kitty alone does not prove X11.",
+    "unsupported-integrations": "Do not assert remote Windows MCP, explicit provider catalogs, Guardian, subagents or plugin-loading fixes are active here. Scoped optional mention is allowed.",
+    "testing-only": "Do not present test isolation or test-target changes as user runtime fixes."
+  },
+  "held-conditions": {
+    "hook-action": "Require renaming the configured PreCompact event to PreCompaction, using only the replacement supplied in the notes.",
+    "memory-off": "No memory migration with features.memories explicitly false.",
+    "hint-value": "Do not infer the value of CODEX_DISABLE_HINTS from its listed name. Hints/opt-out are not an action.",
+    "plugin-scope": "Plugin OAuth may be a conditional Worth knowing fix; do not claim installed means enabled or demand a user decision to determine activation.",
+    "statusline": "Cover selected status-line fields surviving resume exactly once.",
+    "bookmarks": "Cover the new bookmarks command without making it an action.",
+    "hidden": "Explicitly say four unmatched entries were not shown/read, not four irrelevant entries. No claims about the contents of hidden bullets.",
+    "terminal": "Report detected Kitty and TERM mismatch without inventing a required TERM value."
+  },
+  "common-topic": {
+    "layout": "Use a dated topic arc, not window action/fix groups.",
+    "coverage": "State six matches, six shown/read, snapshot bounds 6.0.0 through 7.5.0, local snapshot limitation and possible earlier-name uncertainty.",
+    "baseline": "No baseline advancement or instruction to commit a topic.",
+    "no-false-impact": "No invented effective configuration, fix or release date."
+  },
+  "held-topic": {
+    "introduction": "Date persistent recall to 7.1.0 on 2026-08-03, not the literal first pattern match 7.0.0.",
+    "rename": "Explain remembered context became memories at 7.2.0 on 2026-08-05.",
+    "trust-fix": "Include the untrusted-project fix in 7.4.0 on 2026-08-09.",
+    "reversal": "Include disabled-by-default pending replacement in 7.5.0 on 2026-08-11.",
+    "collisions": "Identify both 7.0.0 image-decoding memory usage and 7.3.0 terminal memory pressure as other meanings, not persistent-memory milestones."
+  }
+}

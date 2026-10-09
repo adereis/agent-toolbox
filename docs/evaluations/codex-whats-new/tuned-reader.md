@@ -62,15 +62,11 @@ alone does not establish first-run mode.
 Use Act on this, Could not check, Fixed for you and Worth knowing in that
 order. Keep Act on this with "Nothing here needs a decision." when empty.
 Omit other empty groups. Give each item its release and concrete relevance
-condition. Preserve the subject and relation in each fix: preserving credential
-boundaries concerns isolation, not merely retaining credentials. Do not
-invent a narrower failure than the notes describe.
+condition. Preserve the notes' scope without inventing a narrower failure.
 
 Close with Counts and coverage. Give exact withheld and unmatched counts,
-including zero, and any withheld breakdown. Report hidden unmatched counts
-separately. Only entries actually hidden were unavailable to read. With zero
-hidden, do not call shown unmatched bullets unread; read them in the first
-pass too. Unmatched means no configuration tag,
+including zero, and any withheld breakdown. Include hidden unmatched counts
+and say those entries were not read. Unmatched means no configuration tag,
 not irrelevant or omitted by you. Preserve snapshot limitations, file-inventory
 limits and archive bounds. Report the detected terminal and a TERM mismatch
 when present. Do not claim the baseline moved; the parent has not written it.

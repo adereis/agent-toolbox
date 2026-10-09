@@ -1,0 +1,1704 @@
+{
+  "train-public": {
+    "split": "train",
+    "kind": "public",
+    "question": "What changed in these releases for this setup?",
+    "arguments": "--since 0.158.0 --through 0.159.3",
+    "report": {
+      "environment": {
+        "platform": "linux",
+        "version": "0.160.1",
+        "codex_home": "/example/.codex",
+        "project": "/example/project",
+        "profile": "subscription",
+        "project_trust": "trusted",
+        "terminal": "kitty",
+        "terminal_evidence": "KITTY_PID",
+        "term": "xterm-kitty",
+        "term_disagrees": false,
+        "multiplexer": "",
+        "settings": {
+          "approval_policy": "on-request",
+          "sandbox_mode": "workspace-write",
+          "model": "gpt-5.6-terra",
+          "model_reasoning_effort": "high",
+          "model_provider": "openai"
+        },
+        "features": {
+          "multi_agent": true,
+          "instant_interrupt": false
+        },
+        "hooks": [],
+        "hooks_disabled": false,
+        "mcp": [
+          "reference"
+        ],
+        "plugins": [
+          "reference-plugin"
+        ],
+        "skills": [
+          "reference-skill"
+        ],
+        "sources": [
+          "/example/.codex/config.toml"
+        ],
+        "statusline": true,
+        "notifications": false,
+        "vim": false,
+        "keymap": false,
+        "otel": false,
+        "rules": true,
+        "sessions": true,
+        "git": true,
+        "env": [],
+        "notices": [
+          "File-based inventory, not the running session's effective configuration. CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are not resolved. Unset features retain unknown runtime defaults."
+        ]
+      },
+      "mode": "window",
+      "baseline": "0.158.0",
+      "commit": false,
+      "state_file": "/example/state/baseline.json",
+      "counts": {
+        "withheld": 0,
+        "unmatched": 78,
+        "hidden_unmatched": 0
+      },
+      "withheld": {},
+      "signals": [
+        "mcp",
+        "plugins",
+        "skills",
+        "permissions",
+        "subagents",
+        "statusline",
+        "sessions",
+        "git",
+        "provider",
+        "effort",
+        "compaction",
+        "new-setting",
+        "new-command",
+        "behavior-change",
+        "model",
+        "feature:multi_agent",
+        "term:kitty",
+        "new-feature"
+      ],
+      "window": {
+        "from": "0.159.0",
+        "to": "0.159.3",
+        "count": 4
+      },
+      "releases": [
+        {
+          "bullets": [
+            {
+              "section": "New Features",
+              "text": "Eligible local sessions signed in with ChatGPT can now show optional reminders to complete account security setup. (#49744)",
+              "tags": [
+                "new-feature"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "Full Changelog: https://github.com/openai/codex/compare/rust-v0.159.2...rust-v0.159.3",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49744 [0.159] Backport account security setup reminders for 0.159.3 @andrewgu-oai",
+              "tags": []
+            }
+          ],
+          "published_at": "2026-09-30T22:57:34+00:00",
+          "version": "0.159.3"
+        },
+        {
+          "bullets": [
+            {
+              "section": "Bug Fixes",
+              "text": "Suppressed console windows flashing on Windows when Codex launches background processes and sandboxed commands. (#49385)",
+              "tags": [
+                "permissions"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "Full Changelog: https://github.com/openai/codex/compare/rust-v0.159.1...rust-v0.159.2",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49385 [0.159] Backport Windows console suppression for 0.159.2 @andrewgu-oai",
+              "tags": []
+            }
+          ],
+          "published_at": "2026-09-29T23:57:16+00:00",
+          "version": "0.159.2"
+        },
+        {
+          "bullets": [
+            {
+              "section": "New Features",
+              "text": "Added GPT-6.1 Sol as the default model in the bundled catalog and Amazon Bedrock Mantle and Runtime catalogs. (#49323, #49342)",
+              "tags": [
+                "provider",
+                "new-feature"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "Full Changelog: https://github.com/openai/codex/compare/rust-v0.159.0...rust-v0.159.1",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49323 [0.159] Prepare 0.159.1 release backports @andrewgu-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49342 [0.159] Backport GPT-6.1 Sol Bedrock catalogs @celia-oai",
+              "tags": [
+                "provider"
+              ]
+            }
+          ],
+          "published_at": "2026-09-29T20:32:34+00:00",
+          "version": "0.159.1"
+        },
+        {
+          "bullets": [
+            {
+              "section": "New Features",
+              "text": "Opt-in `instant_interrupt` lets new input steer Codex during model responses or long-running code-mode calls. (#48135, #48141)",
+              "tags": [
+                "new-feature"
+              ]
+            },
+            {
+              "section": "New Features",
+              "text": "New sessions get a compact welcome screen and consistent headers, with occasional tips during and after turns. (#48513, #48562, #48352)",
+              "tags": [
+                "compaction",
+                "new-feature"
+              ]
+            },
+            {
+              "section": "New Features",
+              "text": "The warnings viewer dismisses reviewed warnings when closed; press `k` to keep one for later. (#48205, #48206)",
+              "tags": [
+                "new-feature"
+              ]
+            },
+            {
+              "section": "New Features",
+              "text": "You can scroll the transcript while deciding whether to implement a plan. (#48805)",
+              "tags": [
+                "new-feature"
+              ]
+            },
+            {
+              "section": "New Features",
+              "text": "Native Mermaid rendering supports more flowchart edges, labels, and node groups. (#48814, #48895)",
+              "tags": [
+                "new-feature"
+              ]
+            },
+            {
+              "section": "New Features",
+              "text": "App-server clients can paginate thread history from a specific item. (#48151)",
+              "tags": [
+                "new-feature"
+              ]
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Windows launches avoid stray console windows for MCP servers, code-mode hosts, and piped commands; restrictive launchers can fall back to embedded mode. (#48138, #48238, #48483, #48491)",
+              "tags": [
+                "mcp"
+              ]
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Copying transcript selections preserves Markdown tables, formatting, and significant whitespace. More terminals now copy automatically on selection. (#48548, #48549, #48469)",
+              "tags": []
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Blank sessions retain drafts when switching tasks, and threads can be archived and listed before their first turn. (#48628, #48828, #48199)",
+              "tags": []
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Local ChatGPT sign-in opens the browser reliably; onboarding also provides a shortcut to copy the login link. (#48502, #48544)",
+              "tags": []
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Approved commands retain explicit filesystem denials, and `.aws` directories are protected by default under writable roots. (#48155, #48176)",
+              "tags": []
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Fixed macOS TLS access in network-enabled sandboxes and remote environments that require proxy access. (#48565, #48198)",
+              "tags": [
+                "permissions"
+              ]
+            },
+            {
+              "section": "Chores",
+              "text": "Removed automatic follow-up prompt suggestions and the `tui.prompt_suggestions` setting. (#48621)",
+              "tags": [
+                "behavior-change"
+              ]
+            },
+            {
+              "section": "Chores",
+              "text": "Removed the bundled `plugin-creator` skill. (#48604)",
+              "tags": [
+                "plugins",
+                "skills",
+                "behavior-change"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "Full Changelog: https://github.com/openai/codex/compare/rust-v0.158.0...rust-v0.159.0",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48135 Add opt-in code-mode yielding on new user input @pakrym-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48138 Suppress console windows when spawning the code-mode host on Windows @zm-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48141 Preempt model responses when new user input arrives @pakrym-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48143 Preserve executor MCP credential boundaries across reconnects @rreichel3-oai",
+              "tags": [
+                "mcp"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48151 Add item anchors to `thread/items/list` pagination @btraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48155 Preserve filesystem denials when preparing approved commands @viyatb-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48157 Allow Windows daemon launches with residual job membership @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48158 Fix Guardian retained context spacing and empty assistant handling @olliem-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48168 Generate unique exec-server process IDs for every request @sdcoffey",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48174 Preserve usage limit windows in turn and compaction analytics @rhan-oai",
+              "tags": [
+                "compaction"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48176 Protect `.aws` directories under sandbox writable roots @jackz100",
+              "tags": [
+                "permissions"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48187 Fix zsh alias quoting in sourced shell snapshots @jif-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48190 Bound agent message board SSE frames before parsing @jif-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48197 Optimize `blake3` in Bazel fastbuilds @jif-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48198 Honor execution environment proxy requirements @seanh-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48199 Keep archived threads with empty previews visible in listings @acrognale-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48200 Extract Responses header conversion into a shared module @anp-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48205 Dismiss viewed TUI warnings when closing the viewer @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48206 Add a keep-and-next action to the warnings viewer @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48207 Preserve queued output for observers during code-mode termination @pakrym-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48211 Keep Codex visible during external editor handoff @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48213 Isolate executable fixture copies in CLI tests on Linux @jif-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48222 Preserve late result metadata for truncated code-mode calls @ningyi-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48224 Preserve model and access program pairs during compaction @jamy-OAI",
+              "tags": [
+                "compaction"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48229 Extract Responses failure parsing into a dedicated module @anp-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48238 Suppress console windows for local Windows MCP servers @malsamiri-oai",
+              "tags": [
+                "mcp"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48272 Prevent Windows daemon launches from retaining launcher stdio @zm-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48318 Keep TUI reconnect attempts running until the shared deadline @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48344 Preserve tool metadata for OpenAI provider endpoint overrides @peilin-openai",
+              "tags": [
+                "provider"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48350 Display reconnect commands on a separate line @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48352 Show turn tips while working and after completion in the TUI @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48353 Stabilize skill catalogs across executor availability changes @vkg-oai",
+              "tags": [
+                "skills"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48469 Default to copying transcript selections in more terminals @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48483 Prevent console windows for piped Windows child processes @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48489 Fix Mermaid shape, relationship, and state description parsing @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48491 Fall back to embedded mode under restrictive Windows launchers @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48502 Fix ChatGPT browser sign-in for local app servers @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48508 Preserve WebSocket continuations when steering a turn @pakrym-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48513 Refresh the TUI welcome screen for new sessions @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48531 Add context to Windows sandbox runtime registration errors @zm-oai",
+              "tags": [
+                "permissions"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48544 Make onboarding login links easier to copy @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48547 Fade blossom replays back to the idle state @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48548 Preserve table cell source metadata through TUI rendering @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48549 Preserve Markdown tables and whitespace when copying TUI responses @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48551 Fix TUI math rendering for zero and big wedge expressions @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48560 Keep working tips stable during transcript interaction @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48562 Use a consistent borderless session header in the TUI @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48565 Allow macOS TLS trust evaluation in network-enabled Seatbelt profiles @winston-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48568 Allow exec-server to proxy permitted private IPs upstream @open-matt",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48574 Preserve deferred tool namespace names before descriptions @adaley-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48575 Allow provisioned executors more time to come online @richardopenai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48604 Remove the bundled `plugin-creator` skill @martinauyeung-oai",
+              "tags": [
+                "plugins",
+                "skills",
+                "behavior-change"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48611 Centralize persistent mode enablement checks @alishobeiri-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48621 Remove follow-up prompt suggestions from the TUI @etraut-openai",
+              "tags": [
+                "behavior-change"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48623 Preserve empty Markdown list markers in the TUI @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48626 Stop showing previous-session summaries when switching TUI sessions @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48628 Preserve blank TUI sessions when switching tasks @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48643 Set the provisioned macOS CLI bundle name to ChatGPT @riley-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48646 Fix the session-start helper call in the command center test @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48686 Remove WebSocket headers and tool payloads from info logs @chess-oai",
+              "tags": [
+                "behavior-change"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48724 Prevent Linux ETXTBSY races in MCP stdio tests @jif-oai",
+              "tags": [
+                "mcp"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48725 Retain confirmed Code Mode messages for Guardian reviews @ankushg",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48727 Centralize executable fixture creation to avoid Linux ETXTBSY races @jif-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48754 Render `/status` without borders and wrap long values @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48757 Match TUI status shimmer timing to desktop headers @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48761 Show hidden output line counts in compact terminal activity @fcoury-oai",
+              "tags": [
+                "compaction"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48764 Preserve MCP app resource URIs without defaulting display mode @victor-openai",
+              "tags": [
+                "mcp"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48772 Fix Unix socket connections through long symlink paths @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48775 Match pinned transcript headers to the original prompt style @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48776 Remove the `current` badge from TUI task rows @etraut-openai",
+              "tags": [
+                "behavior-change"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48779 Preserve independent Guardian history across parent compaction @felixxia-oai",
+              "tags": [
+                "compaction"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48783 Add single-server MCP status discovery with thread connection reuse @victor-openai",
+              "tags": [
+                "mcp"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48796 Add opt-in structured errors for Guardian circuit-breaker interruptions @won-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48799 Fix SGR mouse reporting for Windows terminal capture @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48800 Use the terminal palette for ordered Markdown list markers @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48805 Allow transcript wheel scrolling while a modal is open @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48807 Show short turn durations in TUI completion footers @fcoury-oai",
+              "tags": [
+                "statusline"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48812 Add history-aware prewarming for idle threads @vkg-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48814 Preserve punctuation and semicolons in Mermaid labels @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48819 Use explicit histogram buckets for tool and skill context metrics @mzeng-openai",
+              "tags": [
+                "skills"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48824 Keep voice RTP timestamps aligned to 20 ms packets @bc-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48827 Show a hand pointer over transcript links in Ghostty and Kitty @bc-openai",
+              "tags": [
+                "term:kitty"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48828 Allow archiving threads before their first turn @bc-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48829 Wait briefly for the Windows sandbox provisioning service to start @zm-oai",
+              "tags": [
+                "permissions"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#48830 Show a short, neutral TUI interruption notice @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48895 Expand native Mermaid flowchart syntax support @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48973 Isolate realtime auth fallback test from startup prewarm @jif-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48982 Prevent message-board notifications from reopening final answers @eknight-oai",
+              "tags": []
+            }
+          ],
+          "published_at": "2026-09-29T08:05:42+00:00",
+          "version": "0.159.0"
+        }
+      ],
+      "notices": [
+        "Local snapshot; releases outside this file are not searched."
+      ],
+      "coverage": {
+        "oldest": "0.159.0",
+        "newest": "0.159.3"
+      },
+      "source": "Frozen public archive or explicitly synthetic fixture; see cases.json"
+    }
+  },
+  "train-conditions": {
+    "split": "train",
+    "kind": "synthetic",
+    "question": "What changed in the last two releases?",
+    "arguments": "--releases 2 --through 9.3.0",
+    "report": {
+      "environment": {
+        "platform": "linux",
+        "version": "9.3.0",
+        "codex_home": "/example/.codex",
+        "project": "/example/project",
+        "profile": "subscription",
+        "project_trust": "trusted",
+        "terminal": "kitty",
+        "terminal_evidence": "KITTY_PID",
+        "term": "xterm-256color",
+        "term_disagrees": true,
+        "multiplexer": "",
+        "settings": {
+          "approval_policy": "on-request",
+          "sandbox_mode": "workspace-write",
+          "model_reasoning_effort": "high"
+        },
+        "features": {
+          "memories": true,
+          "multi_agent": true,
+          "hooks": false
+        },
+        "hooks": [
+          "PreToolUse"
+        ],
+        "hooks_disabled": true,
+        "mcp": [],
+        "plugins": [],
+        "skills": [],
+        "sources": [
+          "/example/.codex/config.toml"
+        ],
+        "statusline": true,
+        "notifications": false,
+        "vim": true,
+        "keymap": false,
+        "otel": true,
+        "rules": true,
+        "sessions": true,
+        "git": true,
+        "env": [],
+        "notices": [
+          "File-based inventory, not the running session's effective configuration. CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are not resolved. Unset features retain unknown runtime defaults."
+        ]
+      },
+      "mode": "window",
+      "baseline": null,
+      "commit": false,
+      "state_file": "/example/state/baseline.json",
+      "counts": {
+        "withheld": 1,
+        "unmatched": 2,
+        "hidden_unmatched": 0
+      },
+      "withheld": {
+        "Windows: another platform": 1
+      },
+      "signals": [
+        "permissions",
+        "memory",
+        "subagents",
+        "statusline",
+        "vim",
+        "sessions",
+        "git",
+        "telemetry",
+        "effort",
+        "compaction",
+        "new-setting",
+        "new-command",
+        "behavior-change",
+        "feature:memories",
+        "feature:multi_agent",
+        "term:kitty",
+        "new-feature"
+      ],
+      "window": {
+        "from": "9.2.0",
+        "to": "9.3.0",
+        "count": 2
+      },
+      "releases": [
+        {
+          "version": "9.3.0",
+          "published_at": "2026-09-30T12:00:00Z",
+          "bullets": [
+            {
+              "section": "New Features",
+              "text": "Added `/rewind` to restore an earlier conversation turn.",
+              "tags": [
+                "new-command",
+                "new-feature"
+              ]
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Fixed Vim input losing the draft after leaving scrollback.",
+              "tags": [
+                "vim"
+              ]
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Fixed telemetry initialization only when telemetry is disabled.",
+              "tags": [
+                "telemetry"
+              ]
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Fixed MCP OAuth refresh for an enabled server.",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "Fix Vim draft loss after scrollback.",
+              "tags": [
+                "vim"
+              ]
+            }
+          ]
+        },
+        {
+          "version": "9.2.0",
+          "published_at": "2026-09-30T12:00:00Z",
+          "bullets": [
+            {
+              "section": "Changes",
+              "text": "Removed `features.memories`; users who explicitly enable it must migrate to `features.memory_v2`.",
+              "tags": [
+                "memory",
+                "behavior-change",
+                "feature:memories"
+              ]
+            },
+            {
+              "section": "Changes",
+              "text": "Removed `sandbox_legacy`; users with an old `legacy_access` permission rule must replace that rule.",
+              "tags": [
+                "permissions",
+                "behavior-change"
+              ]
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Fixed PreToolUse hook allow decisions bypassing an ask rule.",
+              "tags": []
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Fixed subagents reconnecting when multi_agent is enabled.",
+              "tags": [
+                "subagents",
+                "feature:multi_agent"
+              ]
+            },
+            {
+              "section": "New Features",
+              "text": "Added `CODEX_DISABLE_TIPS=1` to suppress the new default startup tips.",
+              "tags": [
+                "new-feature"
+              ]
+            }
+          ]
+        }
+      ],
+      "notices": [
+        "Local snapshot; releases outside this file are not searched."
+      ],
+      "coverage": {
+        "oldest": "9.2.0",
+        "newest": "9.3.0"
+      },
+      "source": "Frozen public archive or explicitly synthetic fixture; see cases.json"
+    }
+  },
+  "held-public": {
+    "split": "held",
+    "kind": "public",
+    "question": "Do these releases require any decisions for my setup?",
+    "arguments": "--since 0.159.3 --through 0.160.1",
+    "report": {
+      "environment": {
+        "platform": "linux",
+        "version": "0.160.1",
+        "codex_home": "/example/.codex",
+        "project": "/example/project",
+        "profile": "subscription",
+        "project_trust": "trusted",
+        "terminal": "kitty",
+        "terminal_evidence": "KITTY_PID",
+        "term": "xterm-kitty",
+        "term_disagrees": false,
+        "multiplexer": "",
+        "settings": {
+          "approval_policy": "on-request",
+          "sandbox_mode": "workspace-write",
+          "model_reasoning_effort": "high"
+        },
+        "features": {},
+        "hooks": [],
+        "hooks_disabled": false,
+        "mcp": [],
+        "plugins": [],
+        "skills": [],
+        "sources": [
+          "/example/.codex/config.toml"
+        ],
+        "statusline": true,
+        "notifications": false,
+        "vim": false,
+        "keymap": false,
+        "otel": false,
+        "rules": true,
+        "sessions": true,
+        "git": true,
+        "env": [],
+        "notices": [
+          "File-based inventory, not the running session's effective configuration. CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are not resolved. Unset features retain unknown runtime defaults."
+        ]
+      },
+      "mode": "window",
+      "baseline": "0.159.3",
+      "commit": false,
+      "state_file": "/example/state/baseline.json",
+      "counts": {
+        "withheld": 0,
+        "unmatched": 48,
+        "hidden_unmatched": 0
+      },
+      "withheld": {},
+      "signals": [
+        "permissions",
+        "statusline",
+        "sessions",
+        "git",
+        "effort",
+        "compaction",
+        "new-setting",
+        "new-command",
+        "behavior-change",
+        "term:kitty",
+        "new-feature"
+      ],
+      "window": {
+        "from": "0.160.0",
+        "to": "0.160.1",
+        "count": 2
+      },
+      "releases": [
+        {
+          "bullets": [
+            {
+              "section": "Bug Fixes",
+              "text": "Preserve `SYSTEMROOT`, `TEMP`, and `TMP` when launching remote stdio MCP servers with explicitly configured remote environment variables, allowing Unix hosts to retain the Windows executor's startup environment.",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "[#51121](https://github.com/openai/codex/pull/51121): Backport Windows remote MCP environment preservation to 0.160.",
+              "tags": []
+            }
+          ],
+          "published_at": "2026-10-05T18:29:37+00:00",
+          "version": "0.160.1"
+        },
+        {
+          "bullets": [
+            {
+              "section": "New Features",
+              "text": "Browse older tasks in the agent command center with a keyboard-accessible \u201cShow more\u201d action. (#49106)",
+              "tags": [
+                "new-feature"
+              ]
+            },
+            {
+              "section": "New Features",
+              "text": "Select transcript text and paste with middle-click in fullscreen mode on supported local Linux X11 terminals. (#49112)",
+              "tags": [
+                "new-feature"
+              ]
+            },
+            {
+              "section": "New Features",
+              "text": "Start sessions outside a project with workspace defaults when policy permits, and restore saved permissions when resuming. (#49160)",
+              "tags": [
+                "permissions",
+                "sessions",
+                "new-feature"
+              ]
+            },
+            {
+              "section": "New Features",
+              "text": "Added opt-in Guardian review capabilities to retrieve earlier user instructions and include context from agent handoffs. (#49036, #49057)",
+              "tags": [
+                "new-feature"
+              ]
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Unsent queued messages now resume after reconnection once uncertain submissions are resolved, avoiding duplicate sends. (#49105)",
+              "tags": [
+                "sessions"
+              ]
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "The terminal UI now preserves server provider, reasoning-summary, and verbosity settings and shows the correct sessions in resume and fork history. (#49144, #49161, #49171)",
+              "tags": [
+                "sessions",
+                "effort"
+              ]
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Fixed Windows sandbox PowerShell fallbacks and long-path permission repairs, and suppressed unwanted console windows from background helpers. (#49019, #49058, #49098, #49164, #49386)",
+              "tags": [
+                "permissions"
+              ]
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Subagents now retain environments that are still starting and receive their configuration or preparation failure. (#49075)",
+              "tags": []
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Prevented SQLite stalls during connection setup and logging, and surfaced initialization errors instead of masking them as timeouts. (#49032, #49102)",
+              "tags": []
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Explicit provider model catalogs no longer include unsupported bundled models or reuse stale entries after refresh failures. (#49135)",
+              "tags": [
+                "behavior-change"
+              ]
+            },
+            {
+              "section": "Documentation",
+              "text": "Clarified how provider credentials use the configured storage backend and how `env_key` identifies the API-key environment variable. (#49118)",
+              "tags": []
+            },
+            {
+              "section": "Chores",
+              "text": "Reduced repeated plugin-loading work by caching parsed manifests and reusing HTTP connections for remote plugin requests. (#49099, #49100)",
+              "tags": []
+            },
+            {
+              "section": "Chores",
+              "text": "Added background reclamation of unused log database space to reduce disk usage. (#49069)",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "Full Changelog: https://github.com/openai/codex/compare/rust-v0.159.0...rust-v0.160.0",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#48983 Avoid full metadata rewrites for thread timestamp updates @jif-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49000 Isolate the memory startup metadata test from Git enrichment @jif-oai",
+              "tags": [
+                "git"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49019 Use a compatible PowerShell fallback for the Windows MXC sandbox @iceweasel-oai",
+              "tags": [
+                "permissions"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49028 Use the numeric ioctl value in the macOS sandbox policy @aionescu-oai",
+              "tags": [
+                "permissions"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49031 Clarify ChatGPT sign-in success copy @bc-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49032 Avoid SQLite stalls from connection setup and stderr span logging @jif-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49036 Add opt-in conversation history retrieval to Guardian reviews @felixxia-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49037 Show the Plan mode cycling hint in the fullscreen status line @fcoury-oai",
+              "tags": [
+                "statusline"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49038 Preserve encrypted agent messages in Guardian reviews @felixxia-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49041 Copy selections within inline code as plain text @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49043 Update Pro plan display names in the TUI @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49057 Add handoff-aware root context for Guardian reviews @jif-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49058 Fix Windows sandbox ACL repair for long runtime paths @darius-oai",
+              "tags": [
+                "permissions"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49060 Update Guardian messaging snapshots for native agent messages @dkovalenko-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49065 Update Guardian handoff snapshot for separate agent messages @cassirer-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49067 Keep configuration values out of Windows sandbox policy events @zm-oai",
+              "tags": [
+                "permissions"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49069 Reclaim unused SQLite log database pages in the background @dkovalenko-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49073 Surface realtime voice catalog failures in the TUI @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49074 Propagate Cargo package versions to Bazel Rust targets @tamird",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49075 Preserve pending environments when spawning subagents @sayan-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49076 Avoid collecting unused Git metadata in skill analytics @tamird",
+              "tags": [
+                "git"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49079 Update and centralize TUI subscription labels @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49082 Skip remote Git discovery for Guardian diff paths @jif-oai",
+              "tags": [
+                "git"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49084 Track app-server running turns incrementally @tamird",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49089 Render follow-up directive labels in the TUI and copied responses @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49093 Simplify startup promotions to platform-specific desktop app tips @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49096 Update `h2` from 0.4.16 to 0.4.19 in Cargo and Bazel lockfiles @cassirer-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49097 Notify lifecycle extensions of compaction usage limits @xli-oai",
+              "tags": [
+                "compaction"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49098 Resolve Windows sandbox PowerShell fallbacks on the exec server @zm-oai",
+              "tags": [
+                "permissions"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49099 Cache parsed plugin manifests across plugin workflows @dkovalenko-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49100 Reuse the HTTP connection pool for remote plugin requests @dkovalenko-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49102 Preserve SQLite vacuum modes and surface pool initialization errors @bc-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49103 Balance Windows Bazel test shards using duration estimates @jgershen-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49105 Resume unsent TUI input after reconnecting @etraut-openai",
+              "tags": [
+                "sessions"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49106 Add history pagination to the agent command center @bc-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49112 Add X11 primary selection and middle-click paste support @fcoury-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49114 Point remote compaction tests at the mock ChatGPT server @OLI-OAI",
+              "tags": [
+                "compaction"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49117 Attribute analytics requests to each thread's product SKU @papayo-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49118 Correct provider authentication storage documentation @celia-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49119 Add recovery guidance to content-filter retries @won-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49127 Deduplicate cloud and executor skill listings before budgeting @TAFOYA-OAI",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49130 Move content-filter guidance into the shared Responses retry handler @won-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49135 Treat explicit provider model catalogs as authoritative @andrewgu-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49136 Remove the plus separator after Option symbols in TUI key hints @bc-openai",
+              "tags": [
+                "behavior-change"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49138 Expose original error details to turn lifecycle contributors @bryanashley",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49144 Preserve server reasoning summary and verbosity settings in the TUI @etraut-openai",
+              "tags": [
+                "effort"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49145 Hide reasoning summary settings in `/status` for server connections @etraut-openai",
+              "tags": [
+                "effort"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "#49147 Simplify cloud task base URL normalization @akira-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49153 Omit blockquote markers when copying quoted selections in the TUI @bc-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49160 Support projectless TUI sessions with workspace defaults @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49161 Honor app-server provider defaults in the TUI @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49164 Suppress Windows console windows for background subprocesses @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49171 Fix model provider lookup for TUI history @etraut-openai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49386 [0.160] Backport remaining Windows console fix to frozen alpha.6 @andrewgu-oai",
+              "tags": []
+            },
+            {
+              "section": "Changelog",
+              "text": "#49763 [0.160] Backport maintenance-line catalog and security reminder updates @andrewgu-oai",
+              "tags": []
+            }
+          ],
+          "published_at": "2026-10-01T20:19:13+00:00",
+          "version": "0.160.0"
+        }
+      ],
+      "notices": [
+        "Local snapshot; releases outside this file are not searched."
+      ],
+      "coverage": {
+        "oldest": "0.160.0",
+        "newest": "0.160.1"
+      },
+      "source": "Frozen public archive or explicitly synthetic fixture; see cases.json"
+    }
+  },
+  "held-conditions": {
+    "split": "held",
+    "kind": "synthetic",
+    "question": "What do I need to change, and what was fixed?",
+    "arguments": "--since 8.9.0 --through 9.0.0 --relevant-only",
+    "report": {
+      "environment": {
+        "platform": "linux",
+        "version": "9.0.0",
+        "codex_home": "/example/.codex",
+        "project": "/example/project",
+        "profile": "subscription",
+        "project_trust": "trusted",
+        "terminal": "kitty",
+        "terminal_evidence": "KITTY_PID",
+        "term": "xterm-256color",
+        "term_disagrees": true,
+        "multiplexer": "",
+        "settings": {
+          "approval_policy": "on-request",
+          "sandbox_mode": "workspace-write",
+          "model_reasoning_effort": "high"
+        },
+        "features": {
+          "hooks": true,
+          "memories": false
+        },
+        "hooks": [
+          "PreCompact"
+        ],
+        "hooks_disabled": false,
+        "mcp": [],
+        "plugins": [
+          "reference-plugin"
+        ],
+        "skills": [],
+        "sources": [
+          "/example/.codex/config.toml"
+        ],
+        "statusline": true,
+        "notifications": false,
+        "vim": false,
+        "keymap": false,
+        "otel": false,
+        "rules": true,
+        "sessions": true,
+        "git": true,
+        "env": [
+          "CODEX_DISABLE_HINTS"
+        ],
+        "notices": [
+          "File-based inventory, not the running session's effective configuration. CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are not resolved. Unset features retain unknown runtime defaults."
+        ]
+      },
+      "mode": "window",
+      "baseline": "8.9.0",
+      "commit": false,
+      "state_file": "/example/state/baseline.json",
+      "counts": {
+        "withheld": 2,
+        "unmatched": 4,
+        "hidden_unmatched": 4
+      },
+      "withheld": {
+        "Windows: another platform": 1,
+        "macOS: another platform": 1
+      },
+      "signals": [
+        "hooks",
+        "plugins",
+        "permissions",
+        "statusline",
+        "sessions",
+        "git",
+        "effort",
+        "compaction",
+        "new-setting",
+        "new-command",
+        "behavior-change",
+        "feature:hooks",
+        "term:kitty",
+        "new-feature"
+      ],
+      "window": {
+        "from": "9.0.0",
+        "to": "9.0.0",
+        "count": 1
+      },
+      "releases": [
+        {
+          "version": "9.0.0",
+          "published_at": "2026-09-30T12:00:00Z",
+          "bullets": [
+            {
+              "section": "Changes",
+              "text": "Removed the PreCompact hook event; configurations listing PreCompact must rename it to PreCompaction.",
+              "tags": [
+                "hooks",
+                "compaction",
+                "behavior-change"
+              ]
+            },
+            {
+              "section": "Changes",
+              "text": "Removed the old memories setting; migrate only if features.memories is true.",
+              "tags": [
+                "behavior-change"
+              ]
+            },
+            {
+              "section": "New Features",
+              "text": "Added `CODEX_DISABLE_HINTS=1` to disable default hints; configurations that already allow hints need no change.",
+              "tags": [
+                "new-setting",
+                "new-feature"
+              ]
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Fixed plugin OAuth refresh when a plugin is enabled.",
+              "tags": [
+                "plugins"
+              ]
+            },
+            {
+              "section": "Bug Fixes",
+              "text": "Fixed the status line losing its selected fields after resume.",
+              "tags": [
+                "statusline",
+                "sessions"
+              ]
+            },
+            {
+              "section": "Changelog",
+              "text": "Preserve selected status line fields on resumed sessions.",
+              "tags": [
+                "statusline",
+                "sessions"
+              ]
+            },
+            {
+              "section": "New Features",
+              "text": "Added `/bookmarks` to bookmark a transcript position.",
+              "tags": [
+                "new-command",
+                "new-feature"
+              ]
+            }
+          ]
+        }
+      ],
+      "notices": [
+        "Local snapshot; releases outside this file are not searched."
+      ],
+      "coverage": {
+        "oldest": "9.0.0",
+        "newest": "9.0.0"
+      },
+      "source": "Frozen public archive or explicitly synthetic fixture; see cases.json"
+    }
+  },
+  "held-topic": {
+    "split": "held",
+    "kind": "synthetic",
+    "question": "When did persistent memories appear, and how did they change?",
+    "arguments": "--topic memor --topic recall --limit 0",
+    "report": {
+      "environment": {
+        "platform": "linux",
+        "version": "0.160.1",
+        "codex_home": "/example/.codex",
+        "project": "/example/project",
+        "profile": "subscription",
+        "project_trust": "trusted",
+        "terminal": "kitty",
+        "terminal_evidence": "KITTY_PID",
+        "term": "xterm-kitty",
+        "term_disagrees": false,
+        "multiplexer": "",
+        "settings": {
+          "approval_policy": "on-request",
+          "sandbox_mode": "workspace-write",
+          "model_reasoning_effort": "high"
+        },
+        "features": {},
+        "hooks": [],
+        "hooks_disabled": false,
+        "mcp": [],
+        "plugins": [],
+        "skills": [],
+        "sources": [
+          "/example/.codex/config.toml"
+        ],
+        "statusline": true,
+        "notifications": false,
+        "vim": false,
+        "keymap": false,
+        "otel": false,
+        "rules": true,
+        "sessions": true,
+        "git": true,
+        "env": [],
+        "notices": [
+          "File-based inventory, not the running session's effective configuration. CLI overrides, cloud defaults, enforced requirements, plugin-bundled content, and hook trust are not resolved. Unset features retain unknown runtime defaults."
+        ]
+      },
+      "mode": "topic",
+      "total_matches": 6,
+      "matches": [
+        {
+          "version": "7.0.0",
+          "date": "2026-08-01",
+          "text": "Fixed high memory usage during image decoding."
+        },
+        {
+          "version": "7.1.0",
+          "date": "2026-08-03",
+          "text": "Introduced opt-in persistent recall, initially called remembered context."
+        },
+        {
+          "version": "7.2.0",
+          "date": "2026-08-05",
+          "text": "Renamed remembered context to memories and added a management command."
+        },
+        {
+          "version": "7.3.0",
+          "date": "2026-08-07",
+          "text": "Fixed memory pressure in the terminal renderer."
+        },
+        {
+          "version": "7.4.0",
+          "date": "2026-08-09",
+          "text": "Fixed memories being read from an untrusted project."
+        },
+        {
+          "version": "7.5.0",
+          "date": "2026-08-11",
+          "text": "Disabled memories by default pending a replacement."
+        }
+      ],
+      "first_match": "7.0.0",
+      "coverage": {
+        "oldest": "6.0.0",
+        "newest": "7.5.0"
+      },
+      "notices": [
+        "Local snapshot; releases outside this file are not searched."
+      ],
+      "source": "Synthetic topic fixture"
+    }
+  }
+}
