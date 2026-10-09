@@ -138,6 +138,8 @@ $convene promote NAME 2              # or: promote NAME 2 --absent
 $convene run NAME                    # the remaining rounds
 $convene extend NAME 6               # more rounds than the plan declared
 $convene prune NAME                  # remove the run's environment; records stay
+$convene runs                        # every run, its disk use, and whether it finished
+$convene prune --finished            # every finished run's environment at once
 ```
 
 `convene status` reads the records and changes nothing. Its header counts
@@ -201,10 +203,18 @@ carries a `CACHEDIR.TAG`, which `borg`, `restic` and GNU `tar` skip under
 `~/.cache` by default. On macOS, Time Machine leaves out `~/Library/Caches`
 but not `~/.cache`; `tmutil addexclusion ~/.cache/agent-toolbox` adds it.
 
-`convene prune NAME` removes a run's environment and keeps its records.
-Once the environment is gone, whether pruned or with a cleared cache, the
-run refuses every further turn and promotion by name, and `board` and
-`export` still work.
+Nothing removes an environment by itself, because a finished run can
+still be extended or played past its convergence. `convene run` ends by
+naming how much a finished run's environment holds, and `convene runs`
+lists every run of the project with its disk use and state. `convene prune
+NAME` removes a run's environment and keeps its records. It refuses an
+unfinished run, one with a held round, rounds left to play or a judge yet
+to rule, because going on needs the seats' sessions; `--force` prunes it
+anyway, and the trail records what it cut short. `convene prune
+--finished` prunes every finished run of the project and lists the ones
+it kept. Once the environment is gone, whether pruned or with a cleared
+cache, the run refuses every further turn and promotion by name, and
+`board` and `export` still work.
 
 ## What a seat gets, and what it cannot reach
 

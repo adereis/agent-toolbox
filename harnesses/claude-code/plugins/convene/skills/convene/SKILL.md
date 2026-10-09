@@ -95,7 +95,9 @@ operator may be any of them.
    tier, tool calls, usage) and every red flag verbatim. Offer
    `convene prune NAME` once the export is in hand: it removes the run's
    environment (seat workspaces, repositories and private homes) and keeps
-   every record.
+   every record. It refuses an unfinished run; report the refusal rather
+   than passing `--force` unasked. `convene runs` shows every run's disk
+   use, and `convene prune --finished` clears every finished one at once.
 
 ## Reading a sealed round
 

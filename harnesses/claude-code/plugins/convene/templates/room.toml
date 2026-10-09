@@ -4,7 +4,7 @@
 #   convene prepare room.toml
 #   convene run <name>            # plays every round; stops on a quota hold
 #   convene board <name>          # every round's digest, attributed
-#   convene prune <name>          # removes seat repositories and private homes after export
+#   convene prune <name>          # removes the run's environment once it is finished
 #
 # Phases add up to `rounds`. A phase may seat a subset (the rest listen),
 # ask for a deliverable file (written to outbox/NAME beside the post, so

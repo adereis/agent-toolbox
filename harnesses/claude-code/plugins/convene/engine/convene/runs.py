@@ -13,11 +13,12 @@ the run is over, so it lives where backups skip.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from pathlib import Path
 
-from convene import SCHEMA, platform
+from convene import SCHEMA, platform, workspace
 from convene.storage import digest, identifier, read, trail, write, write_text
 
 # https://bford.info/cachedir/: borg, restic and GNU tar skip a directory
@@ -76,6 +77,46 @@ def seat_work(root, plan, name):
 
 def seat_home(root, plan, name):
     return environment(root, plan) / "homes" / name
+
+
+def removable(root, plan):
+    """The paths `prune` would remove, as they exist now.
+
+    The environment whole; for an older run whose environment is its own
+    directory, only its seat repositories and private homes, since its
+    workspaces sit beside the records.
+    """
+    place = environment(root, plan)
+    if place != Path(root):
+        return [place] if place.exists() else []
+    found = []
+    for seat in plan["seats"]:
+        tree = seat_work(root, plan, seat["id"]) / workspace.REPO
+        if seat["workspace"] == "worktree" and tree.exists():
+            found.append(tree)
+        if seat_home(root, plan, seat["id"]).exists():
+            found.append(seat_home(root, plan, seat["id"]))
+    return found
+
+
+def disk_usage(paths):
+    """Bytes the paths occupy on disk, each hard-linked file counted once.
+
+    A clone made with `git clone --local` hard-links its objects, so a
+    naive sum would count them once per seat.
+    """
+    seen, total = set(), 0
+    for top in paths:
+        for directory, dirs, files in os.walk(top):
+            for name in dirs + files:
+                try:
+                    info = os.lstat(os.path.join(directory, name))
+                except FileNotFoundError:
+                    continue  # a running seat removed it between listing and reading
+                if (info.st_dev, info.st_ino) not in seen:
+                    seen.add((info.st_dev, info.st_ino))
+                    total += info.st_blocks * 512
+    return total
 
 
 def environment_gone(root, plan):

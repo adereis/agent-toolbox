@@ -21,7 +21,7 @@ convene: multi-seat panels over native coding-agent CLIs.
   continue RUN SEAT [--round N]               retake a quota-stopped turn
   promote RUN N [--absent]                    close a round by hand
   extend RUN ROUNDS                           raise the round budget
-  prune RUN [--force]                         remove the run's environment; records stay
+  prune RUN [--force] | --finished            remove a run's environment; records stay
   follow RUN SEAT [--round N] [--thinking]    tail a seat's turn as it runs
   seal RUN [--round N]                        letter a blind round's drafts for reading
   unseal RUN [--round N]                      print the key, once judgment.md is written
@@ -29,7 +29,7 @@ convene: multi-seat panels over native coding-agent CLIs.
   board [RUN] [--round N] [--raw]             the published posts, attributed
   export RUN DIR                              copy board and receipts out
   usage [RUN]                                 tokens and cost per seat
-  runs                                        this project's runs, oldest first
+  runs                                        this project's runs, their disk use and state
   personas [list|show ID]                     the persona catalog
   doctor [--no-probes]                        harnesses, credentials, tiers, flags
 
@@ -142,10 +142,19 @@ def main(argv=None):
     p.add_argument("run")
     p.add_argument("rounds", type=int)
 
-    p = sub.add_parser("prune", help="remove the run's environment (workspaces, repositories, "
-                                     "private homes); keep the records")
-    p.add_argument("run")
-    p.add_argument("--force", action="store_true")
+    p = sub.add_parser("prune", help="remove a run's environment (workspaces, repositories, "
+                                     "private homes); keep the records",
+                       description="Remove a run's environment and keep its records. An "
+                                   "unfinished run (a held round, rounds left to play, a judge "
+                                   "yet to rule) is refused, because going on needs the seats' "
+                                   "sessions. A seat still running is never pruned.")
+    p.add_argument("run", nargs="?", help="the run to prune; leave out with --finished")
+    p.add_argument("--finished", action="store_true",
+                   help="prune every finished run of this project; unfinished ones are kept "
+                        "and listed")
+    p.add_argument("--force", action="store_true",
+                   help="prune an unfinished run, or one on a machine that cannot tell whether "
+                        "a seat is running")
 
     p = sub.add_parser("follow", help="print a seat's stream as it grows, until its turn ends")
     p.add_argument("run")
@@ -204,6 +213,47 @@ def main(argv=None):
     except (ValueError, RuntimeError, OSError) as exc:
         print(f"convene {args.command}: {exc}", file=sys.stderr)
         return 1
+
+
+def _size(n):
+    """Bytes as a person reads them, in powers of 1000."""
+    for unit in ("B", "kB", "MB", "GB"):
+        if n < 1000:
+            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+        n /= 1000
+    return f"{n:.1f} TB"
+
+
+def _idle(row):
+    """A finished run whose environment still takes space."""
+    return not row.get("error") and row["bytes"] and not row["gone"] and not row["unfinished"]
+
+
+def _runs_state(row):
+    if row.get("error"):
+        return f"unreadable: {row['error']}"
+    if row["gone"] == "it was pruned":
+        return "pruned"
+    if row["gone"]:
+        return f"environment gone: {row['gone']}"
+    state = f"unfinished: {row['unfinished']}" if row["unfinished"] else "finished"
+    return f"{_size(row['bytes']):>8}  {state}"
+
+
+def _prune_finished(report, as_json):
+    """One line per run touched; non-zero only when a run refused, not when one was kept."""
+    failed = 1 if any(row.get("failed") for row in report) else 0
+    if as_json:
+        print(json.dumps(report, indent=2))
+        return failed
+    for row in report:
+        if row.get("removed"):
+            print(f"{row['name']}: freed {_size(row['bytes'])}")
+        else:
+            print(f"{row['name']}: kept, {row['kept']}")
+    freed = sum(row["bytes"] for row in report if row.get("removed"))
+    print(f"freed {_size(freed)} in all" if freed else "nothing to remove")
+    return failed
 
 
 def _unmade(published):
@@ -273,6 +323,10 @@ def dispatch(args):
                   + (f"; held on {', '.join(held)}" if held else f"; posted {len(posted)}")
                   + _unmade(outcome["_board"]))
         print(f"{why}; next: convene status {root.name}")
+        row = round_.footprint(root)
+        if _idle(row):
+            print(f"its environment holds {_size(row['bytes'])} at {row['environment']}; "
+                  f"convene prune {root.name} frees it once you are done with the run")
         return 3 if why.startswith("held") else 0
     if args.command == "round":
         outcome = round_.run_round(runs.resolve(args.run, project), args.number, jobs=args.jobs,
@@ -307,8 +361,17 @@ def dispatch(args):
         print(f"budget is now {allowed} rounds")
         return 0
     if args.command == "prune":
-        removed = round_.prune(runs.resolve(args.run, project), force=args.force)
-        print("removed:\n" + "\n".join(f"  {r}" for r in removed) if removed else "nothing to remove")
+        if args.finished == bool(args.run):
+            raise ValueError("name one RUN, or pass --finished for every finished run")
+        if args.finished and args.force:
+            raise ValueError("--force applies to one named run, after checking it by hand")
+        if args.finished:
+            return _prune_finished(round_.prune_finished(project), args.json)
+        root, plan = runs.load(runs.resolve(args.run, project), verify=False)
+        size = runs.disk_usage(runs.removable(root, plan))
+        removed = round_.prune(root, force=args.force)
+        print("removed:\n" + "\n".join(f"  {r}" for r in removed) + f"\nfreed {_size(size)}"
+              if removed else "nothing to remove")
         return 0
     if args.command == "follow":
         root, plan = runs.load(runs.resolve(args.run, project), verify=False)
@@ -374,8 +437,16 @@ def dispatch(args):
         print(f"exported to {where}; write synthesis.md there")
         return 0
     if args.command == "runs":
-        for root in runs.listing(project):
-            print(root.name)
+        rows = [round_.footprint(root) for root in runs.listing(project)]
+        if args.json:
+            print(json.dumps(rows, indent=2))
+            return 0
+        width = max((len(row["name"]) for row in rows), default=0)
+        for row in rows:
+            print(f"{row['name']:<{width}}  {_runs_state(row)}")
+        idle = sum(row["bytes"] for row in rows if _idle(row))
+        if idle:
+            print(f"convene prune --finished frees {_size(idle)} from finished runs")
         return 0
     if args.command == "personas":
         catalog = personas.catalog(project)

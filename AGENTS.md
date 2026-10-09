@@ -103,7 +103,11 @@ skip it: it is large, holds a staged login during a turn, and is what
 a record. Only `runs.py` names the `work/` and `homes/` directories; every
 caller asks it for a seat's paths, and every verb that plays a turn or
 promotes a round first calls `runs.require_environment`, because a cleared
-cache would otherwise resume nothing or file a seat's work as unmade.
+cache would otherwise resume nothing or file a seat's work as unmade. A run
+is finished exactly where `run` stops it, and `prune` refuses any other run
+unless forced; keep that rule in `round._unfinished` alone, which status,
+prune and the `runs` listing all read. Nothing prunes on its own: a
+finished run can still be extended.
 
 The jail is an allow-list all the way down, and the root is no exception.
 It binds a fixed set of system trees read-only at their own paths (`/usr`,

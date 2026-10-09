@@ -234,7 +234,8 @@ class RoundTests(unittest.TestCase):
         __import__("shutil").rmtree(tree)
         self.box.git("worktree", "add", "--detach", "-q", str(tree), "HEAD")
         self.assertIn(str(tree), self.box.git("worktree", "list"))
-        self.assertEqual(round_.prune(root), [str(tree), str(root / "homes/d")])
+        # Never played, so only a forced prune takes it.
+        self.assertEqual(round_.prune(root, force=True), [str(tree), str(root / "homes/d")])
         self.assertFalse(tree.exists())
         self.assertNotIn(str(tree), self.box.git("worktree", "list"))
         self.assertTrue((root / "work/d/START.md").exists(), "an older run's workspace stays")
@@ -262,6 +263,79 @@ class RoundTests(unittest.TestCase):
         with contextlib.redirect_stdout(out):
             self.assertEqual(main(["--project", str(self.box.project), "board", root.name]), 0)
         self.assertIn("Stub finding", out.getvalue())
+
+    def test_prune_keeps_a_held_run_unless_forced(self):
+        """A held seat resumes its session from its home; pruning would strand it."""
+        root, _ = self.prepare(rounds=1, seats=[{"id": "a", "persona": "archie-tecture"}],
+                               brief={"text": "[[stub:quota-refused-once]] Discuss."})
+        self.assertEqual(round_.run(root)[1], "held on a")
+        with self.assertRaisesRegex(RuntimeError, r"not finished: round 1 is held on a\. "
+                                    r".*--force prunes it anyway"):
+            round_.prune(root)
+        self.assertTrue(environment_of(root).exists())
+        self.assertEqual(round_.continue_seat(root, 1, "a"), "answered")
+        round_.promote_held(root, 1)
+        self.assertIsNone(round_.status(root)["unfinished"])
+        self.assertEqual(round_.prune(root), [str(environment_of(root))])
+
+    def test_prune_finished_takes_finished_runs_and_lists_the_rest(self):
+        import contextlib
+        import io
+        import json
+        seats = [{"id": "a", "persona": "archie-tecture"}]
+        run = lambda *a: main(["--project", str(self.box.project), *a])  # noqa: E731
+
+        def cli(*args, code=0):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+                self.assertEqual(run(*args), code, out.getvalue())
+            return out.getvalue()
+
+        done, _ = self.prepare(rounds=1, seats=seats)
+        self.assertRegex(cli("run", done.name),
+                         rf"its environment holds [\d.]+ k?B at {environment_of(done)}; "
+                         rf"convene prune {done.name} frees it once you are done with the run")
+        going, _ = self.prepare(rounds=2, seats=seats)
+        self.assertNotIn("its environment holds", cli("run", going.name, "--rounds", "1"))
+        gone, _ = self.prepare(rounds=1, seats=seats)
+        round_.run(gone)
+        round_.prune(gone)
+
+        listing = cli("runs")
+        self.assertRegex(listing, rf"(?m)^{done.name}\s+[\d.]+ k?B  finished$")
+        self.assertRegex(listing, rf"(?m)^{going.name}\s+[\d.]+ k?B  unfinished: "
+                                  r"1 of 2 rounds are published$")
+        self.assertRegex(listing, rf"(?m)^{gone.name}\s+pruned$")
+        self.assertRegex(listing, r"convene prune --finished frees [\d.]+ k?B from finished runs")
+        rows = {row["name"]: row for row in json.loads(cli("runs", "--json"))}
+        self.assertEqual(rows[gone.name]["gone"], "it was pruned")
+        self.assertEqual(rows[going.name]["environment"], str(environment_of(going)))
+
+        swept = cli("prune", "--finished")
+        self.assertRegex(swept, rf"{done.name}: freed [\d.]+ k?B\n")
+        self.assertIn(f"{going.name}: kept, unfinished: 1 of 2 rounds are published\n", swept)
+        self.assertNotIn(gone.name, swept, "a pruned run has nothing left to remove")
+        self.assertFalse(environment_of(done).exists())
+        self.assertTrue(environment_of(going).exists())
+        self.assertNotIn("convene prune --finished frees", cli("runs"))
+        self.assertIn("nothing to remove", cli("prune", "--finished"))
+
+        self.assertIn("name one RUN, or pass --finished", cli("prune", code=1))
+        self.assertIn("name one RUN, or pass --finished",
+                      cli("prune", going.name, "--finished", code=1))
+        self.assertIn("--force applies to one named run",
+                      cli("prune", "--finished", "--force", code=1))
+
+    def test_disk_usage_counts_a_hard_link_once(self):
+        """A local clone hard-links its objects; each seat's would count them again."""
+        first, second = self.box.root / "du/one", self.box.root / "du/two"
+        first.mkdir(parents=True)
+        second.mkdir()
+        (first / "object").write_bytes(os.urandom(200_000))
+        os.link(first / "object", second / "object")
+        alone = runs.disk_usage([first])
+        self.assertGreaterEqual(alone, 200_000)
+        self.assertEqual(runs.disk_usage([first, second]), alone)
 
     def test_a_cleared_cache_stops_turns_and_promotion_by_name(self):
         """Clearing the cache removes the environment without the run knowing.
@@ -435,7 +509,10 @@ class RoundTests(unittest.TestCase):
             self.assertEqual(run("round", root.name, "2"), 0)
             self.assertEqual(run("extend", root.name, "3"), 0)
             self.assertEqual(run("board", root.name, "--round", "2"), 0)
-            self.assertEqual(run("prune", root.name), 0)
+            # Extended to three rounds with two played: unfinished, so kept.
+            self.assertEqual(run("prune", root.name), 1)
+            self.assertTrue(environment_of(root).exists())
+            self.assertEqual(run("prune", root.name, "--force"), 0)
         text = out.getvalue()
         self.assertIn("held on a", text)
         self.assertIn("still held on a", text)
@@ -444,7 +521,11 @@ class RoundTests(unittest.TestCase):
         self.assertIn("round 2: a=answered; published", text)
         self.assertIn("budget is now 3 rounds", text)
         self.assertIn("The board -- round 2", text)
-        self.assertIn("removed:\n  " + str(environment_of(root)), text)
+        self.assertIn("convene prune: run " + root.name + " is not finished: 2 of 3 rounds "
+                      "are published", text)
+        self.assertRegex(text, "removed:\n  " + str(environment_of(root)) + r"\nfreed \d")
+        self.assertEqual([r.get("unfinished") for r in trail(root) if r["event"] == "pruned"],
+                         ["2 of 3 rounds are published"], "a forced prune says what it cut short")
 
 
 class StatusRenderingTests(unittest.TestCase):

@@ -491,6 +491,28 @@ def _spans(numbers):
     return ", ".join(str(a) if a == b else f"{a}-{b}" for a, b in spans)
 
 
+def _unfinished(root, plan, *, published, budget, held, withheld, converged):
+    """Why the run still needs its environment, or None once it does not.
+
+    A run is finished exactly where `run` leaves it: no round held on a
+    seat's session, no judge seat yet to rule, and no round left to play
+    unless the room converged. Going on past that, by playing past
+    convergence or extending the budget, is the operator's call, and so is
+    pruning first. Reading a round sealed needs only the records.
+    """
+    if held:
+        waiting = ", ".join(held[0].get("waiting_on") or []) or "a seat"
+        return f"round {held[0].get('round')} is held on {waiting}"
+    if withheld:
+        n = seal.pending(root, plan)[-1]
+        rules = seal.judge_round(root, plan, n)
+        if rules and rules not in published:
+            return f"the judge {seal.judge_of(plan)} has yet to rule on round {n}"
+    if len(published) < budget and not converged:
+        return f"{len(published)} of {budget} rounds are published"
+    return None
+
+
 def next_step(root, plan, *, published, budget, held, withheld, converged, gone=None):
     """The one command to type next.
 
@@ -617,6 +639,8 @@ def status(root):
             "chair": {"delivered": [r for r in spoken if r in published],
                       "queued": [r for r in spoken if r not in published]},
             "seats": seats, "last_events": rows[-8:],
+            "unfinished": _unfinished(root, plan, published=published, budget=budget,
+                                      held=still_held, withheld=withheld, converged=converged),
             "next": next_step(root, plan, published=published, budget=budget, held=still_held,
                               withheld=withheld, converged=converged, gone=gone)}
 
@@ -771,6 +795,10 @@ def prune(root, *, force=False):
     pruned; a machine that cannot say whether one is running keeps
     everything unless forced.
 
+    An unfinished run is refused unless forced: a held round's seat resumes
+    its session from its home, and unplayed rounds need every seat's. The
+    trail records a forced prune and what the run was still waiting for.
+
     A run prepared before environments moved to the cache keeps its
     workspaces inside the run directory, so only its repositories and homes
     go.
@@ -789,22 +817,65 @@ def prune(root, *, force=False):
                 live.append((row.get("seat"), row["pid"]))
     if live:
         raise RuntimeError("seats still running: " + ", ".join(f"{s} (pid {p})" for s, p in live))
+    why = None if runs.environment_gone(root, plan) else unfinished(root)
+    if why and not force:
+        raise RuntimeError(
+            f"run {plan['name']} is not finished: {why}. Pruning removes the sessions and "
+            f"workspaces it needs to go on; convene status {plan['name']} says what is next, "
+            "and --force prunes it anyway")
     removed = []
-    environment = runs.environment(root, plan)
-    if environment != root:
-        if environment.exists():
-            shutil.rmtree(environment)
-            removed.append(str(environment))
-        event(root, event="pruned", removed=removed)
-        return removed
-    for seat in plan["seats"]:
-        tree = runs.seat_work(root, plan, seat["id"]) / workspace.REPO
-        if seat["workspace"] == "worktree" and tree.exists():
-            workspace.remove(plan["project_root"], tree)
-            removed.append(str(tree))
-        home = runs.seat_home(root, plan, seat["id"])
-        if home.exists():
-            shutil.rmtree(home)
-            removed.append(str(home))
-    event(root, event="pruned", removed=removed)
+    for path in runs.removable(root, plan):
+        if workspace.is_linked(path):
+            # A linked worktree from a run prepared before seats got clones:
+            # removed through git, so the operator's repository forgets it.
+            workspace.remove(plan["project_root"], path)
+        else:
+            shutil.rmtree(path)
+        removed.append(str(path))
+    event(root, event="pruned", removed=removed, **({"unfinished": why} if why else {}))
     return removed
+
+
+def unfinished(root):
+    """Why the run still needs its environment, or None once it does not."""
+    return status(root)["unfinished"]
+
+
+def footprint(root):
+    """What a run's environment holds on disk, and whether it may go.
+
+    `bytes` counts what `prune` would remove. A run that cannot be read is
+    reported with its error rather than hiding the rest of the listing.
+    """
+    try:
+        root, plan = runs.load(root, verify=False)
+        gone = runs.environment_gone(root, plan)
+        return {"name": plan["name"], "run": str(root),
+                "environment": str(runs.environment(root, plan)), "gone": gone,
+                "bytes": runs.disk_usage(runs.removable(root, plan)),
+                "unfinished": None if gone else unfinished(root)}
+    except (ValueError, RuntimeError, OSError, KeyError) as exc:
+        return {"name": Path(root).name, "run": str(root), "error": str(exc)}
+
+
+def prune_finished(project, env=None):
+    """Prune every finished run of a project, one report row per run touched.
+
+    A run with nothing left to remove is passed over. An unfinished run is
+    kept and says why; one that refuses, a seat still running or a plan that
+    no longer verifies, is kept with its error. No run's refusal stops the
+    rest.
+    """
+    report = []
+    for root in runs.listing(project, env):
+        row = footprint(root)
+        if row.get("error"):
+            report.append({**row, "kept": row["error"], "failed": True})
+        elif row["bytes"] and row["unfinished"]:
+            report.append({**row, "kept": f"unfinished: {row['unfinished']}"})
+        elif row["bytes"]:
+            try:
+                report.append({**row, "removed": prune(root)})
+            except (ValueError, RuntimeError, OSError) as exc:
+                report.append({**row, "kept": str(exc), "failed": True})
+    return report
