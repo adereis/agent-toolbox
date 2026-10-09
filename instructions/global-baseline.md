@@ -15,6 +15,13 @@ direct user instructions take precedence over every default below.
   lands — including one you made yourself minutes earlier. A mis-aimed amend
   is doubly destructive: it absorbs unrelated changes *and* overwrites the
   target commit's message, which is not recoverable from the diff.
+* **Never fold into a commit that is already pushed.** Before an amend
+  or soft reset, run `git branch -r --contains HEAD`; if it lists any
+  branch, commit the follow-up as a new commit instead. The HEAD check
+  above cannot catch this, because a push leaves HEAD where it was, and
+  the user may push by hand from outside the session. Folding a pushed
+  commit forks the local branch from its remote, and only a force push
+  repairs it.
 * **Never reuse a recent commit's subject line.** If the message you are
   about to write already appears in `git log`, you are probably amending or
   re-committing the wrong thing. Two adjacent commits sharing a subject is
