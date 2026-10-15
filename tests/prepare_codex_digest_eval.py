@@ -34,7 +34,8 @@ def prepare(destination):
     archive = REPO / "tests/fixtures/codex-whats-new/releases.json"
     cases = {}
     for name, memories in (("disabled", False), ("enabled", True),
-                           ("topic", False), ("empty", False)):
+                           ("topic", False), ("empty", False), ("startup", False)):
+        startup = name == "startup"
         home = destination / name
         codex = home / ".codex"
         project = home / "project"
@@ -47,17 +48,18 @@ def prepare(destination):
             '[otel]\nlog_user_prompt = false\n', encoding="utf-8")
         (codex / "hooks.json").write_text('{"hooks":{"PreToolUse":[]}}', encoding="utf-8")
         (codex / "rules").mkdir()
+        case_archive = archive.with_name("startup-releases.json") if startup else archive
         arguments = ["--codex-dir", str(codex), "--project", str(project),
-                     "--changelog", str(archive), "--state", str(home / "baseline.json")]
+                     "--changelog", str(case_archive), "--state", str(home / "baseline.json")]
         if name == "topic":
             arguments += ["--topic", "helpers", "--topic", "subagents", "--limit", "0"]
         else:
-            arguments += ["--since", "9.3.0" if name == "empty" else "9.1.0"]
+            arguments += ["--since", "9.3.0" if name in ("empty", "startup") else "9.1.0"]
         report = destination / f"{name}.md"
-        with patch.dict(os.environ, {"HOME": str(home), "TERM": "xterm-256color",
+        with patch.dict(os.environ, {"HOME": str(home), "TERM": "xterm-kitty" if startup else "xterm-256color",
                                      "KITTY_PID": "123"}, clear=True), \
                 patch.object(adapter, "SYSTEM_CONFIG", destination / "absent-system.toml"), \
-                patch.object(adapter, "running_version", return_value="9.3.0"), \
+                patch.object(adapter, "running_version", return_value="9.4.0" if startup else "9.3.0"), \
                 report.open("w", encoding="utf-8") as output, \
                 contextlib.redirect_stdout(output):
             result = cli.main(arguments)

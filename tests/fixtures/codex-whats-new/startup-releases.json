@@ -1,0 +1,9 @@
+[
+  {
+    "tag_name": "rust-v9.4.0",
+    "published_at": "2026-09-30T12:00:00Z",
+    "body": "## Bug Fixes\n- Fixed a TUI crash when asynchronous questions contain multiple lines, preserving line breaks and complete hyperlink destinations.\n- Fixed startup failures caused by differences between a running background server's feature settings and CLI defaults. Compatibility checks now apply only to explicit command-line feature overrides.\n",
+    "draft": false,
+    "prerelease": false
+  }
+]

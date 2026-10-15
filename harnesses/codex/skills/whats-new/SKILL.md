@@ -47,6 +47,13 @@ Linux and Python 3.11+. Keep the checkout intact for its shared imports.
 Online fetching also needs GitHub CLI authenticated with
 `gh auth login --hostname github.com`.
 
+If fetching fails, check the harness's network restrictions before diagnosing
+authentication. In a network-restricted sandbox, even `gh auth status` can
+report an invalid token when it cannot reach GitHub. Retry `--refresh` through
+the harness's permitted network-access mechanism before recommending a new
+login. If network access remains unavailable, disclose the snapshot limit;
+do not treat an empty stale-cache window as an update check.
+
 | Request | Arguments |
 |---|---|
 | Changes since the last digest | no window argument |
@@ -82,11 +89,14 @@ window, not that the installed CLI is current.
 
 ## Recording the reviewed window
 
-After presenting the checked window digest, repeat its arguments with
-`--through NEWEST_PRESENTED_VERSION --commit`. The ceiling keeps a newly
-published release from being marked read before it was discussed. Never use
-`--commit` with `--topic`. This flag records digest state; it does not create
-a Git commit.
+After presenting the checked window digest, repeat its window and configuration
+arguments with `--through NEWEST_PRESENTED_VERSION --commit`. For an archive
+report, remove `--refresh` and add `--offline` to record from the reviewed
+cache without fetching again. For a local `--changelog` report, retain that
+file. The ceiling keeps a newly published release from being marked read
+before it was discussed. If the cached ceiling is missing, resolve the
+snapshot mismatch before recording. Never use `--commit` with `--topic`.
+This flag records digest state; it does not create a Git commit.
 
 If the harness can only deliver the report as its final message, record the
 baseline as the last tool step after supervision, then deliver the checked
@@ -98,6 +108,7 @@ digest, give its actual `--since`/`--releases`/time-window arguments and
 an unreviewed worker answer, or a window with no releases. A state-write
 failure must be visible; report the digest with the baseline unchanged.
 Keep diagnostics on standard error when saving a second utility result.
+A successful write prints a baseline receipt there after the state is saved.
 Clean up the private report directory when finished.
 
 State lives under `$XDG_STATE_HOME/agent-toolbox/codex-whats-new/`, defaulting

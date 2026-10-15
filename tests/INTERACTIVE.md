@@ -323,7 +323,7 @@ The installed `~/.agents/skills/whats-new` is a directory link containing a
 regular `SKILL.md`. Follow the migration instructions if the installer
 reports the older real directory of file links as a conflict.
 
-**Synthetic evidence:** Prepare a private directory and four reports:
+**Synthetic evidence:** Prepare a private directory and five reports:
 
 ```bash
 mkdir -p ~/tmp
@@ -332,8 +332,9 @@ python3 tests/prepare_codex_digest_eval.py "$evaluation/reports"
 ```
 
 `cases.json` records each report's exact utility arguments. All versions,
-release notes, settings, and hook data in these cases are fictitious. The
-preparer replaces system config, HOME, terminal evidence, and installed
+settings and hook data in these cases are fictitious. The startup case uses
+public fix wording with a fictitious version and date. The preparer replaces
+system config, HOME, terminal evidence, and installed
 version with isolated values. It makes no network or model calls and
 refuses an output path outside `~/tmp` or an existing destination.
 
@@ -349,6 +350,15 @@ assesses these outcomes against the raw report:
 | enabled | What changed since 9.1.0? | Memory migration needs action; same condition, deduplication, capability, and count checks |
 | topic | When did helpers or subagents arrive and change? | Dated introduction, rename, and later fix; coverage caveat; no window groups or baseline write |
 | empty | What changed since 9.3.0? | No releases in this snapshot; no claim that the installed CLI is current; zero counts; no baseline write |
+| startup | What changed in this patch, and do I need to change anything? | Installed 9.4.0; no action required; retain the multiline-question fix; startup bug condition is server/default feature mismatch; explicit CLI overrides describe the new compatibility check, not a prerequisite of the old bug; no claim a background server is running; counts 0 withheld, 2 unmatched, 0 hidden |
+
+The startup case targets semantic fidelity across the old failure condition
+and the new behavior. A configured `multi_agent` flag does not establish
+background-server usage. Keep that fix conditional on the server workflow.
+Also retain crash prevention rather than reporting only text preservation.
+The [startup regression observation](../docs/evaluations/codex-whats-new/startup-regression.md)
+records one fresh Luna reading and the parent correction with the reader
+prompt unchanged.
 
 Check that the reader distinguishes the selected window from archive
 coverage and does not invent a selection reason from a missing baseline.

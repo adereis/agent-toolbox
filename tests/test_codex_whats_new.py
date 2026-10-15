@@ -200,7 +200,7 @@ class ArchiveTests(IsolatedTest):
         self.assertIn("cursor=previous", command)
         self.assertEqual(command[command.index("--hostname") + 1], "github.com")
 
-    def test_missing_gh_and_auth_failure_name_recovery_commands(self):
+    def test_missing_gh_and_query_failure_name_recovery_without_leaking_diagnostics(self):
         with patch.object(adapter.subprocess, "run", side_effect=FileNotFoundError()):
             with self.assertRaisesRegex(ValueError, "sudo dnf install gh"):
                 adapter.fetch_page()
@@ -209,6 +209,9 @@ class ArchiveTests(IsolatedTest):
             with self.assertRaises(ValueError) as error:
                 adapter.fetch_page()
         self.assertIn("gh auth login", str(error.exception))
+        self.assertIn("network and sandbox", str(error.exception))
+        self.assertLess(str(error.exception).index("permitted network access"),
+                        str(error.exception).index("gh auth status"))
         self.assertNotIn("fictitious-secret", str(error.exception))
 
     def test_partial_graphql_error_and_missing_cursor_fail(self):
@@ -444,6 +447,69 @@ class CommandTests(IsolatedTest):
         self.assertEqual(json.loads(self.state.read_text())["baseline"]["release"], "0.153.4")
         self.assertEqual(self.report()["window"]["to"], "0.154.0")
 
+    def test_refreshed_window_can_be_recorded_offline_without_consuming_a_newer_release(self):
+        self.write(self.codex / "api.config.toml", 'model = "fictitious-model"\n')
+        cache = self.root / "cache/releases.json"
+        arguments = ["--codex-dir", str(self.codex), "--project", str(self.project),
+                     "--profile", "api", "--state", str(self.state), "--since", "0.153.0", "--json"]
+        out, err = io.StringIO(), io.StringIO()
+        with patch.object(cli, "cache_path", return_value=cache), \
+                patch.object(adapter, "fetch_page", return_value=(ARCHIVE, None)) as fetch, \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            self.assertEqual(cli.main([*arguments, "--refresh"]), 0, err.getvalue())
+        fetch.assert_called_once()
+        reviewed = json.loads(out.getvalue())
+        self.assertFalse(self.state.exists())
+        cached = json.loads(cache.read_text())
+        cached["releases"] = adapter.parse_releases([release("0.155.0"), *ARCHIVE])
+        core.write_json(cache, cached)
+        out, err = io.StringIO(), io.StringIO()
+        with patch.object(cli, "cache_path", return_value=cache), \
+                patch.object(adapter, "fetch_page", side_effect=AssertionError("unexpected network")), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            self.assertEqual(cli.main([*arguments, "--offline", "--through", reviewed["window"]["to"],
+                                       "--commit"]), 0, err.getvalue())
+        recorded = json.loads(out.getvalue())
+        state = json.loads(self.state.read_text())
+        self.assertEqual(recorded["window"], reviewed["window"])
+        self.assertEqual(state["baseline"]["release"], "0.154.0")
+        self.assertEqual(state["scope"], {"codex_home": str(self.codex),
+                                         "project": str(self.project), "profile": "api"})
+        self.assertIn("Baseline recorded: none -> 0.154.0", err.getvalue())
+
+    def test_baseline_receipt_follows_successful_write_and_keeps_json_valid(self):
+        self.report("--since", "0.153.0", "--through", "0.153.4", "--commit")
+        code, out, err = self.run_cli("--json", "--through", "0.154.0", "--commit")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(out)["window"]["to"], "0.154.0")
+        self.assertEqual(json.loads(self.state.read_text())["baseline"]["release"], "0.154.0")
+        self.assertIn(f"Baseline recorded: 0.153.4 -> 0.154.0 ({self.state})", err)
+
+    def test_failed_baseline_write_has_no_success_receipt(self):
+        with patch.object(cli, "save_state", side_effect=OSError("fictitious write failure")):
+            code, out, err = self.run_cli("--json", "--commit")
+        self.assertEqual(code, 1)
+        json.loads(out)
+        self.assertIn("fictitious write failure", err)
+        self.assertNotIn("Baseline recorded:", err)
+        self.assertFalse(self.state.exists())
+
+    def test_offline_missing_reviewed_ceiling_does_not_record_a_baseline(self):
+        cache = self.root / "cache/releases.json"
+        core.write_json(cache, {"schema": 1, "complete": True, "source": adapter.RELEASES_URL,
+                               "fetched_at": datetime.now(timezone.utc).isoformat(),
+                               "releases": adapter.parse_releases(ARCHIVE[1:])})
+        out, err = io.StringIO(), io.StringIO()
+        with patch.object(cli, "cache_path", return_value=cache), \
+                patch.object(adapter, "fetch_page", side_effect=AssertionError("unexpected network")), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = cli.main(["--codex-dir", str(self.codex), "--project", str(self.project),
+                             "--state", str(self.state), "--offline", "--through", "0.154.0", "--commit"])
+        self.assertEqual(code, 1)
+        self.assertIn("--through version is absent", err.getvalue())
+        self.assertNotIn("Baseline recorded:", err.getvalue())
+        self.assertFalse(self.state.exists())
+
     def test_baseline_never_regresses_or_duplicates_same_release(self):
         self.report("--commit")
         before = self.state.read_bytes()
@@ -524,8 +590,9 @@ class CommandTests(IsolatedTest):
 
     def test_failed_output_does_not_consume_releases(self):
         with patch.object(cli, "emit", side_effect=BrokenPipeError("closed output")):
-            code, _, _ = self.run_cli("--commit")
+            code, _, err = self.run_cli("--commit")
         self.assertEqual(code, 1)
+        self.assertNotIn("Baseline recorded:", err)
         self.assertFalse(self.state.exists())
 
     def test_baseline_lock_excludes_other_processes(self):

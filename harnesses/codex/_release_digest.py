@@ -127,9 +127,11 @@ def fetch_page(cursor=None):
     if result.returncode:
         # gh diagnostics can reflect environment settings. Do not relay them
         # into a digest; give specific local diagnostic commands instead.
-        raise ValueError(f"GitHub CLI query failed (exit {result.returncode}); run gh auth status --hostname github.com "
-                         "and gh api --hostname github.com rate_limit. Authenticate with "
-                         "gh auth login --hostname github.com if needed, then retry --refresh")
+        raise ValueError(f"GitHub CLI query failed (exit {result.returncode}); check network and sandbox "
+                         "restrictions first. Retry --refresh with permitted network access before treating "
+                         "authentication diagnostics as invalid credentials. Then run "
+                         "gh auth status --hostname github.com and gh api --hostname github.com rate_limit. "
+                         "Authenticate with gh auth login --hostname github.com only if needed")
     try:
         payload = json.loads(result.stdout)
         if payload.get("errors"):

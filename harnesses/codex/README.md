@@ -115,6 +115,11 @@ The archive is cached for 24 hours under
 `~/.cache/agent-toolbox/codex-releases.json`. An installed version absent
 from the cache also triggers a refresh. A failed refresh can use a previous
 complete cache with a visible notice. A partial fetch never replaces it.
+Check network and sandbox restrictions before diagnosing an authentication
+failure. A restricted connection can make `gh auth status` report an invalid
+token. Retry `--refresh` with permitted network access before recommending
+a new login. If access remains unavailable, the cached report's limitation
+still applies even when its window is empty.
 Offline and local-file reports state their snapshot limitation. The utility
 uses GitHub CLI's existing authentication without reading or copying its
 credentials. No Codex credentials, model calls, or harness cache modifications
@@ -147,16 +152,22 @@ and [hook sources](https://developers.openai.com/codex/hooks).
 ### Remembering a completed digest
 
 After reading the report, repeat its window and configuration arguments with
-`--through NEWEST_PRESENTED_VERSION --commit`. For example:
+`--through NEWEST_PRESENTED_VERSION --commit`. For archive reports, replace
+`--refresh` with `--offline` (or add `--offline` if neither was supplied) to
+reuse the reviewed cache without another fetch. For example:
 
 ```bash
-~/.agents/scripts/codex-whats-new.py --profile api \
+~/.agents/scripts/codex-whats-new.py --offline --profile api \
   --since 0.153.0 --through 0.154.0 --commit
 ```
 
 The ceiling prevents a release published between the read and the commit
 from being marked as already discussed. Topic searches reject `--commit`.
 Re-reading an older window cannot move the baseline backward.
+If the cache lacks the reviewed ceiling, resolve the snapshot mismatch
+before recording. Local `--changelog` reports retain their file argument.
+After a successful state write, a receipt on stderr names the previous and
+new baseline and the state path. JSON output remains a single JSON value.
 
 Each Codex home, project, and profile has a separate baseline under
 `$XDG_STATE_HOME/agent-toolbox/codex-whats-new/`, defaulting to

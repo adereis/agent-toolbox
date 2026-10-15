@@ -12,7 +12,7 @@ Examples:
   codex-whats-new.py --profile api
   codex-whats-new.py --days 14 --relevant-only
   codex-whats-new.py --topic 'multi.agent' --topic subagent
-  codex-whats-new.py --since 0.153.0 --through 0.154.0 --commit
+  codex-whats-new.py --offline --since 0.153.0 --through 0.154.0 --commit
 
 Configuration is a file-based inventory, not a live session probe. Supply
 --profile explicitly when applicable. Baselines are isolated by Codex home,
@@ -239,6 +239,8 @@ def run(args):
         sys.stdout.flush()  # A failed pipe must not consume unread releases.
         if args.commit and newest and newest != baseline:
             save_state(state_file, newest, previous=state, source=source, scope=scope)
+            print(safe_text(f"Baseline recorded: {baseline or 'none'} -> {newest} ({state_file})"),
+                  file=sys.stderr)
 
 
 def main(argv=None):
