@@ -177,11 +177,18 @@ Claude Code discovers plugins only through its own registry
 would be a second source of truth for the same state. Remove an installed
 plugin with `claude plugin uninstall convene@agent-toolbox`.
 
-Updating a plugin is a separate step, because a plugin does not track the
-checkout the way installed components do. The installer creates symlinks, so
-`git pull` changes what a skill or script does immediately. A plugin is
-copied into `~/.claude/plugins/cache/<marketplace>/<name>/<version>/`, so the
-same pull leaves it running the old code until you update it:
+Whether a plugin tracks the checkout the way installed components do
+depends on where Claude Code reads it from. The installer creates symlinks,
+so `git pull` changes what a skill or script does immediately. A plugin
+installed from this checkout, a marketplace added from a local path, is read
+in place on Claude Code 2.1.301: `claude plugin list --json` shows a
+`readFromFolder` field naming the checkout, and the next session loads
+whatever is checked out. A copy under `~/.claude/plugins/cache/` stays on
+disk, but nothing loads it, so a pull needs no update step.
+
+A plugin without `readFromFolder` was copied into
+`~/.claude/plugins/cache/<marketplace>/<name>/<version>/`, and a pull leaves
+it running the old code until you update it:
 
 ```bash
 claude plugin marketplace update agent-toolbox
@@ -190,15 +197,16 @@ claude plugin update convene@agent-toolbox
 
 The update compares **version strings, not commits**. A plugin whose
 `version` has not changed reports "already at the latest version" and copies
-nothing, however far the checkout has moved. Changing a plugin therefore
-means bumping `version` in both its `.claude-plugin/plugin.json` and its
-entry in the root marketplace manifest; `claude plugin tag` validates that
-the two agree. Without that bump no installed copy will ever see the change.
+nothing, however far the checkout has moved. Releasing a plugin change to a
+copied install therefore means bumping `version` in both its
+`.claude-plugin/plugin.json` and its entry in the root marketplace manifest;
+`claude plugin tag` validates that the two agree. Without that bump no
+copied install will ever see the change.
 
 The update applies after Claude Code restarts. `/agent-toolbox-sync`
-performs this step for every plugin in the marketplace manifest, which is
-the reason to sync rather than to pull alone. Check what a plugin costs
-every session, and what it is currently pinned to, with:
+checks which case applies to every plugin in the marketplace manifest and
+updates the copied ones. Check what a plugin costs every session, and what
+it is currently pinned to, with:
 
 ```bash
 claude plugin details convene@agent-toolbox

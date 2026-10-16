@@ -118,7 +118,7 @@ prepares and runs it, reads the board, synthesizes, exports, and reports
 the receipts. The same engine runs from a shell:
 
 ```bash
-convene=~/.claude/plugins/cache/agent-toolbox/convene/*/bin/convene   # or the checkout's bin/convene
+convene=/path/to/agent-toolbox/harnesses/claude-code/plugins/convene/bin/convene   # the checkout, which a local install runs
 $convene doctor
 $convene prepare templates/panel.toml --range HEAD~3..HEAD
 $convene run 2026-09-21-panel-review-the-change
