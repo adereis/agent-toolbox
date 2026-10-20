@@ -56,10 +56,11 @@ what.
 | Three-way memory sync across machines, run by an agent | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-memory-sync--memory-portability), [supervised run](prompts/sync-memories.md) |
 | Release digest against local configuration | Claude Code | [Utilities](harnesses/claude-code/scripts/README.md#claude-code-whats-newpy) |
 | Release digest against local configuration | Codex | [Release digest](harnesses/codex/README.md#release-digest) |
+| Release digest against local configuration | Antigravity (`agy`) | [Antigravity integration](harnesses/agy/README.md#release-digest-agy-whats-newpy) |
 | Statusline, agent panel rows, and quota display | Claude Code | [Settings](harnesses/claude-code/settings/README.md) |
 | Hooks | Claude Code | [Hooks](harnesses/claude-code/hooks/README.md) |
-| Teaching skill | Claude Code and Codex | [Shared workflow](skills/teach/SKILL.md) |
-| Release digest skill | Claude Code and Codex | [Shared workflow](skills/whats-new/SKILL.md) |
+| Teaching skill | Claude Code, Codex, Antigravity | [Shared workflow](skills/teach/SKILL.md) |
+| Release digest skill | Claude Code, Codex, Antigravity | [Shared workflow](skills/whats-new/SKILL.md) |
 | Baseline adoption, review, and browser verification prompts | Any harness accepting text prompts | [Prompts](prompts/README.md) |
 | Optional instruction modules | Any harness accepting instruction files | [Instructions](instructions/README.md) |
 | Hook reference examples | Claude Code payloads; not deployed | [Examples](examples/claude-code/hooks/README.md) |

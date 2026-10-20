@@ -1,0 +1,1 @@
+../../../../../skills/whats-new/SKILL.md

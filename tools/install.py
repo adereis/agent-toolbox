@@ -35,6 +35,9 @@ COMMANDS = {
         "codex-tmux": "harnesses/codex/scripts/codex-tmux.py",
         "convene": "harnesses/claude-code/plugins/convene/bin/convene",
     },
+    "agy": {
+        "convene": "harnesses/claude-code/plugins/convene/bin/convene",
+    },
 }
 CONVENE_SKILL = REPO / "harnesses/claude-code/plugins/convene/skills/convene"
 
@@ -49,7 +52,7 @@ def catalog(harness, components):
                 result["skills/teach/references/workflow.md"] = REPO / "skills/teach/SKILL.md"
                 result["skills/whats-new/SKILL.md"] = REPO / "harnesses/claude-code/skills/whats-new/SKILL.md"
                 result["skills/whats-new/references/workflow.md"] = REPO / "skills/whats-new/SKILL.md"
-            else:
+            elif harness == "codex":
                 result["skills/teach/SKILL.md"] = REPO / "skills/teach/SKILL.md"
                 result["skills/teach/agents/openai.yaml"] = REPO / "harnesses/codex/skills/teach/agents/openai.yaml"
                 # Codex skips a symlinked SKILL.md. Link the directory so
@@ -60,6 +63,10 @@ def catalog(harness, components):
                 # linked as a directory: Codex follows directory symlinks but
                 # its skill scan skips a symlinked SKILL.md. Keep the policy
                 # and references beside the authoritative regular file.
+                result["skills/convene"] = CONVENE_SKILL
+            else:
+                result["skills/teach/SKILL.md"] = REPO / "skills/teach/SKILL.md"
+                result["skills/whats-new"] = REPO / "harnesses/agy/skills/whats-new"
                 result["skills/convene"] = CONVENE_SKILL
         elif component == "profiles":
             if harness != "codex":
@@ -173,7 +180,7 @@ def install_roots(plans, apply=False):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--harness", required=True, choices=("claude-code", "codex"))
+    parser.add_argument("--harness", required=True, choices=("claude-code", "codex", "agy"))
     parser.add_argument("--scope", required=True, choices=("user", "project"))
     parser.add_argument("--project", type=Path, help="Project directory for project scope")
     parser.add_argument("--target", type=Path, help="Explicit installation root instead of the scope default")
@@ -203,6 +210,8 @@ def main(argv=None):
                 target = Path.home() / ".local/bin"
             elif args.harness == "claude-code":
                 target = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / directory)
+            elif args.harness == "agy":
+                target = Path.home() / ".gemini/config"
             else:
                 target = Path.home() / directory
             plans.setdefault(target.expanduser().resolve(), {}).update(links)

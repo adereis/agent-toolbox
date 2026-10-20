@@ -1,7 +1,22 @@
 ---
 name: whats-new
-description: Explain recent Codex CLI releases against local configuration, or trace when a CLI feature or fix appeared. Use for update digests, upgrade impact, and release-history questions about Codex CLI.
+description: Explain recent Codex or Antigravity CLI releases against local configuration, or trace when a CLI feature or fix appeared. Use for update digests, upgrade impact, and release-history questions.
 ---
+
+## Harness routing
+
+When running inside **Antigravity (`agy`)**:
+Follow the [Antigravity release digest procedure](../../../agy/skills/whats-new/SKILL.md):
+1. Run `agy-whats-new.py` from `~/.gemini/config/scripts/agy-whats-new.py`,
+   `~/.agents/scripts/agy-whats-new.py`, or `harnesses/agy/scripts/agy-whats-new.py`
+   in the checkout.
+2. Read the digest and environment block following the shared [release digest workflow](references/workflow.md).
+3. Do not spawn a Luna subagent or run the Codex reader procedure. Interpret
+   the report directly in the active session and commit the baseline with
+   `--through <version> --commit`.
+
+When running inside **Codex CLI**:
+Follow the supervised release reading procedure below.
 
 ## Supervised release reading
 
