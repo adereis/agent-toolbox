@@ -103,7 +103,9 @@ pseudo-terminal. It does not validate account-backed Codex telemetry.
 **Subscription:** Run `codex-tmux.py`, submit a small prompt, and check model,
 effort, context, process memory, and subscription profile. Compare quotas
 with `/status`. Check the model after changing it. Observe the display at
-wide and narrow terminal widths. The context percentage intentionally uses
+wide and narrow terminal widths. From a directory deep inside a repository,
+the path should shrink around its last directory, behind the repository's
+name, before any column drops out. The context percentage intentionally uses
 raw reported usage, whereas Codex's native footer subtracts a baseline.
 
 **API:** When paid API testing is requested, run

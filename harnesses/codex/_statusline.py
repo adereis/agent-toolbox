@@ -279,6 +279,24 @@ def git_state(cwd):
     return branch + ("*" if dirty else "") + ("+" if staged else "") + ("?" if untracked else "")
 
 
+def git_root(cwd):
+    """Where cwd's work tree starts, and where cwd sits under it.
+
+    Asked only after git_state found a repository, so a failure is an error, not
+    an absent repository. git resolves the root, so the pair holds when cwd was
+    reached through a symlink; each answer is its own call because a directory
+    name may hold a newline.
+    """
+    answers = []
+    for flag in ("--show-toplevel", "--show-prefix"):
+        result = subprocess.run(["git", "--no-optional-locks", "-C", str(cwd), "rev-parse", flag],
+                                capture_output=True, timeout=2)
+        if result.returncode:
+            raise ValueError("git rev-parse failed: " + safe_text(result.stderr.decode(errors="replace")))
+        answers.append(result.stdout.decode(errors="replace").removesuffix("\n"))
+    return {"root": answers[0], "prefix": answers[1].removesuffix("/")}
+
+
 def memory_mb(pid, proc=Path("/proc")):
     for line in (proc / str(pid) / "status").read_text().splitlines():
         if line.startswith("VmRSS:"):
@@ -302,6 +320,43 @@ def shorten(text, limit):
     return result + "…" if limit else ""
 
 
+def fit_path(path, room, repo=None):
+    """A displayed directory in at most room columns, giving up its least useful part first.
+
+    The leaf is where the session is, so it survives longest. Inside a repository
+    its name stands in for everything up to its root, and the directories in the
+    middle go before either. _fit_path in the Claude Code status line
+    (harnesses/claude-code/settings/statusline.sh) is the same rule, tested at
+    the same boundaries; a change to one belongs in both.
+    """
+    if width(path) <= room:
+        return path
+    if repo:
+        anchor, rest = repo["root"].rsplit("/", 1)[-1], repo["prefix"]
+        whole = anchor + ("/" + rest if rest else "")
+        if width(whole) <= room:
+            return whole
+    elif "/" in path:
+        anchor, rest = path.split("/", 1)
+    else:
+        anchor, rest = path, ""
+    parts = rest.split("/") if rest else []
+    leaf = parts[-1] if parts else anchor  # at the repository root the name is all there is
+    # A marker never stands for nothing. Behind the anchor and in front of every
+    # directory it would be wider than the whole path, which did not fit; on its
+    # own it stands at least for the anchor.
+    for marker in (anchor + "/…/", "…/") if parts else ():
+        if width(marker + leaf) > room:
+            continue
+        tail = leaf
+        for part in reversed(parts[:-1]):
+            if width(marker + part + "/" + tail) > room:
+                break
+            tail = part + "/" + tail
+        return marker + tail
+    return shorten(leaf, room)
+
+
 def tier_color(value):
     return "red" if value >= 80 else "yellow" if value >= 50 else "green"
 
@@ -315,14 +370,20 @@ def render(data, columns=160, now=None, styled=True):
         if value is None:
             return
         header, value = safe_text(header), safe_text(value)
-        value = shorten(value, cap)
+        if cap is not None:
+            value = shorten(value, cap)
         cells.append((header, value, color, priority))
 
     cwd = str(data.get("cwd") or "")
     home = str(Path.home())
     if cwd == home or cwd.startswith(home + "/"):
         cwd = "~" + cwd[len(home):]
-    add("workspace", cwd, "blue,bold", 1, 28)
+    # No cap: the path is fitted below, into the room the other columns leave.
+    add("workspace", cwd, "blue,bold", 1, None)
+    workspace = cells[-1]
+    repo = data.get("repo")
+    if repo:
+        repo = {"root": safe_text(repo["root"]), "prefix": safe_text(repo["prefix"])}
     add("branch", data.get("branch"), "yellow", 2, 18)
     model = data.get("model") or "waiting"
     if data.get("window") and data["window"] < 1_000_000:
@@ -361,8 +422,18 @@ def render(data, columns=160, now=None, styled=True):
     columns = max(1, min(columns, 4096))
     padding = min(2, (columns - 1) // 2)
     columns -= 2 * padding
-    while len(cells) > 1 and sum(max(width(c[0]), width(c[1])) for c in cells) + 3 * (len(cells) - 1) > columns:
+    # The path gives way before any column goes: it asks only for its header
+    # while columns are dropped, then takes whatever room is left.
+    def need(cell):
+        return width(cell[0]) if cell is workspace else max(width(cell[0]), width(cell[1]))
+
+    while len(cells) > 1 and sum(need(c) for c in cells) + 3 * (len(cells) - 1) > columns:
         cells.pop(min(range(len(cells)), key=lambda i: cells[i][3]))
+    for i, cell in enumerate(cells):
+        if cell is workspace:
+            room = columns - sum(need(c) for c in cells if c is not workspace) - 3 * (len(cells) - 1)
+            header, value, color, priority = cell
+            cells[i] = (header, fit_path(value, max(room, width(header)), repo), color, priority)
     rows = [[], []]
     for header, value, color, _ in cells:
         size = min(columns, max(width(header), width(value)))

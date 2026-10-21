@@ -618,6 +618,8 @@ EDGE=4
 #   attempt-000
 #   attempt-0…
 # Outside a repository the anchor is ~ (or /) instead of a name: ~/…/attempt-000.
+# fit_path in harnesses/codex/_statusline.py is the same rule, tested at the
+# same boundaries; a change to one belongs in both.
 
 # Drop characters from the end of $_cut until it is at most $1 wide. In a
 # byte-counting locale ${s%?} drops one byte, but a continuation byte does not

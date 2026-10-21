@@ -26,7 +26,7 @@ HERE = Path(__file__).resolve()
 HARNESS = HERE.parents[1]
 sys.path.insert(0, str(HARNESS))
 from _statusline import (
-    Rollout, git_state, load_prices, memory_mb, open_rollouts, other_writers,
+    Rollout, git_root, git_state, load_prices, memory_mb, open_rollouts, other_writers,
     render, safe_text,
 )
 
@@ -218,6 +218,8 @@ def run_pane(directory):
                 else:
                     data["notice"] = "waiting for local transcript"
                 data["branch"] = git_state(data["cwd"])
+                if data["branch"] is not None:
+                    data["repo"] = git_root(data["cwd"])
             except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
                 data = {"backend": spec["backend"], "error": safe_text(str(error)), "cost": None}
             error = data.get("error") or data.get("cost_error")

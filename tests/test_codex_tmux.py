@@ -224,6 +224,51 @@ class DisplayTests(TemporaryTest):
         (self.root / "untracked").write_text("fixture\n")
         self.assertEqual(status.git_state(self.root), "demo*+?")
 
+    def test_git_root_names_the_work_tree_and_the_place_under_it(self):
+        subprocess.run(["git", "init", "-q", "-b", "demo", str(self.root)], check=True)
+        nested = self.root / "build" / "line\nbreak" / "leaf"
+        nested.mkdir(parents=True)
+        (self.root / "via").symlink_to(nested)
+        real = str(self.root.resolve())
+        self.assertEqual(status.git_root(self.root), {"root": real, "prefix": ""})
+        self.assertEqual(status.git_root(nested), {"root": real, "prefix": "build/line\nbreak/leaf"})
+        # git resolves the link, so the prefix is the real place, not the link's name.
+        self.assertEqual(status.git_root(self.root / "via"), {"root": real, "prefix": "build/line\nbreak/leaf"})
+
+    def test_workspace_path_gives_up_its_least_useful_part_first(self):
+        # The rule and the boundaries the Claude Code status line tests use.
+        repo = {"root": "/fictional/projects/demo-app",
+                "prefix": "build/runs/run-01/records/02-lesson/attempt-000"}
+        full = repo["root"] + "/" + repo["prefix"]
+        for room, expected in ((len(full), full), (len(full) - 1, "demo-app/" + repo["prefix"]),
+                               (32, "demo-app/…/02-lesson/attempt-000"), (31, "demo-app/…/attempt-000"),
+                               (21, "…/attempt-000"), (12, "attempt-000"), (10, "attempt-0…")):
+            self.assertEqual(status.fit_path(full, room, repo), expected, room)
+        self.assertEqual(status.fit_path(repo["root"], 9, {"root": repo["root"], "prefix": ""}), "demo-app")
+        plain = "~/plain/run-01/02-lesson/attempt-000"
+        self.assertEqual(status.fit_path(plain, 25), "~/…/02-lesson/attempt-000")
+        self.assertEqual(status.fit_path(plain, 24), "~/…/attempt-000")
+        self.assertEqual(status.fit_path("/" + plain[2:], 24), "/…/02-lesson/attempt-000")
+        # A wide leaf is cut by the columns it fills, not by its characters.
+        self.assertEqual(status.fit_path("/fictional/界界界界界界", 9), "界界界界…")
+
+    def test_workspace_gives_way_before_any_column_is_dropped(self):
+        repo = {"root": "/fictional/projects/demo-app",
+                "prefix": "build/runs/run-01/records/02-lesson/attempt-000"}
+        full = repo["root"] + "/" + repo["prefix"]
+        data = {"backend": "api", "cwd": full, "repo": repo, "model": "demo-model", "effort": "high",
+                "context": 23, "cost": "1.234", "branch": "main*", "memory": 312.5}
+        wide = status.render(data, 400, styled=False)[1]
+        self.assertIn(full, wide)  # no fixed cap once the row has room
+        beside = status.width(wide) - 4 - len(full)  # the other columns, past both margins
+        for room, expected in ((32, "demo-app/…/02-lesson/attempt-000"), (9, "attempt-…")):
+            size = room + 4 + beside
+            header, row = status.render(data, size, styled=False)
+            self.assertTrue(row.startswith("  " + expected + " "), (room, row))
+            self.assertIn("312.5 MB", row)
+            self.assertLessEqual(status.width(row), size)
+            self.assertEqual(status.width(header), status.width(row))
+
 
 class OwnershipTests(TemporaryTest):
     def test_duplicate_writers_are_detected_but_readers_are_allowed(self):

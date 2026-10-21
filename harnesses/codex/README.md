@@ -385,7 +385,7 @@ workspace            branch   model                 effort   session   cost~   �
 
 | Column | Color | Meaning |
 |--------|-------|---------|
-| `workspace` | Bold blue | Current turn's working directory, with `~` for your home |
+| `workspace` | Bold blue | Current turn's working directory, with `~` for your home, shortened to the room the other columns leave |
 | `branch` | Yellow | Git branch or detached commit; `*` unstaged, `+` staged, `?` untracked |
 | `model` | Green | Model recorded for the current turn; windows under one million tokens appear in brackets |
 | `effort` | Magenta | Recorded reasoning effort; dim at `low`, bold at `max` |
@@ -403,9 +403,17 @@ toward the available width, so the footer still fits narrow terminals.
 
 Context and quota values are green below 50%, yellow from 50%, and red
 from 80%. Quotas older than 15 minutes, or past their reset time, go dim
-and show their age. A narrow terminal drops less essential columns first;
-the backend remains visible. Extra per-model quota buckets and Claude's
-vim mode are not available from this Codex transcript format.
+and show their age. Extra per-model quota buckets and Claude's vim mode
+are not available from this Codex transcript format.
+
+The workspace path takes whatever width the other columns leave, so it never
+pushes them out. It gives up its least useful part first. The last directory
+survives longest. Inside a git repository, the repository's name replaces
+everything above its root. Directories in the middle go before either, as in
+`demo-app/…/02-lesson/attempt-000`, then `…/attempt-000`, then
+`attempt-0…`. The Claude Code status line follows the same rule. Only once
+the path is down to its header's width does a narrow terminal drop less
+essential columns, and the backend remains visible.
 
 The context percentage uses the reported token count directly. Codex's own
 footer subtracts a fixed baseline, so the percentages can differ. Model,
