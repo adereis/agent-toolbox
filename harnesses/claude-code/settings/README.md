@@ -26,7 +26,7 @@ resets at (`↻14:30`), so the deadline costs no extra width.
 | Column | Color | Description |
 |--------|-------|-------------|
 | mode | Bold magenta | Vim mode indicator, abbreviated to 3 letters (`[NOR]`/`[INS]`), only when vim mode is on |
-| workspace | Bold blue | Working directory (`~` shorthand for `$HOME`) |
+| workspace | Bold blue | Working directory (`~` shorthand for `$HOME`), shortened to the room the other columns leave so it never pushes them off the edge — see *Workspace width* below |
 | branch | Yellow | Git branch + status indicators (`*` dirty, `+` staged, `%` untracked) |
 | model | Green | Active model display name. On a 1M-context session the ` (1M context)` qualifier Claude Code appends for `[1m]` model ids is stripped — it is the ordinary case now and only widened the column. When the enforced window is smaller, the name wears its size instead (e.g. `Opus 4.8 [200k]`), read from `context_window_size` — this covers both the plain 200k model variant and a `[1m]` model whose 1M credits are spent |
 | effort | Magenta (dim→bold) | Reasoning effort level (`low`/`medium`/`high`/`xhigh`/`max`), read from `.effort.level`. Brightness ramps with intensity — dim at `low`, bold at `max` — deliberately off the green→red tier scale, which is reserved for "distance to a limit". Hidden on models with no effort parameter |
@@ -42,6 +42,32 @@ resets at (`↻14:30`), so the deadline costs no extra width.
 - **Green**: < 50% used
 - **Yellow**: 50–79% used
 - **Red**: ≥ 80% used
+
+**Workspace width:**
+
+Claude Code sets `COLUMNS` to the terminal width before it runs the status
+line, and draws the line two columns in from each edge. The workspace path
+gets whatever that leaves after the other columns, and never less than its
+header. Each step gives up the least useful part left. The leaf directory is
+where you are, so it survives longest. Inside a git repository, the
+repository's name replaces everything up to its root. Directories in the
+middle go before either:
+
+```
+~/projects/demo-app/build/runs/run-01/records/02-lesson/attempt-000
+demo-app/build/runs/run-01/records/02-lesson/attempt-000
+demo-app/…/02-lesson/attempt-000
+demo-app/…/attempt-000
+…/attempt-000
+attempt-000
+attempt-0…
+```
+
+Outside a repository, `~` (or `/`) stays in front instead of a name:
+`~/…/02-lesson/attempt-000`. Without `COLUMNS`, as from an older Claude Code
+or when running the script by hand, the path is shown whole. On a terminal too
+narrow for the other columns alone, Claude Code cuts the row's right end
+with `…`.
 
 **Installation:**
 

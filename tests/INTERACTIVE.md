@@ -25,7 +25,12 @@ executes. The `-C` form once slipped through unasked.
 for context fill, and session cost. On a subscription the quota column is
 headed `↻HH:MM` — the local time the 5-hour window resets. Cross-check that
 time against `/usage`, and check that the two rows stay column-aligned (the
-`↻` is the only multi-byte glyph in a header).
+`↻` is the only multi-byte glyph in a header). Then work from a directory
+deep enough that its path is wider than the terminal leaves for it. The path
+shrinks around its last directory, the `memory` column still ends whole
+inside the terminal with no `…` after it, and resizing the window re-fits the
+path on the next refresh. This is the only check of the two-column edge
+Claude Code draws the line inside.
 
 ## IT-06: Jira MCP is scoped to the `jira` agent (Sonnet only)
 

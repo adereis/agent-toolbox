@@ -17,6 +17,9 @@ export CLAUDE_USAGE_REFRESH="$FIXTURES/no-such-refresher"
 export CLAUDE_USAGE_CREDS="$FIXTURES/absent-creds.json"
 unset CLAUDE_CODE_USE_VERTEX ANTHROPIC_API_KEY
 
+# COLUMNS shrinks the workspace path to fit. Tests that want a width say so.
+unset COLUMNS
+
 # OAuth credentials in the shape Claude Code writes them. The token is here
 # because the real file has one and the column must ignore it, not because
 # anything reads it.
@@ -268,6 +271,110 @@ assert_output_contains "api"
 test_begin "drops the profile column when nothing identifies the backend"
 run_hook "$SCRIPT" "$PROFILE_IN"
 assert_output_lacks "profile"
+
+# ── Workspace width ──────────────────────────────────────────────────
+# Claude Code sets COLUMNS to the terminal width and draws the line two columns
+# in from each edge, so the path gets what the other columns leave of
+# COLUMNS - 4. Each case gives it an exact room, measured from a roomy render,
+# so an off-by-one in that sum fails a case. The ceiling keeps git from
+# finding a repository above the fixtures.
+
+export GIT_CEILING_DIRECTORIES="$FIXTURES"
+REPO="$FIXTURES/demo-app"
+DEEP="$REPO/build/runs/run-01/records/02-lesson/attempt-000"
+mkdir -p "$DEEP" "$FIXTURES/plain/run-01/02-lesson/attempt-000" "$FIXTURES/plain/café-crème-brûlée"
+git init -q -b main "$REPO"
+ws_payload() { printf '{"workspace":{"current_dir":"%s"},"context_window":{},"cost":{}}' "$1"; }
+
+# Characters in $1, in any locale: UTF-8 continuation bytes start no character.
+chars() {
+    local LC_ALL=C s=$1
+    s=${s//[$'\200'-$'\277']/}
+    echo "${#s}"
+}
+
+# The value row, without colors.
+value_row() { printf '%s\n' "$_stdout" | sed -n 2p | sed 's/\x1b\[[0-9;]*m//g'; }
+
+# The COLUMNS that leaves exactly $2 columns for the workspace of payload $1:
+# what a roomy render spends beside the path, plus Claude Code's two edges.
+columns_for_room() {
+    COLUMNS=1000 run_hook "$SCRIPT" "$1"
+    local row path w
+    row=$(value_row)
+    path=${row%%   *}
+    w=$(chars "$path")
+    (( w < 9 )) && w=9   # the column is never narrower than its header
+    echo $(( $2 + 4 + $(chars "$row") - w ))
+}
+
+# Give payload $1 exactly $2 columns of room and expect the path to read $3,
+# in a row no wider than the line Claude Code draws. A path that fills its
+# room exactly puts that bound at the row's last column, so it also catches a
+# separator left trailing after it.
+assert_workspace() {
+    local cols row shown
+    cols=$(columns_for_room "$1" "$2")
+    COLUMNS=$cols run_hook "$SCRIPT" "$1"
+    row=$(value_row)
+    shown=${row%%   *}
+    if [ "$shown" = "$3" ] && [ "$(chars "$row")" -le $(( cols - 4 )) ]; then
+        (( _pass++ ))
+    else
+        (( _fail++ ))
+        echo "  FAIL: $_test_name"
+        echo "    room $2 of COLUMNS=$cols: expected '$3' in a row of at most $(( cols - 4 ))"
+        echo "    got '$shown' in a row of $(chars "$row"): $row"
+    fi
+}
+
+DEEP_IN=$(ws_payload "$DEEP")
+FULL=${DEEP/#$HOME/\~}
+
+test_begin "shows a path that fits whole"
+assert_workspace "$DEEP_IN" "$(chars "$FULL")" "$FULL"
+
+test_begin "names the repository in place of the directories above it"
+assert_workspace "$DEEP_IN" $(( $(chars "$FULL") - 1 )) "demo-app/build/runs/run-01/records/02-lesson/attempt-000"
+
+test_begin "drops directories from the middle, keeping the nearest"
+assert_workspace "$DEEP_IN" 32 "demo-app/…/02-lesson/attempt-000"
+assert_workspace "$DEEP_IN" 31 "demo-app/…/attempt-000"
+
+test_begin "gives up the repository's name before the leaf"
+assert_workspace "$DEEP_IN" 21 "…/attempt-000"
+
+test_begin "shows the bare leaf, then cuts it at the end"
+assert_workspace "$DEEP_IN" 12 "attempt-000"
+assert_workspace "$DEEP_IN" 10 "attempt-0…"
+
+test_begin "shrinks the repository root to its name"
+assert_workspace "$(ws_payload "$REPO")" 9 "demo-app"
+
+test_begin "never narrows the path below its header"
+COLUMNS=1 run_hook "$SCRIPT" "$DEEP_IN"
+assert_output_contains "attempt-…"
+
+test_begin "anchors a path outside any repository at ~"
+PLAIN_IN=$(ws_payload "$FIXTURES/plain/run-01/02-lesson/attempt-000")
+HOME=$FIXTURES assert_workspace "$PLAIN_IN" 25 "~/…/02-lesson/attempt-000"
+HOME=$FIXTURES assert_workspace "$PLAIN_IN" 24 "~/…/attempt-000"
+
+test_begin "anchors a path outside home at /"
+HOME=$FIXTURES/elsewhere assert_workspace "$PLAIN_IN" 24 "/…/02-lesson/attempt-000"
+
+test_begin "shows the whole path when COLUMNS is absent"
+run_hook "$SCRIPT" "$DEEP_IN"
+assert_output_contains "$FULL"
+
+# The cut must land between characters even where bash counts bytes, or the
+# terminal receives a broken UTF-8 sequence.
+test_begin "cuts a leaf between characters in any locale"
+ACCENT_IN=$(ws_payload "$FIXTURES/plain/café-crème-brûlée")
+HOME=$FIXTURES assert_workspace "$ACCENT_IN" 10 "café-crèm…"
+export LC_ALL=C
+HOME=$FIXTURES assert_workspace "$ACCENT_IN" 10 "café-crèm…"
+unset LC_ALL
 
 # ── Agent panel rows (--subagent) ────────────────────────────────────
 # subagentStatusLine sends every agent row in one payload (base hook fields,

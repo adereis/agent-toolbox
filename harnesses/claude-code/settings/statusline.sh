@@ -12,6 +12,9 @@
 # The 5-hour quota column has no word for a header: it wears the wall-clock time
 # it resets at (↻14:30), so the deadline is visible without spending a column.
 #
+# The workspace path shrinks to the room the other columns leave, so a deep
+# directory never pushes them off the edge; see "Workspace" below.
+#
 # Usage columns change color by tier:
 #   green (<50%) → yellow (50-79%) → red (≥80%)
 #
@@ -346,7 +349,7 @@ fi
 
 # ── Git branch + dirty state ────────────────────────────────────────
 
-git_val=""
+git_val="" repo_top="" repo_sub=""
 if [ -n "$cwd" ] && git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1; then
   branch=$(git -C "$cwd" --no-optional-locks symbolic-ref --short HEAD 2>/dev/null ||
            git -C "$cwd" --no-optional-locks rev-parse --short HEAD 2>/dev/null || true)
@@ -356,6 +359,13 @@ if [ -n "$cwd" ] && git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1; then
   git -C "$cwd" --no-optional-locks ls-files --others --exclude-standard 2>/dev/null \
     | head -1 | grep -q . && u='?' || true
   git_val="${branch}${d}${s}${u}"
+  # For the workspace column: the repository's root, and where cwd sits under
+  # it. git reports the prefix against the root it resolved, so the pair holds
+  # even when cwd reached the repository through a symlink. Inside .git itself
+  # there is no work tree, and both stay empty.
+  { read -r repo_top; read -r repo_sub; } < <(git -C "$cwd" --no-optional-locks \
+      rev-parse --show-toplevel --show-prefix 2>/dev/null)
+  repo_sub=${repo_sub%/}
 fi
 
 # ── Profile — backend, or the exact subscription plan ────────────────
@@ -555,21 +565,104 @@ if [ -n "$cc_pid" ]; then
   fi
 fi
 
+# ── Workspace — fit the path into the room the other columns leave ───
+#
+# A deep working directory would otherwise push every column after it off the
+# right edge. The payload carries no width, but Claude Code sets COLUMNS to the
+# terminal width before it runs the script, so the path gets whatever the other
+# columns leave, and never less than its header. Without COLUMNS (an older
+# Claude Code, or a run by hand) the path is shown whole.
+#
+# Claude Code draws the line two columns in from each edge and cuts what
+# overflows with "…": on a 120-column terminal (2.1.306) a row ends at column
+# 118 and holds 116 characters. Both insets come off the width first.
+EDGE=4
+
+# Each step gives up the least useful part left. The leaf is where you are, so
+# it survives longest; inside a repository its name stands in for everything up
+# to its root; the directories in the middle go before either:
+#   ~/projects/demo-app/build/runs/run-01/records/02-lesson/attempt-000
+#   demo-app/build/runs/run-01/records/02-lesson/attempt-000
+#   demo-app/…/02-lesson/attempt-000
+#   demo-app/…/attempt-000
+#   …/attempt-000
+#   attempt-000
+#   attempt-0…
+# Outside a repository the anchor is ~ (or /) instead of a name: ~/…/attempt-000.
+
+# Drop characters from the end of $_cut until it is at most $1 wide. In a
+# byte-counting locale ${s%?} drops one byte, but a continuation byte does not
+# count toward the width, so the loop only stops after dropping a character's
+# lead byte: a cut never splits a character.
+_trim() {
+  _width "$_cut"
+  while (( _w > $1 )) && [ -n "$_cut" ]; do
+    _cut=${_cut%?}
+    _width "$_cut"
+  done
+}
+
+# The workspace path fitted into $1 columns, into $_fit.
+_fit_path() {
+  local room=$1 anchor rest leaf tail up next marker mw
+  _fit=$short_cwd
+  _width "$_fit"; (( _w <= room )) && return 0
+  if [ -n "$repo_top" ]; then
+    anchor=${repo_top##*/} rest=$repo_sub
+    _fit=$anchor${rest:+/$rest}
+    _width "$_fit"; (( _w <= room )) && return 0
+  elif [[ $short_cwd == */* ]]; then
+    anchor=${short_cwd%%/*} rest=${short_cwd#*/}
+  else
+    anchor=$short_cwd rest=""
+  fi
+  # At the repository root the name is all there is, so it is the leaf.
+  leaf=${rest##*/}
+  [ -n "$rest" ] || leaf=$anchor
+  # The longest run of trailing directories that fits behind the anchor, then
+  # behind no anchor at all. A marker never stands for nothing. Behind the
+  # anchor and in front of every directory it would be wider than the whole
+  # path, which did not fit; on its own it stands at least for the anchor.
+  if [ -n "$rest" ]; then
+    for marker in "$anchor/…/" "…/"; do
+      _width "$marker"; mw=$_w
+      _width "$leaf"; (( mw + _w <= room )) || continue
+      tail=$leaf up=$rest
+      while [[ $up == */* ]]; do
+        up=${up%/*}
+        next=${up##*/}/$tail
+        _width "$next"; (( mw + _w <= room )) || break
+        tail=$next
+      done
+      _fit=$marker$tail
+      return 0
+    done
+  fi
+  _fit=$leaf
+  _width "$_fit"; (( _w <= room )) && return 0
+  _cut=$leaf; _trim $(( room - 1 )); _fit=$_cut…
+}
+
 # ── Build two-row output ────────────────────────────────────────────
+#
+# Columns are collected first and drawn after, because the workspace's width
+# depends on every column that follows it.
 
 DIM="\033[2m"  RST="\033[0m"  BOLD="\033[1m"
 SEP="   "
-hdr="" val=""
+heads=() vals=() clrs=()
 
-col() {
-  local h="$1" v="$2" c="$3"
-  _width "$v"; local w=$_w
-  _width "$h"; (( _w > w )) && w=$_w
-  hdr+="${DIM}$(pad "$h" "$w")${RST}${SEP}"
-  val+="${c}$(pad "$v" "$w")${RST}${SEP}"
+col() { heads+=("$1"); vals+=("$2"); clrs+=("$3"); }
+
+# Width of column $1, its header or its value, whichever is wider, into $_w.
+_colw() {
+  _width "${vals[$1]}"; local w=$_w
+  _width "${heads[$1]}"; (( _w < w )) && _w=$w
+  return 0
 }
 
 [ -n "$vim_mode" ] && col "mode" "[${vim_mode:0:3}]" "\033[1;35m"
+ws_i=${#heads[@]}
 col "workspace" "$short_cwd" "${BOLD}\033[34m"
 [ -n "$git_val" ]   && col "branch"     "$git_val"     "\033[33m"
 [ -n "$model_val" ] && col "model"      "$model_val"   "\033[32m"
@@ -586,5 +679,25 @@ done
 # drops out when nothing identifies the backend, like every other column.
 [ -n "$profile_val" ] && col "profile" "$profile_val" "$profile_clr"
 [ -n "$mem_val" ]   && col "memory"     "$mem_val"     "\033[36m"
+
+if [[ ${COLUMNS:-} =~ ^[0-9]+$ ]]; then
+  room=$(( COLUMNS - EDGE ))
+  for i in "${!heads[@]}"; do
+    (( i == ws_i )) && continue
+    _colw "$i"; room=$(( room - _w - ${#SEP} ))
+  done
+  _width "${heads[ws_i]}"; (( room < _w )) && room=$_w
+  _fit_path "$room"; vals[ws_i]=$_fit
+fi
+
+# Separators go between columns only: a trailing one would spend three of the
+# columns Claude Code can draw on padding nobody sees.
+hdr="" val=""
+for i in "${!heads[@]}"; do
+  _colw "$i"; w=$_w
+  (( i > 0 )) && { hdr+=$SEP; val+=$SEP; }
+  hdr+="${DIM}$(pad "${heads[i]}" "$w")${RST}"
+  val+="${clrs[i]}$(pad "${vals[i]}" "$w")${RST}"
+done
 
 printf '%b\n%b' "$hdr" "$val"
