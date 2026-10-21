@@ -51,6 +51,29 @@ test_begin "abbreviates home directory to ~"
 run_hook "$SCRIPT" '{"workspace":{"current_dir":"'"$HOME"'/myproj"},"context_window":{},"cost":{}}'
 assert_output_contains "~/myproj"
 
+test_begin "abbreviates home itself to a bare ~"
+HOME=/home/testuser run_hook "$SCRIPT" '{"workspace":{"current_dir":"/home/testuser"},"context_window":{},"cost":{}}'
+assert_output_contains '\[34m~  '   # the blue workspace value, then its padding
+
+test_begin "leaves a sibling of home unabbreviated"
+HOME=/home/testuser run_hook "$SCRIPT" '{"workspace":{"current_dir":"/home/testuser2/proj"},"context_window":{},"cost":{}}'
+assert_output_contains "/home/testuser2/proj"
+assert_output_lacks "~"
+
+test_begin "compares HOME as a string, not a pattern"
+HOME='/home/[t]estuser' run_hook "$SCRIPT" '{"workspace":{"current_dir":"/home/testuser/proj"},"context_window":{},"cost":{}}'
+assert_output_contains "/home/testuser/proj"
+assert_output_lacks "~"
+
+test_begin "ignores a trailing slash on HOME"
+HOME=/home/testuser/ run_hook "$SCRIPT" '{"workspace":{"current_dir":"/home/testuser/proj"},"context_window":{},"cost":{}}'
+assert_output_contains "~/proj"
+
+test_begin "abbreviates nothing when HOME is /"
+HOME=/ run_hook "$SCRIPT" '{"workspace":{"current_dir":"/srv/proj"},"context_window":{},"cost":{}}'
+assert_output_contains "/srv/proj"
+assert_output_lacks "~"
+
 test_begin "shows context window fill under a 'session' header"
 run_hook "$SCRIPT" '{"workspace":{"current_dir":"'"$PWD"'"},"context_window":{"used_percentage":42.4},"cost":{}}'
 assert_output_contains "session"
@@ -329,7 +352,7 @@ assert_workspace() {
 }
 
 DEEP_IN=$(ws_payload "$DEEP")
-FULL=${DEEP/#$HOME/\~}
+case $DEEP in "$HOME"/*) FULL="~${DEEP#"$HOME"}" ;; *) FULL=$DEEP ;; esac
 
 test_begin "shows a path that fits whole"
 assert_workspace "$DEEP_IN" "$(chars "$FULL")" "$FULL"

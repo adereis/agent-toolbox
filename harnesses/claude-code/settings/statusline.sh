@@ -326,7 +326,17 @@ fi
     (.cost.total_cost_usd | val),
     (.effort.level | val)')
 
-short_cwd="${cwd/#$HOME/\~}"
+# ~ stands for $HOME only on a whole-directory match: /home/user2 is not under
+# /home/user. HOME is compared as a string, never as a pattern, and a trailing
+# slash on it is ignored. A HOME of / names no directory worth abbreviating.
+home=${HOME%/}
+short_cwd=$cwd
+if [ -n "$home" ]; then
+  case "$cwd" in
+    "$home")   short_cwd="~" ;;
+    "$home"/*) short_cwd="~${cwd#"$home"}" ;;
+  esac
+fi
 
 # Claude Code builds this name as display_name + " (1M context)" whenever the
 # model id ends in [1m] — the registry's display_name is always the short form.
