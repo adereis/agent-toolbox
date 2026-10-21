@@ -399,6 +399,85 @@ export LC_ALL=C
 HOME=$FIXTURES assert_workspace "$ACCENT_IN" 10 "café-crèm…"
 unset LC_ALL
 
+# ── Free text on its way to the terminal ─────────────────────────────
+# A directory name is arbitrary bytes, and so are the strings the payload, the
+# credentials and the usage API hand over. Each must print as itself, keep the
+# two rows two, never reach the terminal as a control sequence, and leave the
+# fields read after it where they belong.
+
+# A payload for directory $1 under the fixture repository, with a model and a
+# cost behind the path for a shifted read to garble.
+odd_payload() {
+    mkdir -p "$REPO/$1"
+    jq -n --arg d "$REPO/$1" '{workspace: {current_dir: $d}, model: {display_name: "Opus 5.5"},
+                               context_window: {}, cost: {total_cost_usd: 1.5}}'
+}
+
+assert_clean_rows() {
+    if [ "$(printf '%s\n' "$_stdout" | wc -l)" -eq 2 ] && [ -z "$_stderr" ]; then
+        (( _pass++ ))
+    else
+        (( _fail++ ))
+        echo "  FAIL: $_test_name"
+        echo "    expected two rows and no stderr, got: $_stdout"
+        echo "    stderr: $_stderr"
+    fi
+}
+
+test_begin "prints a backslash in a directory name as itself"
+run_hook "$SCRIPT" "$(odd_payload 'back\nslash')"
+assert_clean_rows
+assert_output_contains 'back\\nslash'
+
+test_begin "keeps every column after a \\c in a directory name"
+run_hook "$SCRIPT" "$(odd_payload 'stop\chere')"
+assert_output_contains 'stop\\chere'
+assert_output_contains '\$1.50'
+
+test_begin "shows a control character in a directory name as ?"
+run_hook "$SCRIPT" "$(odd_payload $'esc\033[31mred')"
+assert_clean_rows
+assert_output_contains 'esc?\[31mred'
+assert_output_lacks $'\033''\[31mred'
+
+test_begin "keeps the fields after a newline in a directory name"
+run_hook "$SCRIPT" "$(odd_payload $'new\nline')"
+assert_clean_rows
+assert_output_contains 'new?line'
+assert_output_contains 'Opus 5.5'
+assert_output_contains '\$1.50'
+
+test_begin "reads a directory name ending in a space whole"
+run_hook "$SCRIPT" "$(odd_payload 'trailing ')"
+assert_output_contains 'trailing '
+assert_output_contains 'branch'   # git -C found the directory
+
+# [[:cntrl:]] stops at ASCII where bash counts bytes, so the C1 controls need
+# their own match there. U+009B is a one-character CSI on some terminals.
+test_begin "shows a C1 control as ? in any locale"
+C1_IN=$(jq -n '{workspace: {current_dir: "/home/testuser"}, model: {display_name: "Opus\u009b5"},
+                context_window: {}, cost: {}}')
+run_hook "$SCRIPT" "$C1_IN"
+assert_output_contains 'Opus?5'
+export LC_ALL=C
+run_hook "$SCRIPT" "$C1_IN"
+unset LC_ALL
+assert_output_contains 'Opus?5'
+
+test_begin "drops a NUL inside a payload string without shifting later fields"
+run_hook "$SCRIPT" "$(jq -n '{workspace: {current_dir: "/home/testuser"}, model: {display_name: "Op\u0000us 5"},
+                              context_window: {}, cost: {total_cost_usd: 1.5}}')"
+assert_clean_rows
+assert_output_contains 'Opus 5'
+assert_output_contains '\$1.50'
+
+test_begin "filters text from outside the payload too"
+creds '"te\u001b[31mam"' 'null'
+run_hook "$SCRIPT" "$PROFILE_IN"
+assert_output_contains 'te?\[31mam'
+assert_output_lacks $'\033''\[31mam'
+export CLAUDE_USAGE_CREDS="$FIXTURES/absent-creds.json"
+
 # ── Agent panel rows (--subagent) ────────────────────────────────────
 # subagentStatusLine sends every agent row in one payload (base hook fields,
 # columns, tasks) and reads back one JSON line per row, {"id", "content"}.

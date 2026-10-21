@@ -80,6 +80,16 @@ _width() {
   _w=${#s}
 }
 
+# Free text bound for the terminal, into $_p: every control character becomes
+# ?, the way ls shows one, so a directory name can neither break the two rows
+# nor start an escape sequence. A byte-counting locale's [[:cntrl:]] stops at
+# ASCII, so the C1 controls (U+0080–U+009F) are matched as their UTF-8 bytes.
+_p=""
+_printable() {
+  _p=${1//[[:cntrl:]]/?}
+  _p=${_p//$'\302'[$'\200'-$'\237']/?}
+}
+
 pad() {
   _width "$1"
   local gap=$(( $2 - _w ))
@@ -297,23 +307,25 @@ if [ "$mode" = subagent ]; then
 fi
 
 # ── Extract all fields in one jq call ────────────────────────────────
-# Each value on its own line — avoids bash IFS tab-stripping bug where
-# leading/consecutive tabs are silently dropped, shifting all fields.
+# Each value ends in a NUL and is read whole with IFS emptied. Splitting on
+# tabs once dropped empty fields and shifted the rest; lines did the same for a
+# directory name holding a newline, and trimmed one ending in a space. No path
+# holds a NUL, and val drops one from any other string, so the framing holds.
 
 {
-  read -r vim_mode
-  read -r cwd
-  read -r model_val
-  read -r ctx_pct
-  read -r ctx_size
-  read -r q
-  read -r q_reset
-  read -r wk
-  read -r cost_val
-  read -r effort_lvl
-} < <(printf '%s' "$input" | jq -r '
-    def val: if . == null then "" else tostring end;
-    (.vim.mode | val),
+  IFS= read -r -d '' vim_mode
+  IFS= read -r -d '' cwd
+  IFS= read -r -d '' model_val
+  IFS= read -r -d '' ctx_pct
+  IFS= read -r -d '' ctx_size
+  IFS= read -r -d '' q
+  IFS= read -r -d '' q_reset
+  IFS= read -r -d '' wk
+  IFS= read -r -d '' cost_val
+  IFS= read -r -d '' effort_lvl
+} < <(printf '%s' "$input" | jq -j '
+    def val: if . == null then "" else tostring | explode | map(select(. != 0)) | implode end;
+    ((.vim.mode | val),
     (.workspace.current_dir | val),
     ((if .model | type == "array" then .model[0].display_name
       elif .model | type == "object" then .model.display_name
@@ -324,7 +336,7 @@ fi
     (.rate_limits.five_hour.resets_at | val),
     (.rate_limits.seven_day.used_percentage | val),
     (.cost.total_cost_usd | val),
-    (.effort.level | val)')
+    (.effort.level | val)) + "\u0000"')
 
 # ~ stands for $HOME only on a whole-directory match: /home/user2 is not under
 # /home/user. HOME is compared as a string, never as a pattern, and a trailing
@@ -337,6 +349,8 @@ if [ -n "$home" ]; then
     "$home"/*) short_cwd="~${cwd#"$home"}" ;;
   esac
 fi
+# cwd itself stays raw, for git; only what is shown is made printable.
+_printable "$short_cwd"; short_cwd=$_p
 
 # Claude Code builds this name as display_name + " (1M context)" whenever the
 # model id ends in [1m] — the registry's display_name is always the short form.
@@ -372,10 +386,15 @@ if [ -n "$cwd" ] && git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1; then
   # For the workspace column: the repository's root, and where cwd sits under
   # it. git reports the prefix against the root it resolved, so the pair holds
   # even when cwd reached the repository through a symlink. Inside .git itself
-  # there is no work tree, and both stay empty.
-  { read -r repo_top; read -r repo_sub; } < <(git -C "$cwd" --no-optional-locks \
-      rev-parse --show-toplevel --show-prefix 2>/dev/null)
+  # there is no work tree, and both stay empty. One call per answer, because a
+  # directory name may hold a newline; the / sentinel keeps $(...) from eating
+  # one at the end of a name along with git's own.
+  repo_top=$(git -C "$cwd" --no-optional-locks rev-parse --show-toplevel 2>/dev/null && echo /)
+  repo_sub=$(git -C "$cwd" --no-optional-locks rev-parse --show-prefix 2>/dev/null && echo /)
+  repo_top=${repo_top%$'\n/'} repo_sub=${repo_sub%$'\n/'}
   repo_sub=${repo_sub%/}
+  _printable "$repo_top"; repo_top=$_p
+  _printable "$repo_sub"; repo_sub=$_p
 fi
 
 # ── Profile — backend, or the exact subscription plan ────────────────
@@ -398,9 +417,9 @@ fi
 
 CREDS_FILE="${CLAUDE_USAGE_CREDS:-$HOME/.claude/.credentials.json}"
 
-profile_val="" profile_clr="\033[36m" sub_type="" rl_tier=""
+profile_val="" profile_clr=$'\033[36m' sub_type="" rl_tier=""
 if [ -n "${CLAUDE_CODE_USE_VERTEX:-}" ] && [ "${CLAUDE_CODE_USE_VERTEX}" != '0' ]; then
-  profile_val="vertex"  profile_clr="\033[33m"
+  profile_val="vertex"  profile_clr=$'\033[33m'
 else
   if [ -r "$CREDS_FILE" ]; then
     { read -r sub_type; read -r rl_tier; } < <(jq -r '
@@ -427,7 +446,7 @@ else
   # Naming it keeps the column's promise — "which account is this session on" —
   # instead of leaving a gap that reads like a bug.
   if [ -z "$profile_val" ] && [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-    profile_val="api"  profile_clr="\033[2m"
+    profile_val="api"  profile_clr=$'\033[2m'
   fi
 fi
 
@@ -543,7 +562,7 @@ if [ -n "$scoped_pairs" ]; then
   IFS=',' read -ra scoped_list <<< "$scoped_pairs"
   for pair in "${scoped_list[@]}"; do
     name=${pair%%=*} pct=${pair##*=}
-    if [ -n "$age_sfx" ]; then clr="\033[2m"; else clr=$(tier_color "$pct"); fi
+    if [ -n "$age_sfx" ]; then clr=$'\033[2m'; else clr=$(tier_color "$pct"); fi
     scoped_hdrs+=("$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')")
     scoped_vals+=("$(printf '%.0f%%%s' "$pct" "$age_sfx")")
     scoped_clrs+=("$clr")
@@ -658,11 +677,17 @@ _fit_path() {
 # Columns are collected first and drawn after, because the workspace's width
 # depends on every column that follows it.
 
-DIM="\033[2m"  RST="\033[0m"  BOLD="\033[1m"
+DIM=$'\033[2m'  RST=$'\033[0m'  BOLD=$'\033[1m'
 SEP="   "
 heads=() vals=() clrs=()
 
-col() { heads+=("$1"); vals+=("$2"); clrs+=("$3"); }
+# Headers and values go in printable: the per-model headers come from the usage
+# API and the profile from the credentials file, and neither is ours to trust.
+col() {
+  _printable "$1"; heads+=("$_p")
+  _printable "$2"; vals+=("$_p")
+  clrs+=("$3")
+}
 
 # Width of column $1, its header or its value, whichever is wider, into $_w.
 _colw() {
@@ -671,14 +696,14 @@ _colw() {
   return 0
 }
 
-[ -n "$vim_mode" ] && col "mode" "[${vim_mode:0:3}]" "\033[1;35m"
+[ -n "$vim_mode" ] && col "mode" "[${vim_mode:0:3}]" $'\033[1;35m'
 ws_i=${#heads[@]}
-col "workspace" "$short_cwd" "${BOLD}\033[34m"
-[ -n "$git_val" ]   && col "branch"     "$git_val"     "\033[33m"
-[ -n "$model_val" ] && col "model"      "$model_val"   "\033[32m"
+col "workspace" "$short_cwd" "$BOLD"$'\033[34m'
+[ -n "$git_val" ]   && col "branch"     "$git_val"     $'\033[33m'
+[ -n "$model_val" ] && col "model"      "$model_val"   $'\033[32m'
 [ -n "$effort_val" ] && col "effort"    "$effort_val"  "$effort_clr"
 [ -n "$ctx_val" ]   && col "session"    "$ctx_val"     "$ctx_clr"
-[ -n "$cost_disp" ] && col "cost"       "$cost_disp"   "\033[36m"
+[ -n "$cost_disp" ] && col "cost"       "$cost_disp"   $'\033[36m'
 [ -n "$quota_val" ] && col "$quota_hdr" "$quota_val"   "$quota_clr"
 [ -n "$week_val" ]  && col "week"       "$week_val"    "$week_clr"
 for i in "${!scoped_vals[@]}"; do
@@ -688,7 +713,7 @@ done
 # columns, so it sits out of the way beside memory rather than up front. It
 # drops out when nothing identifies the backend, like every other column.
 [ -n "$profile_val" ] && col "profile" "$profile_val" "$profile_clr"
-[ -n "$mem_val" ]   && col "memory"     "$mem_val"     "\033[36m"
+[ -n "$mem_val" ]   && col "memory"     "$mem_val"     $'\033[36m'
 
 if [[ ${COLUMNS:-} =~ ^[0-9]+$ ]]; then
   room=$(( COLUMNS - EDGE ))
@@ -710,4 +735,6 @@ for i in "${!heads[@]}"; do
   val+="${clrs[i]}$(pad "${vals[i]}" "$w")${RST}"
 done
 
-printf '%b\n%b' "$hdr" "$val"
+# Colors are escape bytes already, so the rows print as data: %b would expand a
+# backslash in a directory name, and \c in one would end the line there.
+printf '%s\n%s' "$hdr" "$val"
