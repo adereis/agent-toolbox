@@ -27,7 +27,7 @@ resets at (`↻14:30`), so the deadline costs no extra width.
 |--------|-------|-------------|
 | mode | Bold magenta | Vim mode indicator, abbreviated to 3 letters (`[NOR]`/`[INS]`), only when vim mode is on |
 | workspace | Bold blue | Working directory (`~` shorthand for `$HOME`), shortened to the room the other columns leave so it never pushes them off the edge — see *Workspace width* below |
-| branch | Yellow | Git branch + status indicators (`*` dirty, `+` staged, `%` untracked) |
+| branch | Yellow | Git branch + status indicators (`*` dirty, `+` staged, `?` untracked) |
 | model | Green | Active model display name. On a 1M-context session the ` (1M context)` qualifier Claude Code appends for `[1m]` model ids is stripped — it is the ordinary case now and only widened the column. When the enforced window is smaller, the name wears its size instead (e.g. `Opus 4.8 [200k]`), read from `context_window_size` — this covers both the plain 200k model variant and a `[1m]` model whose 1M credits are spent |
 | effort | Magenta (dim→bold) | Reasoning effort level (`low`/`medium`/`high`/`xhigh`/`max`), read from `.effort.level`. Brightness ramps with intensity — dim at `low`, bold at `max` — deliberately off the green→red tier scale, which is reserved for "distance to a limit". Hidden on models with no effort parameter |
 | session | Green→Yellow→Red | Context window fill for this conversation, color-coded by tier |
