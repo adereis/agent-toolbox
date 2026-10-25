@@ -48,7 +48,28 @@ def _clean_prompt(text: str) -> str:
     return text
 
 
-def _entry_from_jsonl(path, indexed):
+# Claude Code files a session under projects/<key>, the key being the real
+# launch directory with every UTF-16 unit other than an ASCII letter or digit
+# replaced by "-". A key longer than 200 units is cut there and given a hash
+# suffix that has differed between releases, so Claude Code's own lookup
+# accepts any suffix after the cut, and so does this one.
+_KEY_LIMIT = 200
+
+
+def _project_key(path):
+    return "".join(ch if ch.isascii() and ch.isalnum() else "--" if ord(ch) > 0xFFFF else "-"
+                   for ch in path)
+
+
+def _keyed_to(folder, path):
+    """Whether Claude Code looks for this directory's sessions in folder."""
+    key = _project_key(path)
+    if len(key) <= _KEY_LIMIT:
+        return folder == key
+    return folder.startswith(key[:_KEY_LIMIT] + "-")
+
+
+def _entry_from_jsonl(path, indexed, home):
     """Use this store's actual file, never a cached fullPath into another store."""
     stat = path.stat()
     first = None
@@ -65,6 +86,8 @@ def _entry_from_jsonl(path, indexed):
     if not isinstance(project, str) or not Path(project).is_absolute():
         warn(f"{path}: missing absolute project path")
         return None
+    if home and not _keyed_to(path.parent.name, project):
+        project = home
     modified = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
     return {
         "sessionId": path.stem, "fullPath": str(path),
@@ -84,14 +107,21 @@ class ClaudeSessions:
     def add_arguments(self, parser):
         pass
 
-    def discover(self, root, args):
+    def discover(self, root, args, target):
         entries = []
+        home_paths = set()
         projects = root / "projects"
         if not projects.is_dir():
             return entries
         for project in sorted(projects.iterdir()):
             if not project.is_dir() or project.is_symlink():
                 continue
+            # Renaming a project directory and moving its sessions to the new
+            # key leaves the old path in every transcript. The folder they sit
+            # in is Claude Code's own record of where they belong now, so a
+            # transcript in the target's folder that names another directory
+            # resumes from the target, as /resume does there.
+            home = str(target) if _keyed_to(project.name, str(target)) else None
             index = {}
             index_path = project / "sessions-index.json"
             if index_path.is_file():
@@ -107,12 +137,20 @@ class ClaudeSessions:
                 if path.is_symlink() or not valid_session_id(path.stem):
                     continue
                 try:
-                    entry = _entry_from_jsonl(path, index.get(path.stem, {}))
+                    entry = _entry_from_jsonl(path, index.get(path.stem, {}), home)
                     if entry:
                         entries.append(entry)
+                        if home:
+                            home_paths.add(entry["fullPath"])
                 except OSError as error:
                     warn(f"{path}: {error}")
-        return entries
+        # A rename during a session splits it: the part written before moves
+        # with the folder, and the rest lands at the old key. Run from the
+        # target, /resume lists the part in the target's folder, so that copy
+        # stands for the session and the other is not listed again.
+        home_ids = {entry["sessionId"] for entry in entries if entry["fullPath"] in home_paths}
+        return [entry for entry in entries
+                if entry["fullPath"] in home_paths or entry["sessionId"] not in home_ids]
 
     def parse(self, entry):
         return parse_session_jsonl(entry["fullPath"])

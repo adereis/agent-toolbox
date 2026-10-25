@@ -52,6 +52,16 @@ interactive session, even without `--list`. Counts must be positive. If the
 recorded project directory is gone, use `--resume-cwd PATH` to choose its
 replacement explicitly; the utility does not silently switch projects.
 
+The one exception is the evidence Claude Code keeps itself. It files each
+session in a folder named after the project directory, and `/resume` lists
+that folder. Renaming a project and moving its sessions to the new folder
+leaves the old path inside every transcript, so the utility lists a session
+for the directory whose folder holds it and resumes it there, as `/resume`
+does. If a rename during a session left the rest of its transcript under the
+old name, only the part in the current directory's folder is listed, the
+part `/resume` shows there. Without that folder evidence, the recorded path
+stands.
+
 Malformed or incomplete JSONL records produce warnings while other records
 remain usable. Custom titles and all text blocks in a user prompt are shown;
 injected metadata is omitted. Edited files require a successful tool result.

@@ -359,7 +359,7 @@ def run_browser(adapter, argv=None):
     root = (Path(selected) if selected else Path(adapter.default_dir)).expanduser().resolve()
     target = Path(args.project or Path.cwd()).expanduser().resolve()
     try:
-        entries = adapter.discover(root, args)
+        entries = adapter.discover(root, args, target)
         if not args.all:
             entries = [entry for entry in entries if entry.get("projectPath")
                        and Path(entry["projectPath"]).expanduser().resolve() == target]

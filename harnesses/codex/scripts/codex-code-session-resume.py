@@ -166,7 +166,9 @@ class CodexSessions:
         parser.add_argument("--include-subagents", action="store_true", help="Include delegated sessions")
         parser.add_argument("--profile", help="Pass this configuration profile to codex resume")
 
-    def discover(self, root, args):
+    def discover(self, root, args, target):
+        # Codex files rollouts by date, not by project, so the store holds
+        # no evidence that could move a session to the target directory.
         titles = {}
         index = root / "session_index.jsonl"
         if index.is_file():

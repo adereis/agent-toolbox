@@ -42,14 +42,67 @@ class SessionBrowserTests(unittest.TestCase):
     def write_records(self):
         self.file.write_text("".join(json.dumps(item) + "\n" for item in self.records))
 
-    def run_cli(self, *flags, interactive=False, inputs=()):
+    def run_cli(self, *flags, interactive=False, inputs=(), scope=("--all",)):
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), \
              patch.object(out, "isatty", return_value=interactive), \
              patch("sys.stdin.isatty", return_value=interactive), \
              patch("builtins.input", side_effect=inputs) as prompt:
-            result = claude.main(["--claude-dir", str(self.store), "--all", *flags])
+            result = claude.main(["--claude-dir", str(self.store), *scope, *flags])
         return result, out.getvalue(), err.getvalue(), prompt
+
+    def move_session(self, folder, recorded, keep=False):
+        """Refile the transcript under folder as if its project had moved."""
+        moved = self.store / "projects" / folder
+        moved.mkdir(exist_ok=True)
+        if not keep:
+            self.file.unlink()
+        self.records[0]["cwd"] = str(recorded)
+        self.file = moved / f"{SID}.jsonl"
+        self.write_records()
+        return self.file
+
+    def test_project_key_matches_claude_code_folder_names(self):
+        self.assertEqual(claude._project_key("/home/me/my.app_v2 x"), "-home-me-my-app-v2-x")
+        # JavaScript replaces UTF-16 units, so an astral character is two.
+        self.assertEqual(claude._project_key("/a/\U0001F600"), "-a---")
+        deep = "/" + "d" * 250
+        cut = claude._project_key(deep)[:200]
+        self.assertTrue(claude._keyed_to(cut + "-1x2y3z", deep))
+        self.assertFalse(claude._keyed_to(cut, deep))
+        self.assertFalse(claude._keyed_to("-e" + cut[2:] + "-1x2y3z", deep))
+
+    def test_session_moved_into_project_folder_resumes_there(self):
+        """A renamed project's transcripts keep the old path; the folder
+        Claude Code files them under names the directory they belong to."""
+        home = self.project.resolve()
+        self.move_session(claude._project_key(str(home)), self.root / "old name")
+        result, out, _, _ = self.run_cli("--json", scope=("--project", str(self.project)))
+        self.assertEqual(result, 0)
+        self.assertEqual([entry["projectPath"] for entry in json.loads(out)], [str(home)])
+        with patch("os.execvpe") as launch, patch("os.chdir") as change:
+            result, _, _, _ = self.run_cli(interactive=True, inputs=["", "yes"],
+                                           scope=("--project", str(self.project)))
+        self.assertEqual(result, 0)
+        change.assert_called_once_with(home)
+        self.assertEqual(launch.call_args.args[1], ["claude", "--resume", SID])
+
+    def test_session_in_another_folder_is_not_claimed(self):
+        self.move_session("-elsewhere", self.root / "old name")
+        result, _, err, _ = self.run_cli("--json", scope=("--project", str(self.project)))
+        self.assertEqual(result, 1)
+        self.assertIn("No Claude Code sessions found", err)
+
+    def test_split_session_lists_the_part_claude_code_resumes(self):
+        """A rename mid-session leaves the rest of the transcript at the old
+        key; run from the project, its folder's part is the one resumed."""
+        home = self.project.resolve()
+        tail = self.file  # still records the project, in a foreign folder
+        head = self.move_session(claude._project_key(str(home)), self.root / "old name", keep=True)
+        self.assertTrue(tail.is_file())
+        result, out, _, _ = self.run_cli("--json", scope=("--project", str(self.project)))
+        self.assertEqual(result, 0)
+        self.assertEqual([entry["fullPath"] for entry in json.loads(out)], [str(head)])
 
     def test_cached_external_paths_do_not_escape_selected_store(self):
         external = self.root / "other-profile.jsonl"
