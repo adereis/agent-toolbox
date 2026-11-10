@@ -94,6 +94,7 @@ KEYCHAIN_HINT = 'security find-generic-password -s "Claude Code-credentials" -w'
 
 class Claude(Harness):
     name = "claude"
+    product = "Claude Code"
     home_name = ".claude"
     # What a seat gets when the plan names no model: a family, never a version.
     default_model = "opus"

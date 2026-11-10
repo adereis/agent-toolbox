@@ -31,6 +31,7 @@ FORBIDDEN_DELEGATION = re.compile(r"invoke_subagent|send_message|schedule", re.I
 
 class Antigravity(Harness):
     name = "agy"
+    product = "Antigravity"
     home_name = ".gemini"
     # What a seat gets when the plan names no model: a family, never a
     # version. The plan's default effort (high) completes the slug.
@@ -54,6 +55,11 @@ class Antigravity(Harness):
 
     def private_env(self, home):
         return {}
+
+    def credited_model(self, served):
+        # A slug carries the turn's effort (`gemini-4-argon-medium`), which is
+        # a setting of the turn, not part of the model's API id.
+        return re.sub(r"-(" + "|".join(self.efforts) + r")$", "", super().credited_model(served))
 
     def models(self, timeout=45):
         """The slugs `agy models` lists, or None when the lookup fails."""

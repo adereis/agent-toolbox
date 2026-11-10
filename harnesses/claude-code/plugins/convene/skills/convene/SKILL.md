@@ -89,7 +89,10 @@ operator may be any of them.
    whole. The engine never summarizes.
 8. **Export and synthesize.** `convene export NAME DIR` creates the export;
    DIR must be absent or empty. Then follow [synthesis](references/synthesis.md).
-   Write `synthesis.md` into that directory and cite seats by id.
+   Write `synthesis.md` into that directory and cite seats by id. Export
+   prints the `Assisted-by` lines for the commit that lands the run's
+   work; that commit carries them plus one for your own session, and
+   credits no seat as `Co-authored-by` or `Reviewed-by`.
 9. **Report.** Report to the user:
    the synthesis, then the receipts (served model per seat, isolation
    tier, tool calls, usage) and every red flag verbatim. Offer

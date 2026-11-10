@@ -166,6 +166,7 @@ def _list_servers(proc, servers):
 
 class Codex(Harness):
     name = "codex"
+    product = "Codex"
     home_name = ".codex"
     # What a seat gets when the plan names no model: a family, never a version.
     default_model = "terra"

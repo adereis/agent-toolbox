@@ -316,6 +316,17 @@ for Codex the MCP servers the seat held by its app server's count
 (`mcp_servers`), and a list of red flags. `convene status` prints the flags; the operator
 skill requires them to be repeated to the user verbatim.
 
+`convene export` turns the receipts into the `Assisted-by` trailers for the
+commit that lands the run's work: one per model that answered a turn, named
+by the version that answered, as in `Assisted-by: Codex (gpt-6.1-sol)`, not
+the `terra` the plan asked for. It prints them and writes them into the
+export's `README.md` and into `summary.json` under `credits`. A seat that
+answered without naming its model is listed to be credited by hand rather
+than guessed. The session that ran the run adds its own line, because no
+receipt records it. Every seat is credited the same way, as drafter, critic,
+reviewer or judge, and none as `Co-authored-by` or `Reviewed-by`: those are
+statements a person makes.
+
 A provider quota stop holds the round open instead of publishing an absence:
 the seat's turn is recorded as `quota` with the reset time, and the board is
 not written. `continue` retakes the turn: a refused stop (nothing ran)

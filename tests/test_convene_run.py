@@ -57,11 +57,45 @@ class RunTests(unittest.TestCase):
         self.assertEqual(summary["receipts"]["skeptic"]["r001"]["tier"], "private-home")
         self.assertIsNone(summary["usage"][1]["cost_usd"], "codex reports no price; never zero")
         self.assertAlmostEqual(summary["usage"][0]["cost_usd"], 0.0123)
+        # The credit names the version that answered, never the family asked for.
+        credit = ["Assisted-by: Claude Code (claude-opus-5-20260601)", "Assisted-by: Codex (gpt-5.5)"]
+        self.assertEqual(summary["credits"], {"assisted_by": credit, "unnamed": []})
+        readme = (target / "README.md").read_text()
+        for line in credit:
+            self.assertIn(line, readme)
+        self.assertNotIn("Co-Authored-By", readme)
         self.assertFalse((target / "records/skeptic/r001/events.jsonl").exists())
         # A second run finds nothing to do and relaunches nobody.
         played, why = round_.run(root)
         self.assertEqual((played, why), ([], "done"))
         self.assertEqual(len(self.box.calls("skeptic", "claude")), 1)
+
+    def test_credits_one_line_per_answering_model_and_never_guess_one(self):
+        plan_ = {"seats": [{"id": "a", "harness": "claude"}, {"id": "b", "harness": "claude"},
+                           {"id": "c", "harness": "codex"}, {"id": "d", "harness": "agy"},
+                           {"id": "e", "harness": "codex"}, {"id": "f", "harness": "agy"}]}
+        receipts = {
+            # Two seats on one model are one credit, and a context-window
+            # suffix is not part of the model's name.
+            "a": {"r001": {"status": "answered", "model": "claude-fable-5-2[1m]"}},
+            "b": {"r001": {"status": "answered", "model": "claude-fable-5-2"}},
+            # A quota-cut turn named its model but contributed nothing alone.
+            "c": {"r001": {"status": "quota", "model": "gpt-6.1-sol"}},
+            # An answer whose stream named no model is never given one.
+            "d": {"r001": {"status": "answered", "model": None}},
+            "e": {"r001": {"status": "quota", "model": "gpt-6.1-terra"},
+                  "r002": {"status": "answered", "model": "gpt-6.1-terra"}},
+            # An Antigravity slug carries the turn's effort, which is not the model.
+            "f": {"r001": {"status": "answered", "model": "gemini-4-argon-medium"}},
+        }
+        lines, unnamed = export.credits(plan_, receipts)
+        self.assertEqual(lines, ["Assisted-by: Antigravity (gemini-4-argon)",
+                                 "Assisted-by: Claude Code (claude-fable-5-2)",
+                                 "Assisted-by: Codex (gpt-6.1-terra)"])
+        self.assertEqual(unnamed, ["d"])
+        text = "\n".join(export.credit_lines({"assisted_by": lines, "unnamed": unnamed}))
+        self.assertIn("credit by hand from the harness: d.", text)
+        self.assertIn("session that ran the run", text)
 
     def test_private_home_seat_sees_only_its_own_home_and_the_access_token(self):
         root, _ = self.prepare(seats=[{"id": "skeptic", "persona": "quinn-t-shun"}],

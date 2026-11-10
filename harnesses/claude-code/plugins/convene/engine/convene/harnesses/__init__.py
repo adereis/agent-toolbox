@@ -183,6 +183,8 @@ class Harness:
                     raise ValueError(f"seat {seat['id']!r}: {arg!r} in args: {hint}")
 
     name = ""
+    # The product a commit credits, as in `Assisted-by: Codex (gpt-6.1-sol)`.
+    product = ""
     capabilities: Capabilities
     home_name = ""       # the directory name of the harness's own state dir
     home_variable = ""   # the environment variable that relocates it
@@ -201,6 +203,13 @@ class Harness:
         nothing here, because there is nothing to pin.
         """
         return None
+
+    def credited_model(self, served):
+        """The model id a commit credits for a served id: the bare API id.
+
+        A context-window suffix such as `[1m]` names a variant, not a model.
+        """
+        return served.split("[", 1)[0]
 
     def preflight(self, seat, argv, launched, home):
         """Receipt fields read before the turn, or a RuntimeError refusing it.

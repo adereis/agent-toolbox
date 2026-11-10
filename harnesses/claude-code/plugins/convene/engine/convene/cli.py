@@ -10,6 +10,7 @@ from pathlib import Path
 from convene import (doctor as doctor_, export as export_, follow as follow_, harnesses,
                      personas, plan as plan_, runs, seal as seal_)
 from convene import round as round_, board as board_
+from convene.storage import read
 
 HELP = """\
 convene: multi-seat panels over native coding-agent CLIs.
@@ -435,6 +436,7 @@ def dispatch(args):
     if args.command == "export":
         where = export_.export(runs.resolve(args.run, project), args.directory)
         print(f"exported to {where}; write synthesis.md there")
+        print("\n".join(["", *export_.credit_lines(read(where / "summary.json")["credits"])]))
         return 0
     if args.command == "runs":
         rows = [round_.footprint(root) for root in runs.listing(project)]
