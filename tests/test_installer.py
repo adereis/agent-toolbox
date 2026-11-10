@@ -44,13 +44,22 @@ class InstallerTests(unittest.TestCase):
         for name, target in (("claude-code", claude), ("codex", codex)):
             self.install(target, installer.catalog(name, ["skills"]), True)
         self.assertEqual((claude / "skills/teach/references/workflow.md").resolve(), REPO / "skills/teach/SKILL.md")
-        self.assertEqual((codex / "skills/teach/SKILL.md").resolve(), REPO / "skills/teach/SKILL.md")
+        self.assertEqual((codex / "skills/teach/references/workflow.md").resolve(), REPO / "skills/teach/SKILL.md")
         self.assertEqual((codex / "skills/teach/agents/openai.yaml").resolve(), REPO / "harnesses/codex/skills/teach/agents/openai.yaml")
         for target in (claude, codex):
             self.assertEqual((target / "skills/whats-new/references/workflow.md").resolve(), REPO / "skills/whats-new/SKILL.md")
             self.assertTrue((target / "skills/whats-new/SKILL.md").is_file())
         self.assertFalse((codex / "settings.json").exists())
         self.assertFalse((claude / "settings.json").exists())
+
+    def test_codex_skills_are_directory_links_around_a_regular_entry_point(self):
+        """Codex skips a symlinked SKILL.md, so a file-linked skill is never discovered."""
+        for relative, source in installer.catalog("codex", ["skills"]).items():
+            with self.subTest(skill=relative):
+                self.assertEqual(len(Path(relative).parts), 2, "link the skill directory, not its files")
+                entry = source / "SKILL.md"
+                self.assertTrue(entry.is_file() and not entry.is_symlink(),
+                                f"{entry.relative_to(REPO)} must be a regular file")
 
     def test_baseline_adoption_is_a_prompt_and_never_a_skill(self):
         """Adoption runs rarely and rewrites the user's own configuration.
@@ -181,7 +190,7 @@ class InstallerTests(unittest.TestCase):
                 "--component", "profiles", "--apply"]
         result, _, err = self.run_cli(*args)
         self.assertEqual((result, err), (0, ""))
-        self.assertTrue((self.root / ".agents/skills/teach/SKILL.md").is_symlink())
+        self.assertTrue((self.root / ".agents/skills/teach").is_symlink())
         for name in ("api", "subscription"):
             installed = self.root / ".codex" / f"{name}.config.toml"
             self.assertEqual(installed.resolve(), REPO / "harnesses/codex/profiles" / installed.name)
@@ -287,8 +296,7 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("Target changed during installation", err)
         self.assertEqual((target / "subscription.config.toml").read_text(), "# Concurrent user profile\n")
         self.assertFalse((target / "api.config.toml").exists())
-        self.assertFalse((self.root / ".agents/skills/teach/SKILL.md").exists())
-        self.assertFalse((self.root / ".agents/skills/teach/agents/openai.yaml").exists())
+        self.assertFalse(os.path.lexists(self.root / ".agents/skills/teach"))
 
     def test_commands_install_on_path_without_their_extensions(self):
         result, _, err = self.run_cli(

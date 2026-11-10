@@ -2,7 +2,11 @@
 
 Use the [scoped installer](../../docs/installation.md) for authentication
 profiles, utilities, and the shared `teach` and `whats-new` skills. The `teach`
-adapter preserves explicit invocation through `agents/openai.yaml`.
+adapter preserves explicit invocation through `agents/openai.yaml`. Both
+install as directory links around a regular `SKILL.md`, because Codex skips a
+symlinked one. An explicit-only skill is missing from the skill list Codex
+gives the model, so confirm `teach` by invoking `$teach` rather than by asking
+which skills are listed.
 The release digest skill supports normal automatic discovery.
 
 ## Personal configuration template

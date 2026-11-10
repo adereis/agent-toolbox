@@ -96,6 +96,39 @@ Start a fresh Codex session and check `/skills` or invoke `$whats-new`.
 The skill uses a fresh Luna subagent at high effort for release reading.
 Its parent checks the report and owns the scoped baseline.
 
+## Codex teaching skill and retired adoption skill
+
+Older installations linked `~/.agents/skills/teach/SKILL.md` as a file, the
+shape the release digest once had, so Codex never discovered `$teach`. The
+installer now links the whole `teach` directory around a regular `SKILL.md`
+and preserves the old directory as a conflict.
+
+Installations from before baseline adoption became a prompt also hold
+`~/.agents/skills/adopt-baseline/`, whose links point at files the
+repository no longer has. Codex never discovered it either; the
+[adoption prompt](../prompts/adopt-baseline.md) replaces it.
+
+Inspect these directories, and an old `whats-new` directory if one remains.
+If each holds only links into this checkout, move them into a private backup
+and reinstall:
+
+```bash
+mkdir -p ~/tmp
+backup=$(mktemp -d "$HOME/tmp/codex-skills-backup.XXXXXXXX")
+printf '%s\n' "$backup"
+for skill in teach adopt-baseline whats-new; do
+  if [ -d ~/.agents/skills/$skill ] && [ ! -L ~/.agents/skills/$skill ]; then
+    mv ~/.agents/skills/$skill "$backup/$skill"
+  fi
+done
+python3 tools/install.py --harness codex --scope user \
+  --component skills --component scripts --apply
+```
+
+Start a fresh Codex session and invoke `$teach`. Asking the model which
+skills it has is no check, because Codex leaves explicit-only skills such as
+`teach` out of that list.
+
 ## Retired hooks
 
 Remove these command registrations from your Claude Code settings before

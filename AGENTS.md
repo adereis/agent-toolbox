@@ -26,6 +26,9 @@ the repository itself.
   `references/workflow.md` symlink beside it, so the link resolves in an
   uninstalled checkout as well as in an installation. An agent often reads
   the skill from the checkout before anything is installed.
+- Codex skips a symlinked `SKILL.md`, so every Codex skill installs as a
+  directory link around a regular `SKILL.md`; `tests/test_installer.py`
+  holds the Codex catalog to that shape.
 - Root `AGENTS.md` governs development here. Distributed instruction modules
   are opt-in content, not automatically active repository policy.
 - README files document usage and installation. This file documents developer

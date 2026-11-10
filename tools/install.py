@@ -53,8 +53,9 @@ def catalog(harness, components):
                 result["skills/whats-new/SKILL.md"] = REPO / "harnesses/claude-code/skills/whats-new/SKILL.md"
                 result["skills/whats-new/references/workflow.md"] = REPO / "skills/whats-new/SKILL.md"
             elif harness == "codex":
-                result["skills/teach/SKILL.md"] = REPO / "skills/teach/SKILL.md"
-                result["skills/teach/agents/openai.yaml"] = REPO / "harnesses/codex/skills/teach/agents/openai.yaml"
+                # Every Codex skill is a directory link around a regular
+                # SKILL.md; a file-linked entry point is never discovered.
+                result["skills/teach"] = REPO / "harnesses/codex/skills/teach"
                 # Codex skips a symlinked SKILL.md. Link the directory so
                 # its regular entry point and reader procedure are discovered.
                 result["skills/whats-new"] = REPO / "harnesses/codex/skills/whats-new"
