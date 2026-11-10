@@ -94,14 +94,14 @@ class InstallerTests(unittest.TestCase):
         self.assertFalse((target / "skills/teach").exists())
 
     def test_instruction_modules_install_without_touching_policy_files(self):
-        for name in ("claude-code", "codex"):
+        for name in ("claude-code", "codex", "agy"):
             with self.subTest(harness=name):
                 target = self.root / name
                 self.install(target, installer.catalog(name, ["instructions"]), True)
                 module = target / "instructions/global-baseline.md"
                 self.assertEqual(module.resolve(), REPO / "instructions/global-baseline.md")
                 self.assertFalse((target / "instructions/README.md").exists())
-                for policy in ("CLAUDE.md", "AGENTS.md"):
+                for policy in ("CLAUDE.md", "AGENTS.md", "GEMINI.md"):
                     self.assertFalse((target / policy).exists())
 
     def test_global_baseline_module_stays_harness_neutral(self):

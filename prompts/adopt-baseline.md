@@ -20,6 +20,12 @@ For Codex the global instruction file is `$CODEX_HOME/AGENTS.md`, or
 `~/.agents/instructions/global-baseline.md` at user scope or
 `<project>/.agents/instructions/global-baseline.md` for one project.
 
+For Antigravity the global instruction file is `~/.gemini/GEMINI.md`, and the
+module installs as `~/.gemini/config/instructions/global-baseline.md` at user
+scope. Antigravity also loads `~/.gemini/AGENTS.md` and the `GEMINI.md` and
+`AGENTS.md` beneath `~/.gemini/config/` as global rules. Read whichever of
+them exist, because shared text in more than one of them is a duplicate.
+
 Stop and report if the module is not installed; do not reconstruct it from
 memory. Install it from a checkout of this repository with:
 
@@ -27,6 +33,8 @@ memory. Install it from a checkout of this repository with:
 python3 tools/install.py --harness claude-code --scope user \
   --component instructions --apply
 ```
+
+Pass `--harness codex` or `--harness agy` for those harnesses.
 
 ## Adopt
 
@@ -56,6 +64,39 @@ Inline the module's sections, shifting their heading depth to sit beneath the
 file's existing top-level heading, and keep them in the module's order. Use no
 marker comments.
 
+Antigravity expands include lines, an `@` before a Markdown link, in its rule
+files, so adopt the module with a single include line in `~/.gemini/GEMINI.md`:
+
+```markdown
+@[global baseline](config/instructions/global-baseline.md)
+```
+
+Antigravity resolves a relative include against `~/.gemini/`, not against the
+including file's directory. From `~/.gemini/config/GEMINI.md` the path
+`instructions/global-baseline.md` stays unexpanded, while
+`config/instructions/global-baseline.md` loads. Keeping the include in
+`~/.gemini/GEMINI.md`, whose directory is `~/.gemini/`, makes the path right
+under either rule. A file under `~/.gemini/config/rules/` is no substitute:
+without `trigger: always_on` frontmatter it loads only when the model decides
+to, and the shared module carries no frontmatter. This was checked against
+Antigravity CLI 1.4.12.
+
+An unexpanded include is silent: the model sees the literal reference line and
+none of the module. After adopting, verify it in a fresh print-mode turn that
+uses no tools, for example by asking the model to quote the bold lead of the
+baseline's AI-credit bullet. A reply that quotes it confirms the include; one
+that names an unresolved reference, or answers that there is no such bullet,
+means it failed.
+
+Antigravity gives the model only a display name for itself, such as
+"Gemini 4 Argon (Medium)", never an API id. The baseline's attribution rule
+therefore needs a harness section in `GEMINI.md` that says where the id is:
+
+```markdown
+## Git (Antigravity)
+* Credit yourself as `Assisted-by: Antigravity (<model-id>)`. Antigravity names your model only by its display name. Find that name in `agy models`, which pairs each display name with its slug, and credit the slug without its trailing effort (`-low`, `-medium`, `-high`). If the lookup fails, omit the model-specific trailer and say so. Antigravity documents no session-link trailer, so add none.
+```
+
 ## Reconcile
 
 On later runs the module is the reference for shared policy. Compare it
@@ -73,8 +114,10 @@ module, because there are no markers to find them by.
 
 Content that a harness cannot load unconditionally must not be described as
 enforced. The Claude Code import is a link and cannot fall out of date. The
-Codex copy is maintained rather than linked, so it can drift; say so when
-reporting, and never describe the two as equivalent.
+Antigravity include is a link too, but it fails silently, so report whether
+the no-tools check confirmed it. The Codex copy is maintained rather than
+linked, so it can drift; say so when reporting, and never describe a copy as
+equivalent to a link.
 
 ## Report
 

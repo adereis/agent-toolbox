@@ -25,4 +25,7 @@ Adoption is not equally enforced across harnesses. Claude Code loads `@path`
 imports with the file that declares them, so an import line makes the module
 apply unconditionally. Codex discovers `AGENTS.md` files up the directory tree
 and has no import syntax for them, so the text must be present in the file
-itself and is a maintained copy rather than a link.
+itself and is a maintained copy rather than a link. Antigravity expands an
+include line in `~/.gemini/GEMINI.md` that names the module's path, so the
+module stays a link there, but an include it cannot resolve is silent; the
+adoption prompt checks that the model actually sees the module.

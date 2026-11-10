@@ -32,16 +32,16 @@ Codex user skills are shared across its profiles; use project scope for a
 project-specific skill installation. This installer does not change
 `CODEX_HOME` or partition native session history.
 
-| Component | Claude Code | Codex | Installation behavior |
-|-----------|-------------|-------|-----------------------|
-| `skills` | Yes | Yes | Installs `teach` with native explicit-invocation metadata and the configuration-aware `whats-new` release digest; for Codex also the `convene` operator procedure, linked from the plugin |
-| `scripts` | Yes | Yes | Links harness utilities under `<root>/scripts/` |
-| `hooks` | Yes | Unavailable | Links the remaining hook scripts; registration is manual |
-| `settings` | Yes | Unavailable | Links statusline scripts at the Claude configuration root |
-| `prompts` | Yes | Yes | Links plain text under `<root>/prompts/`; no automatic invocation |
-| `instructions` | Yes | Yes | Links opt-in modules under `<root>/instructions/`; no policy files overwritten |
-| `profiles` | Unavailable | User scope only | Links `subscription.config.toml` and `api.config.toml` directly into the Codex configuration directory |
-| `commands` | Yes | Yes | User scope only; links the utilities you run yourself into `~/.local/bin`, without their file extension, `convene` included |
+| Component | Claude Code | Codex | Antigravity | Installation behavior |
+|-----------|-------------|-------|-------------|-----------------------|
+| `skills` | Yes | Yes | Yes | Installs `teach` with native explicit-invocation metadata and the configuration-aware `whats-new` release digest; for Codex and Antigravity also the `convene` operator procedure, linked from the plugin |
+| `scripts` | Yes | Yes | Yes | Links harness utilities under `<root>/scripts/` |
+| `hooks` | Yes | Unavailable | Unavailable | Links the remaining hook scripts; registration is manual |
+| `settings` | Yes | Unavailable | Unavailable | Links statusline scripts at the Claude configuration root |
+| `prompts` | Yes | Yes | Yes | Links plain text under `<root>/prompts/`; no automatic invocation |
+| `instructions` | Yes | Yes | Yes | Links opt-in modules under `<root>/instructions/`; no policy files overwritten |
+| `profiles` | Unavailable | User scope only | Unavailable | Links `subscription.config.toml` and `api.config.toml` directly into the Codex configuration directory |
+| `commands` | Yes | Yes | Yes | User scope only; links the utilities you run yourself into `~/.local/bin`, without their file extension, `convene` included |
 
 Codex's `whats-new` skill is linked as a directory so its regular
 `SKILL.md` is discoverable. The skill delegates release reading to Luna at

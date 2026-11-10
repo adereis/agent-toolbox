@@ -9,6 +9,7 @@ Integrations and skills for Google Antigravity (`agy`).
 | `whats-new` | Skill | `skills/whats-new` | [Release digest skill](skills/whats-new/SKILL.md) |
 | `agy-whats-new.py` | Script | `scripts/agy-whats-new.py` | Below |
 | `convene` | Command | `~/.local/bin/convene` | [Convene plugin](../claude-code/plugins/convene/README.md) |
+| `global-baseline.md` | Instruction module | `instructions/global-baseline.md` | Below |
 
 ## Installation
 
@@ -24,6 +25,28 @@ python3 tools/install.py --harness agy --scope user --component skills --compone
 
 * **User scope** installs into `~/.gemini/config/`.
 * **Project scope** installs into `<project>/.agents/`.
+
+## Global baseline
+
+The `instructions` component links the shared policy modules under
+`~/.gemini/config/instructions/`, where they do nothing until adopted:
+
+```bash
+python3 tools/install.py --harness agy --scope user --component instructions --apply
+```
+
+Then follow [the adoption prompt](../../prompts/adopt-baseline.md). It adds an
+include of `config/instructions/global-baseline.md` to
+`~/.gemini/GEMINI.md` and an Antigravity section that tells the model how to
+find its own model id, which Antigravity reports only by display name.
+Antigravity resolves a relative include against `~/.gemini/`, and an include
+it cannot resolve is silent, so the prompt ends by checking that the model
+sees the module.
+
+Over SSH, Antigravity stores and looks for its login in a file rather than in
+the login keyring, so a CLI that was signed in at the desktop reports
+`You are not logged into Antigravity.` Sign in once from the SSH session by
+running `agy` without arguments.
 
 ## Release digest (`agy-whats-new.py`)
 
