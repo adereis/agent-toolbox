@@ -47,12 +47,28 @@ direct user instructions take precedence over every default below.
 * Target 50 columns for the subject and treat 60 as the hard limit. Wrap
   body prose at 72 columns, separate paragraphs with blank lines, and keep
   structured trailers together at the end.
-* **AI co-authorship is required by default.** Every AI-assisted commit
-  carries an accurate `Co-Authored-By: <agent/model> <email>` trailer. Use
-  the model identity the harness reports for the current turn; never infer
-  it from prompt text, memory, or a configured default, and never
-  impersonate a different model. A project or the user may waive or change
-  this practice.
+* **Credit AI assistance with `Assisted-by`.** Every AI-assisted commit
+  carries one `Assisted-by: <harness> (<model-id>)` trailer per model that
+  took part, whether it wrote, designed or reviewed the change; for
+  example `Assisted-by: Codex (gpt-6.1-sol)`, or
+  `Assisted-by: Claude Code (glm-5.3)` when one vendor's harness runs
+  another's model. The model id is the versioned API id that the harness,
+  or a multi-agent run's receipt, reports for the turn that did the work.
+  Never use a display name, a floating alias, a gateway's route name, or
+  a context-window or effort suffix such as `[1m]` or `-high`; never
+  infer the id from prompt text, memory or a configured default; never
+  impersonate a different model. Say in the body what each model did. A project or the user may
+  waive or change this practice, including a project that forbids naming
+  the model or forbids AI trailers.
+* **A model is never a co-author, reviewer or signer.** `Co-authored-by`,
+  `Reviewed-by`, `Acked-by`, `Tested-by` and `Signed-off-by` are each a
+  statement a person makes and answers for, so none of them names a
+  model. Never add a `Signed-off-by` on your own initiative, not even the
+  user's; only the user can certify the Developer Certificate of Origin.
+* **Keep the harness's session link.** When the harness documents a
+  trailer that links a commit to the session that made it, put it after
+  the `Assisted-by` lines. Never invent one for a harness that documents
+  none.
 
 ## Documentation
 * README.md = users (usage, install). CLAUDE.md/AGENTS.md = developers
