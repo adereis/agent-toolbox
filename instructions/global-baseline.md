@@ -63,9 +63,16 @@ direct user instructions take precedence over every default below.
   Never use a display name, a floating alias, a gateway's route name, or
   a context-window or effort suffix such as `[1m]` or `-high`; never
   infer the id from prompt text, memory or a configured default; never
-  impersonate a different model. Say in the body what each model did. A project or the user may
-  waive or change this practice, including a project that forbids naming
-  the model or forbids AI trailers.
+  impersonate a different model. Say in the body what each model did. A
+  project or the user may waive or change this practice, including a
+  project that forbids naming the model or forbids AI trailers.
+* **Map a gateway route to a model id only by instruction.** When the
+  harness reports nothing but a gateway's route, such as
+  `<gateway>/<vendor>/<model>`, credit the id that the user's or the
+  project's instructions map that route to. That mapping is the one
+  exception to never inferring an id. Without one, ask the user for the
+  id; never strip or respell the route yourself, because its last
+  segment is often an alias the vendor itself does not use.
 * **A model is never a co-author, reviewer or signer.** `Co-authored-by`,
   `Reviewed-by`, `Acked-by`, `Tested-by` and `Signed-off-by` are each a
   statement a person makes and answers for, so none of them names a
