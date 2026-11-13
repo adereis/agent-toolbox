@@ -66,6 +66,38 @@ fi
 command=${command//$'\\\n'/ }
 command=${command//$'\n'/ }
 
+# Exceptions: exact pushes that skip the prompt until a date. Each line of
+# the allow file reads `YYYY-MM-DD /absolute/repo/path` and lets exactly
+# `git -C <path> push origin main` through, with the path as written or,
+# under $HOME, with ~ for $HOME, up to and including that date. Anything
+# else still asks: another form, a force push, a chained command, a later
+# date. Paths with spaces aren't supported. GIT_PUSH_GUARD_ALLOW points
+# the hook at another file, for tests.
+ALLOW_FILE=${GIT_PUSH_GUARD_ALLOW:-$HOME/.claude/hooks/git-push-guard.allow}
+
+allowed_push() {
+    local trimmed today date path rest form forms
+    [ -r "$ALLOW_FILE" ] || return 1
+    trimmed=${command#"${command%%[![:space:]]*}"}
+    trimmed=${trimmed%"${trimmed##*[![:space:]]}"}
+    today=$(date +%F)
+    while read -r date path rest || [ -n "$date" ]; do
+        [[ $date =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || continue
+        [ -n "$path" ] && [ -z "$rest" ] || continue
+        [[ $today > $date ]] && continue
+        forms=("$path")
+        [[ $path == "$HOME"/* ]] && forms+=("~${path#"$HOME"}")
+        for form in "${forms[@]}"; do
+            [ "$trimmed" = "git -C $form push origin main" ] && return 0
+        done
+    done < "$ALLOW_FILE"
+    return 1
+}
+
+if allowed_push; then
+    exit 0
+fi
+
 # Check command against each guarded pattern (first match wins). printf,
 # not echo: echo would take a command starting with -n or -e as options.
 for i in "${!PATTERNS[@]}"; do

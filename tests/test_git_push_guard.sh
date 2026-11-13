@@ -3,6 +3,13 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/test_helper.sh"
 HOOK="$SCRIPT_DIR/../harnesses/claude-code/hooks/git-push-guard.sh"
 
+# Keep the user's own allow file out of these tests: every case reads an
+# empty one unless it writes its own.
+GUARD_TMP=$(mktemp -d -p "$HOME/tmp")
+trap 'rm -rf "$GUARD_TMP"' EXIT
+export GIT_PUSH_GUARD_ALLOW="$GUARD_TMP/allow"
+: > "$GIT_PUSH_GUARD_ALLOW"
+
 # Bash tool input for a command, JSON-escaped by jq so commands may hold
 # quotes, $(...) and newlines.
 bash_input() {
@@ -100,5 +107,40 @@ expect_no_decision "a different program ending in git does not trigger" \
 # unasked.
 expect_ask "text that mentions git push asks (deliberate)" \
     'echo "remember to git push later"'
+
+# Exceptions from the allow file: only the exact form, only until the
+# line's date.
+cat > "$GIT_PUSH_GUARD_ALLOW" <<EOF
+# a comment, then a malformed line, then the real entries
+not-a-date /work/ignored
+2999-12-31 /work/app
+2999-12-31 $HOME/work/app
+2000-01-01 /work/expired
+EOF
+expect_no_decision "an allowed exact push skips the prompt" \
+    'git -C /work/app push origin main'
+expect_no_decision "surrounding whitespace doesn't matter" \
+    '  git -C /work/app push origin main  '
+expect_no_decision "~ stands for \$HOME in an allowed path under it" \
+    'git -C ~/work/app push origin main'
+expect_ask "~ never stands for a path outside \$HOME" \
+    'git -C ~/work/app2 push origin main'
+expect_ask "an expired line asks again" \
+    'git -C /work/expired push origin main'
+expect_ask "a force push of an allowed repo asks" \
+    'git -C /work/app push --force origin main'
+expect_ask "another branch of an allowed repo asks" \
+    'git -C /work/app push origin dev'
+expect_ask "an allowed push chained after another command asks" \
+    'cd /work && git -C /work/app push origin main'
+expect_ask "an allowed push followed by another command asks" \
+    'git -C /work/app push origin main; git -C /work/other push origin main'
+expect_ask "a repo that isn't listed asks" \
+    'git -C /work/other push origin main'
+expect_ask "a malformed line allows nothing" \
+    'git -C /work/ignored push origin main'
+expect_ask "a plain git push asks even with an allow file" \
+    'git push origin main'
+: > "$GIT_PUSH_GUARD_ALLOW"
 
 test_summary "git-push-guard"

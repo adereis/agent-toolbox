@@ -14,6 +14,22 @@ This is useful as a safety net for autonomous or semi-autonomous sessions: you c
 
 The guard scans the command's text; it does not parse the shell. So a command that only *mentions* a push asks too, an `echo` or a commit message, for instance. That is deliberate. A parser that misread one shell construct would let a real push through unasked, and for a safety net a needless prompt is the cheaper mistake. Text cannot reveal a push hidden behind a git alias (`git p`), a variable (`$GIT push`), or a script file the command runs.
 
+**Exceptions for a while.** During a stretch of work where one
+repository should push without a prompt, list it in
+`~/.claude/hooks/git-push-guard.allow`, one line per repository:
+
+```
+2026-11-30 /home/me/projects/example-app
+```
+
+Until the end of that date, exactly `git -C <path> push origin main` goes
+through unasked, with the path as written or, under your home directory,
+with `~` in place of it. Every other form still asks: a force push,
+another remote or branch, a push chained with `&&` or `;`, a path that
+isn't listed. After the date the line does nothing, so the prompt comes
+back by itself. Paths with spaces aren't supported. Delete the line to
+end the exception early.
+
 **Adapting to other commands:** The script uses parallel `PATTERNS` and `REASONS` arrays. Uncomment the built-in examples or add your own — the first matching pattern wins and its reason is shown to the user:
 
 | Guard | Pattern | Use case |
