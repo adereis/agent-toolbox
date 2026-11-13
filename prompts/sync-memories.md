@@ -64,6 +64,16 @@ its `name` and `description`, and what it holds:
 - `MERGE` rewrites `MEMORY.md` on both sides. Compare the disk and portable
   copies against the base copy and list the entries each side added and
   removed.
+- `NEW_LINK` records that a project's memory directory is a symlink to
+  another project's, and retires the project's own portable copies. A file
+  its detail says the shared directory lacks is tombstoned in the shared
+  store, so it leaves every machine. Read the portable copy of each one,
+  and confirm the shared directory holds the rest.
+- `REMOTE_LINK` replaces a memory directory here with a symlink to the
+  shared one. When its detail names files it carries over, read each, and
+  for `MEMORY.md` list the entries it adds to the shared index. Files it
+  does not name stay behind, because they are unchanged since this machine
+  last synced them.
 
 Stop before applying, and ask the user, when the preview looks like an
 accident rather than a decision:
@@ -79,9 +89,12 @@ accident rather than a decision:
 - An entry's status contradicts the copies you read, such as a
   `REMOTE_EDIT` whose disk copy differs from the base.
 
-`apply` leaves `CONFLICT`, `ALIASED` and `MISSING` entries untouched. Show
-each conflict with both versions and let the user choose; run `resolve` or
-`link-aliases` only on their decision. For a `MISSING` project, first rule
+`apply` leaves `CONFLICT`, `ALIASED`, `MISSING` and `LINK_CONFLICT` entries
+untouched. Show each conflict with both versions and let the user choose;
+run `resolve` or `link-aliases` only on their decision. For a
+`LINK_CONFLICT`, show its detail and the link on disk (`ls -l` of the
+project's memory directory) beside the recorded `<dir>/<slug>/memory.link`,
+and change neither without the user's decision. For a `MISSING` project, first rule
 out a wrong `--claude-dir` or `--projects-dir` and a moved checkout. Then
 list the files the portable directory holds for it, and ask whether to
 restore them with `resolve --keep remote`, which must name every one, or to
@@ -93,8 +106,9 @@ List the timestamped directories under the backup directory (`--backup-dir`,
 default `backups/` in the base store), then run `apply` with the same
 arguments. Each action line must be the one the decision table maps that
 file's previewed status to, and every previewed entry other than `CONFLICT`,
-`ALIASED` and `MISSING` must have one. A missing, extra or different line is a
-finding.
+`ALIASED`, `MISSING` and `LINK_CONFLICT` must have one. The files a
+`REMOTE_LINK` carried over follow its `LINKED` line as `EXPORTED` lines for
+the shared store; any other missing, extra or different line is a finding.
 
 Check the result against the preview:
 
@@ -105,8 +119,13 @@ Check the result against the preview:
 - A `MERGED` index is identical on disk and in the portable directory. It
   keeps every entry either side added and drops every entry one side
   removed.
-- A second `status` reports only the `CONFLICT`, `ALIASED` and `MISSING`
-  entries left behind. Anything else pending means `apply` did not converge.
+- A `RECORDED` project has a `memory.link` naming the shared project and no
+  `memory/` directory left in the portable directory, and its retired
+  copies are in the backup. A `LINKED` project's memory directory is a
+  symlink to the shared one, and the files it held are in the backup.
+- A second `status` reports only the `CONFLICT`, `ALIASED`, `MISSING` and
+  `LINK_CONFLICT` entries left behind. Anything else pending means `apply`
+  did not converge.
 
 Then check what the utility does not. After deletions and merges, each
 `MEMORY.md` should link only to files beside it, and each memory file should
@@ -128,7 +147,9 @@ Lead with what changed in the user's memories, as a ledger:
   details.
 - Merged indexes, with the entries added and removed on each side.
 - Imported and exported files, by name.
-- Conflicts and aliased projects awaiting the user.
+- Links recorded or created, with the shared project each points to and any
+  files a fold carried over.
+- Conflicts, aliased projects and link conflicts awaiting the user.
 
 List findings separately: each departure from the decision table, missing
 backup, wrong tombstone, non-converging `apply` or index inconsistency, with

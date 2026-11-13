@@ -259,7 +259,7 @@ These are the subcommands the agent runs:
 ```bash
 sync=~/.claude/scripts/claude-memory-sync.py
 python3 "$sync" status    # read-only; exit 2 when work is pending
-python3 "$sync" apply     # everything except CONFLICT / ALIASED / MISSING
+python3 "$sync" apply     # all but CONFLICT / ALIASED / MISSING / LINK_CONFLICT
 python3 "$sync" resolve --keep local  foo/memory/user_role.md
 python3 "$sync" resolve --keep remote foo/memory/user_role.md
 ```
@@ -307,6 +307,56 @@ alone, because syncing two live copies would undo deletions made in either.
 `claude-memory-sync link-aliases` merges them into the conventional
 directory and replaces the others with symlinks to it; it refuses, listing
 the files, when anything other than `MEMORY.md` differs.
+
+### Shared Memory Directories
+
+Several projects can share one memory directory. A workspace directory
+holding related repos is the usual case: each repo's memory directory is a
+symlink to the workspace's own, so a session started in any of them reads
+and writes the same memories.
+
+```
+~/.claude/projects/
+  -home-alice-projects-ws/memory/           the shared directory
+  -home-alice-projects-ws-app/memory    →   ../-home-alice-projects-ws/memory
+  -home-alice-projects-ws-web/memory    →   ../-home-alice-projects-ws/memory
+```
+
+Synced per project, the shared directory would be exported once for every
+link, and another machine would get that many separate copies that drift
+apart. Instead it is synced once, under the slug of the directory that owns
+it (`ws`), which need not be a git repo; discovery finds it through the
+links. Each link is recorded as a file, `ws/app/memory.link`, that holds the
+owner's slug. The links are classified like files, against the portable
+directory and this machine's base:
+
+| Here | Recorded | Status | `apply` does |
+|------|----------|--------|--------------|
+| link to `ws` | — | `NEW_LINK` | record it (`RECORDED`) |
+| — or a dir | `ws` | `REMOTE_LINK` | create the symlink (`LINKED`) |
+| link to `ws` | `ws` | `OK` | nothing |
+| anything else | | `LINK_CONFLICT` | nothing until settled by hand |
+
+Recording a link retires the project's own portable copies, which are backed
+up. When the shared directory lacks one of them, it was dropped when the
+stores were joined, so it is tombstoned in the shared store: a copy on
+another machine is removed, or reported as a conflict when it was edited
+there, rather than carried back. Recording is refused while those copies
+hold changes this machine has not synced; settle each with `resolve`, where
+`--keep remote` brings the change into the shared directory.
+
+Creating a link where the project still has a directory of its own folds the
+directory in first, with the same three-way rules: a file unchanged since
+this machine last synced it stays behind, since the shared store already
+holds what the machines agreed on; a changed or never-synced file is carried
+over, and `MEMORY.md` is merged; a file whose shared copy differs is a
+`LINK_CONFLICT`. Every file replaced or removed is backed up, and the same
+`apply` exports what the fold carried over.
+
+A link to a directory that belongs to no project, a link removed on one
+machine but still recorded, or a link recorded to a different project is a
+`LINK_CONFLICT`: restore the link, or delete the `memory.link` file to give
+the project a store of its own again.
 
 ### Missing Memory Directories
 

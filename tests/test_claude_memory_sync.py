@@ -466,6 +466,145 @@ class LayoutTests(SyncTestCase):
         self.assertFalse(real_mem.is_symlink())
 
 
+class SharedMemoryTests(SyncTestCase):
+    """Repos under a workspace dir whose memory dirs link to the workspace's own."""
+
+    def share(self, machine, *slugs, owner="ws"):
+        (machine.home / "projects" / owner).mkdir(parents=True, exist_ok=True)
+        machine.mem(owner).mkdir(parents=True, exist_ok=True)
+        for slug in slugs:
+            machine.project(slug)
+            link = machine.mem(slug)
+            if link.is_dir() and not link.is_symlink():
+                shutil.rmtree(link)
+            link.parent.mkdir(parents=True, exist_ok=True)
+            link.symlink_to(os.path.relpath(machine.mem(owner), link.parent))
+        return machine
+
+    def separate_store(self, *machines):
+        """ws/web synced as a store of its own on each machine, as before sharing."""
+        self.a.project("ws/web")
+        self.a.write("ws/web", "MEMORY.md", "- [K](keep.md) — k\n- [O](old.md) — o\n")
+        self.a.write("ws/web", "keep.md", "k\n")
+        self.a.write("ws/web", "old.md", "o\n")
+        for machine in (self.a, *machines):
+            self.assertEqual(self.apply(machine)[0], 0)
+
+    def join(self, keep="k\n"):
+        """On a: the shared ws dir keeps keep.md and drops old.md; ws/web links to it."""
+        self.share(self.a, "ws/web")
+        self.a.write("ws", "MEMORY.md", "- [K](keep.md) — k\n")
+        self.a.write("ws", "keep.md", keep)
+
+    def test_shared_dir_is_synced_once_under_its_owner(self):
+        self.share(self.a, "ws/app", "ws/web")
+        self.a.write("ws", "MEMORY.md", "- [N](n.md) — n\n")
+        self.a.write("ws", "n.md", "n\n")
+        code, rows = self.a.lines("status")
+        self.assertEqual(code, 2)
+        self.assertEqual(sorted(map(tuple, rows)), [
+            ("NEW_LINK", "ws/app"), ("NEW_LINK", "ws/web"),
+            ("NEW_LOCAL", "ws/memory/MEMORY.md"), ("NEW_LOCAL", "ws/memory/n.md")])
+        self.assertEqual(self.apply(self.a), (0, {
+            ("EXPORTED", "ws/memory/MEMORY.md"), ("EXPORTED", "ws/memory/n.md"),
+            ("RECORDED", "ws/app"), ("RECORDED", "ws/web")}))
+        self.assertEqual((self.portable / "ws/app/memory.link").read_text(), "ws\n")
+        self.assertFalse((self.portable / "ws/app/memory").exists())
+        self.assertEqual(self.a.lines("status"), (0, []))
+        self.assertIn("OK\tws/web\tlink to ws\n", self.a.run("status", "-v")[1])
+
+    def test_another_machine_recreates_the_links(self):
+        self.share(self.a, "ws/app", "ws/web")
+        self.a.write("ws", "n.md", "n\n")
+        self.apply(self.a)
+        self.assertEqual(self.apply(self.b), (0, {
+            ("IMPORTED", "ws/memory/n.md"), ("LINKED", "ws/app"), ("LINKED", "ws/web")}))
+        link = self.b.mem("ws/app")
+        self.assertTrue(link.is_symlink())
+        self.assertEqual(os.readlink(link), f"../{cms.encode(self.b.home / 'projects/ws')}/memory")
+        self.assertEqual((link / "n.md").read_text(), "n\n")
+        self.assertEqual(self.b.lines("status"), (0, []))
+        self.b.write("ws/web", "w.md", "written through the link\n")
+        self.assertEqual(self.apply(self.b), (0, {("EXPORTED", "ws/memory/w.md")}))
+
+    def test_joining_stores_retires_the_old_one_and_tombstones_what_it_dropped(self):
+        self.separate_store(self.b)
+        self.join()
+        code, rows = self.a.lines("status")
+        self.assertIn(["NEW_LINK", "ws/web"], rows)
+        self.assertIn("the shared dir lacks old.md, tombstoned in ws", self.a.run("status")[1])
+        self.assertEqual(self.apply(self.a), (0, {
+            ("EXPORTED", "ws/memory/MEMORY.md"), ("EXPORTED", "ws/memory/keep.md"),
+            ("RECORDED", "ws/web")}))
+        self.assertFalse((self.portable / "ws/web/memory").exists())
+        self.assertIn(hashlib.sha256(b"o\n").hexdigest(), self.tombstone("ws", "old.md").read_text())
+        backups = list((self.a.home / ".local/state").rglob("portable/ws/web/memory/old.md"))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(self.a.lines("status"), (0, []))
+
+        # b still has ws/web as a dir of its own: old.md unchanged since it
+        # synced, and new.md written there since, with an index entry.
+        self.b.write("ws/web", "new.md", "n\n")
+        self.b.write("ws/web", "MEMORY.md",
+                     "- [K](keep.md) — k\n- [O](old.md) — o\n- [N](new.md) — n\n")
+        self.assertEqual(self.apply(self.b), (0, {
+            ("IMPORTED", "ws/memory/MEMORY.md"), ("IMPORTED", "ws/memory/keep.md"),
+            ("LINKED", "ws/web"),
+            ("EXPORTED", "ws/memory/MEMORY.md"), ("EXPORTED", "ws/memory/new.md")}))
+        self.assertTrue(self.b.mem("ws/web").is_symlink())
+        self.assertFalse(self.b.exists("ws", "old.md"))
+        self.assertEqual(self.b.read("ws", "MEMORY.md"), "- [K](keep.md) — k\n- [N](new.md) — n\n")
+        self.assertEqual(self.b.lines("status"), (0, []))
+        self.assertEqual(self.apply(self.a)[0], 0)
+        self.assertEqual(self.a.read("ws", "new.md"), "n\n")
+
+    def test_fold_that_clashes_is_a_link_conflict(self):
+        self.separate_store(self.b)
+        self.join(keep="k2\n")
+        self.apply(self.a)
+        self.b.write("ws/web", "keep.md", "k3\n")
+        code, rows = self.apply(self.b)
+        self.assertEqual(code, 2)
+        self.assertIn(("LINK_CONFLICT", "ws/web"), rows)
+        self.assertFalse(self.b.mem("ws/web").is_symlink())
+        self.assertEqual(self.b.read("ws/web", "keep.md"), "k3\n")
+
+    def test_old_store_changed_elsewhere_blocks_the_link_until_resolved(self):
+        self.separate_store(self.b)
+        self.b.write("ws/web", "keep.md", "k2\n")
+        self.apply(self.b)
+        self.join()
+        code, rows = self.apply(self.a)
+        self.assertEqual(code, 2)
+        self.assertIn(("LINK_CONFLICT", "ws/web"), rows)
+        self.assertTrue(self.pfile("ws/web", "keep.md").exists())
+        code, out, _ = self.a.run("resolve", "--keep", "remote", "ws/web/memory/keep.md")
+        self.assertEqual((code, out), (0, "IMPORTED\tws/web/memory/keep.md\n"))
+        self.assertEqual(self.a.read("ws", "keep.md"), "k2\n")
+        self.assertEqual(self.apply(self.a)[0], 0)
+        self.assertEqual(self.pfile("ws", "keep.md").read_text(), "k2\n")
+
+    def test_removed_link_is_a_link_conflict(self):
+        self.share(self.a, "ws/app")
+        self.apply(self.a)
+        self.a.mem("ws/app").unlink()
+        self.a.write("ws/app", "own.md", "x\n")
+        code, rows = self.apply(self.a)
+        self.assertEqual((code, rows), (2, {("LINK_CONFLICT", "ws/app")}))
+        self.assertFalse(self.pfile("ws/app", "own.md").exists())
+
+    def test_link_to_no_project_is_a_link_conflict(self):
+        self.a.project("loose")
+        elsewhere = self.a.home / "elsewhere/memory"
+        elsewhere.mkdir(parents=True)
+        (elsewhere / "x.md").write_text("x\n")
+        self.a.mem("loose").parent.mkdir(parents=True)
+        self.a.mem("loose").symlink_to(elsewhere)
+        code, rows = self.apply(self.a)
+        self.assertEqual((code, rows), (2, {("LINK_CONFLICT", "loose")}))
+        self.assertFalse(self.pfile("loose", "x.md").exists())
+
+
 class OperationTests(SyncTestCase):
     def test_adopt_lets_the_first_run_see_a_local_deletion(self):
         self.pfile("app", "old.md").parent.mkdir(parents=True)

@@ -26,6 +26,12 @@ MEMORY.md is an index, so when both sides changed it is merged entry by entry
 changed on both sides is a CONFLICT: nothing is touched until `resolve`
 settles it. Every overwrite or deletion is backed up first.
 
+Several projects can share one memory dir, each project's memory dir being a
+symlink to the dir of the project that owns it. The shared dir is synced once,
+under its owner's slug, and each link is recorded as <slug>/memory.link naming
+the owner, so that other machines recreate the links instead of keeping
+separate copies that drift apart.
+
 Linux and macOS; Python 3.9+ standard library only.
 """
 
@@ -41,8 +47,10 @@ from pathlib import Path
 
 INDEX = "MEMORY.md"
 TOMBSTONE_DIR = ".deleted"
+LINK_FILE = "memory.link"
 GLOBAL = "_global"
 DISCOVERY_DEPTH = 4
+BLOCKING = ("CONFLICT", "ALIASED", "MISSING", "LINK_CONFLICT")
 
 STATUS_HELP = """\
 statuses (status) and actions (apply):
@@ -63,8 +71,18 @@ statuses (status) and actions (apply):
                   Otherwise `resolve` its files: --keep remote restores
                   (naming every remaining file), --keep local deletes
 
+shared memory dirs (one line per project, not per file):
+  NEW_LINK        the memory dir here is a link to another -> RECORDED (link written to the
+                  project's, not yet recorded                 portable dir; this project's own
+                                                              copies retired, and any the shared
+                                                              dir lacks tombstoned in its store)
+  REMOTE_LINK     the portable dir records a link that is  -> LINKED (an existing memory dir is
+                  missing here                                folded into the shared one first)
+  LINK_CONFLICT   the link here and the recorded one disagree, the link points at no
+                  project's memory dir, or folding would clash; left untouched
+
 exit status: 0 nothing pending, 1 error, 2 pending changes (status) or
-unresolved conflicts / aliased or missing projects left (apply).
+unresolved conflicts / aliased, missing or link-conflicted projects left (apply).
 
 Deletions and merges reach every machine, so run apply under an agent
 following prompts/sync-memories.md in Agent Toolbox, which checks each one."""
@@ -209,6 +227,8 @@ class Sync:
                             else self.store / "backups")
         self.stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         self._lock = None
+        self._walked = None
+        self.carried = set()    # shared stores a fold carried files into
 
     # Locking: one mutating run per portable directory at a time.
     def lock(self, bind=True):
@@ -292,27 +312,33 @@ class Sync:
         found = self.memory_dirs(slug)
         return found[0] if found else self.candidate_dirs(slug)[0] / "memory"
 
+    def walk_projects(self):
+        """(slug, path, is_git) for each dir under projects_dir, following symlinks."""
+        if self._walked is not None:
+            return self._walked
+        found, visited = [], set()
+        root = self.projects_dir
+        if root.is_dir():
+            for dirpath, dirnames, _ in os.walk(root, followlinks=True):
+                real = os.path.realpath(dirpath)
+                if real in visited:
+                    dirnames[:] = []
+                    continue
+                visited.add(real)
+                rel = Path(dirpath).relative_to(root)
+                depth = len(rel.parts)
+                if depth:
+                    found.append((rel.as_posix(), dirpath, (Path(dirpath) / ".git").is_dir()))
+                if depth >= DISCOVERY_DEPTH - 1:
+                    dirnames[:] = []
+                else:
+                    dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+        self._walked = found
+        return found
+
     def discover_projects(self):
         """Slugs of git repos under projects_dir, following symlinked repos."""
-        slugs, visited = [], set()
-        root = self.projects_dir
-        if not root.is_dir():
-            return slugs
-        for dirpath, dirnames, _ in os.walk(root, followlinks=True):
-            real = os.path.realpath(dirpath)
-            if real in visited:
-                dirnames[:] = []
-                continue
-            visited.add(real)
-            rel = Path(dirpath).relative_to(root)
-            depth = len(rel.parts)
-            if depth and (Path(dirpath) / ".git").is_dir():
-                slugs.append(rel.as_posix())
-            if depth >= DISCOVERY_DEPTH - 1:
-                dirnames[:] = []
-            else:
-                dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
-        return slugs
+        return [slug for slug, _, is_git in self.walk_projects() if is_git]
 
     # Portable and base sides -------------------------------------------------
     @staticmethod
@@ -344,14 +370,191 @@ class Sync:
         except FileNotFoundError:
             return set()
 
-    def slugs(self):
+    def known_slugs(self):
+        """Every slug on any side, unfiltered, and the owner map built from them.
+
+        The owner of a shared memory dir need not be a git repo: it is often
+        the workspace dir holding the linked repos. It is found through the
+        links, so it joins the slugs even though discovery alone skips it.
+        """
         found = {GLOBAL}
         for slug in self.discover_projects():
             if self.memory_dirs(slug):
                 found.add(slug)
-        found.update(self.stored_slugs(self.portable))
-        found.update(self.stored_slugs(self.base_root))
+        for root in (self.portable, self.base_root):
+            found.update(self.stored_slugs(root))
+            found.update(self.link_slugs(root))
+        owners = self.owner_map(found)
+        for slug in list(found):
+            disk = self.disk_link(slug, owners)
+            if disk and disk[0]:
+                found.add(disk[0])
+        return found, owners
+
+    def slugs(self):
+        found, _ = self.known_slugs()
         return sorted(s for s in found if self.included(s))
+
+    # Shared memory dirs ------------------------------------------------------
+    # A project whose memory dir is a symlink to another project's shares that
+    # project's store. The link is recorded in the portable dir as
+    # <slug>/memory.link holding the owner's slug, and in the base the same
+    # way once this machine has synced it, so a link is classified three ways
+    # like a file: disk, portable and base.
+    def link_file(self, root, slug):
+        return root / slug / LINK_FILE
+
+    @staticmethod
+    def read_link(path):
+        try:
+            return path.read_text().strip() or None
+        except FileNotFoundError:
+            return None
+
+    @staticmethod
+    def link_slugs(root):
+        slugs = []
+        if not root.is_dir():
+            return slugs
+        for dirpath, dirnames, filenames in os.walk(root):
+            rel = Path(dirpath).relative_to(root)
+            if rel.parts and LINK_FILE in filenames:
+                slugs.append(rel.as_posix())
+            if len(rel.parts) >= DISCOVERY_DEPTH:
+                dirnames[:] = []
+            else:
+                dirnames[:] = [d for d in dirnames if not d.startswith(".") and d != "memory"]
+        return slugs
+
+    def owner_map(self, known):
+        """Encoded project dir name -> the slug whose memory dir it holds."""
+        owners = {encode(self.home): GLOBAL}
+        for slug, path, _ in self.walk_projects():
+            owners.setdefault(encode(path), slug)
+            owners.setdefault(encode(os.path.realpath(path)), slug)
+        # A slug known only from the portable dir or the base, such as one
+        # whose checkout is not cloned here, still owns its encoded name.
+        for slug in sorted(known):
+            if slug != GLOBAL:
+                owners.setdefault(encode(self.projects_dir / slug), slug)
+        return owners
+
+    def disk_link(self, slug, owners):
+        """(owner, target) when slug's memory dir is another project's, else None.
+
+        owner is None when the target is no project's memory dir.
+        """
+        if slug == GLOBAL:
+            return None
+        dirs = self.memory_dirs(slug)
+        if len(dirs) != 1:
+            return None
+        projects = Path(os.path.realpath(self.claude_dir / "projects"))
+        target = Path(os.path.realpath(dirs[0]))
+        if target in {projects / c.name / "memory" for c in self.candidate_dirs(slug)}:
+            return None
+        owner = None
+        if target.name == "memory" and target.parent.parent == projects:
+            owner = owners.get(target.parent.name)
+        return (owner if owner != slug else None), target
+
+    def link_state(self, slug, owners):
+        """(disk, portable, base) for slug's link; disk is disk_link()'s result."""
+        return (self.disk_link(slug, owners),
+                self.read_link(self.link_file(self.portable, slug)),
+                self.read_link(self.link_file(self.base_root, slug)))
+
+    def unsettled(self, slug):
+        """Own files of slug whose portable copy changed since this machine synced it."""
+        pdir, bdir = self.portable_dir(slug), self.base_dir(slug)
+        return sorted(n for n in self.names(pdir) | self.names(bdir)
+                      if sha(pdir / n) != sha(bdir / n))
+
+    def dropped_by_link(self, slug):
+        """Files of slug's own store that the shared dir it now links to lacks."""
+        return sorted(self.names(self.base_dir(slug)) - self.names(self.disk_dir(slug)))
+
+    def settled_copy(self, slug, name):
+        """The bytes of slug/name that a file pass leaves on disk, or None."""
+        dpath, bpath, ppath = (self.disk_dir(slug) / name, self.base_dir(slug) / name,
+                               self.portable_dir(slug) / name)
+        status, _ = self.classify(slug, name, dpath, bpath, ppath)
+        if status in ("NEW_REMOTE", "REMOTE_EDIT"):
+            return ppath.read_bytes()
+        if status in ("DELETED_REMOTE", "STALE_LOCAL"):
+            return None
+        return dpath.read_bytes() if dpath.is_file() else None
+
+    def fold_plan(self, slug, owner):
+        """What folding slug's own memory dir into owner's does: ({name: data}, clashes).
+
+        A file unchanged since this machine last synced it stays behind: the
+        shared store already holds what the machines agreed on, and may have
+        dropped it on purpose. A changed or never-synced file is carried over,
+        MEMORY.md merged against slug's base. A file whose shared copy differs
+        is a clash, as in link-aliases.
+        """
+        src = self.disk_dir(slug)
+        if src.is_symlink() or not src.is_dir():
+            return {}, []
+        carry, clash = {}, []
+        for name in sorted(self.names(src)):
+            data, bpath = (src / name).read_bytes(), self.base_dir(slug) / name
+            if sha(bpath) == hashlib.sha256(data).hexdigest():
+                continue
+            have = self.settled_copy(owner, name)
+            if have is None:
+                carry[name] = data
+            elif have == data:
+                continue
+            elif name == INDEX:
+                base = bpath.read_text() if bpath.exists() else ""
+                text, conflicts = merge_index(base, have.decode(), data.decode())
+                if conflicts:
+                    clash.append(name)
+                else:
+                    carry[name] = text.encode()
+            else:
+                clash.append(name)
+        return carry, clash
+
+    def classify_link(self, slug, state):
+        disk, p, b = state
+        d = disk[0] if disk else None
+        marker = self.link_file(self.portable, slug)
+        if disk and d is None:
+            return "LINK_CONFLICT", (f"memory dir links to {disk[1]}, which is no project's memory "
+                                     "dir; point the link at one, or make it a dir of its own")
+        if d and d == p:
+            return "OK", f"link to {d}"
+        if d and p is None and b is None:
+            unsettled = self.unsettled(slug)
+            if unsettled:
+                return "LINK_CONFLICT", (
+                    f"link to {d}, but this project's own copies changed elsewhere since this "
+                    f"machine last synced them: {', '.join(unsettled)}. Settle each with resolve "
+                    "(--keep remote brings it into the shared dir) before the link is recorded")
+            dropped = self.dropped_by_link(slug)
+            return "NEW_LINK", f"link to {d}" + (
+                f"; the shared dir lacks {', '.join(dropped)}, tombstoned in {d}" if dropped else "")
+        if d is None and p and b is None:
+            carry, clash = self.fold_plan(slug, p)
+            if clash:
+                return "LINK_CONFLICT", (f"link to {p}; this project's memory dir here differs from "
+                                         f"the shared one in {', '.join(clash)}. Settle those files "
+                                         "by hand, then rerun")
+            return "REMOTE_LINK", f"link to {p}" + (
+                f"; carries {', '.join(sorted(carry))} into it" if carry else "")
+        if d is None and p is None and b:
+            return "GONE", ""
+        if d and p:
+            return "LINK_CONFLICT", f"links to {d} here, but {marker} records a link to {p}"
+        if d:
+            return "LINK_CONFLICT", (f"links to {d} here, but {marker}, recorded before, is gone. "
+                                     f"Restore it, or replace the link here with a dir of its own")
+        return "LINK_CONFLICT", (f"{marker} records a link to {p}, but the link here is gone. "
+                                 f"Recreate it, or delete {marker} to give this project a store "
+                                 "of its own")
 
     def missing(self, slug):
         """Files synced from slug whose disk memory dir is gone; empty when present.
@@ -378,10 +581,20 @@ class Sync:
 
     # Classification ------------------------------------------------------------
     def entries(self):
-        """Yield (slug, name, status, detail) for every tracked memory file."""
-        for slug in self.slugs():
+        """Yield (slug, name, status, detail) for every tracked memory file.
+
+        A linked project yields one entry with name None, after every file:
+        apply settles the shared stores before it records or creates links.
+        """
+        found, owners = self.known_slugs()
+        links = []
+        for slug in sorted(s for s in found if self.included(s)):
             if len(self.memory_dirs(slug)) > 1:
                 yield slug, None, "ALIASED", " ".join(str(d) for d in self.memory_dirs(slug))
+                continue
+            state = self.link_state(slug, owners)
+            if any(state):
+                links.append((slug, state))
                 continue
             # Held whole: importing even one new file would recreate the dir,
             # and the next run would read the rest as deleted here.
@@ -392,6 +605,9 @@ class Sync:
             for name in sorted(self.names(ddir) | self.names(pdir, True) | self.names(bdir)):
                 status, detail = self.classify(slug, name, ddir / name, bdir / name, pdir / name)
                 yield slug, name, status, detail
+        for slug, state in links:
+            status, detail = self.classify_link(slug, state)
+            yield slug, None, status, detail
 
     def classify(self, slug, name, dpath, bpath, ppath):
         d, b, p = sha(dpath), sha(bpath), sha(ppath)
@@ -543,6 +759,66 @@ class Sync:
             return "MERGED"
         raise AssertionError(status)
 
+    def mark_link(self, slug, owner):
+        """Record slug as a link to owner in the base, which then holds nothing else."""
+        shutil.rmtree(self.base_dir(slug), ignore_errors=True)
+        write_atomic(self.link_file(self.base_root, slug), (owner + "\n").encode())
+
+    def record_link(self, slug, owner):
+        # Files the shared dir lacks were dropped when the stores were joined.
+        # A tombstone in the shared store stops a copy elsewhere from being
+        # carried back into it; this machine made the deletion, so it is
+        # acknowledged here.
+        for name in self.dropped_by_link(slug):
+            self.add_tombstone(owner, name, sha(self.base_dir(slug) / name))
+            self.ack_path(owner, name).parent.mkdir(parents=True, exist_ok=True)
+            self.ack_path(owner, name).touch()
+        pdir = self.portable_dir(slug)
+        if pdir.is_dir():
+            for path in sorted(p for p in pdir.rglob("*") if p.is_file()):
+                side = "portable-tombstones" if path.parent.name == TOMBSTONE_DIR else "portable"
+                self.backup(side, slug, path)
+            shutil.rmtree(pdir)
+        write_atomic(self.link_file(self.portable, slug), (owner + "\n").encode())
+        self.mark_link(slug, owner)
+
+    def create_link(self, slug, owner):
+        """Fold slug's memory dir into owner's and replace it with a link; files carried."""
+        carry, clash = self.fold_plan(slug, owner)
+        if clash:
+            raise SyncError(f"{slug}: {', '.join(clash)} changed while linking; rerun apply")
+        src, dst = self.disk_dir(slug), self.disk_dir(owner)
+        dst.mkdir(parents=True, exist_ok=True)
+        for name, data in carry.items():
+            self.backup("disk", owner, dst / name)
+            write_atomic(dst / name, data, file_mode(dst / name))
+        if src.is_dir():
+            for name in self.names(src):
+                self.backup("disk-alias", slug, src / name)
+            shutil.rmtree(src)
+        src.parent.mkdir(parents=True, exist_ok=True)
+        src.symlink_to(os.path.relpath(dst, src.parent), target_is_directory=True)
+        self.mark_link(slug, owner)
+        return sorted(carry)
+
+    def apply_link(self, slug, status, state):
+        """Carry out a link entry's status; return the action word, or None."""
+        disk, p, b = state
+        if status == "OK":
+            if b != p:
+                self.mark_link(slug, p)
+            return None
+        if status == "GONE":
+            self.link_file(self.base_root, slug).unlink(missing_ok=True)
+            return None
+        if status == "NEW_LINK":
+            self.record_link(slug, disk[0])
+            return "RECORDED"
+        if status == "REMOTE_LINK":
+            self.carried |= {p} if self.create_link(slug, p) else set()
+            return "LINKED"
+        raise AssertionError(status)
+
 
 def label(slug, name):
     return f"{slug}/memory/{name}" if name else slug
@@ -572,14 +848,31 @@ def cmd_status(sync, args):
 def cmd_apply(sync, args):
     sync.lock()
     blocked = False
+    _, owners = sync.known_slugs()
     for slug, name, status, detail in list(sync.entries()):
-        if status in ("CONFLICT", "ALIASED", "MISSING"):
+        if status in BLOCKING:
             blocked = True
             print("\t".join(filter(None, [status, label(slug, name), detail])))
             continue
-        action = sync.apply_entry(slug, name, status)
+        if name is None:
+            action = sync.apply_link(slug, status, sync.link_state(slug, owners))
+        else:
+            action = sync.apply_entry(slug, name, status)
         if action:
             print(f"{action}\t{label(slug, name)}")
+    # Files a fold carried into a shared dir are new to its store: export them
+    # now, so that one apply converges.
+    if sync.carried:
+        for slug, name, status, detail in list(sync.entries()):
+            if slug not in sync.carried or name is None or status == "OK":
+                continue
+            if status in BLOCKING:
+                blocked = True
+                print("\t".join(filter(None, [status, label(slug, name), detail])))
+                continue
+            action = sync.apply_entry(slug, name, status)
+            if action:
+                print(f"{action}\t{label(slug, name)}")
     return 2 if blocked else 0
 
 
