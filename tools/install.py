@@ -40,6 +40,10 @@ COMMANDS = {
     },
 }
 CONVENE_SKILL = REPO / "harnesses/claude-code/plugins/convene/skills/convene"
+# The one-question companion to the operator procedure, authored beside it.
+# Its directory is `convene-ask` so it cannot collide with another skill
+# directory named `ask`; the skill keeps its own frontmatter name.
+CONVENE_ASK_SKILL = REPO / "harnesses/claude-code/plugins/convene/skills/ask"
 
 
 def catalog(harness, components):
@@ -65,10 +69,12 @@ def catalog(harness, components):
                 # its skill scan skips a symlinked SKILL.md. Keep the policy
                 # and references beside the authoritative regular file.
                 result["skills/convene"] = CONVENE_SKILL
+                result["skills/convene-ask"] = CONVENE_ASK_SKILL
             else:
                 result["skills/teach/SKILL.md"] = REPO / "skills/teach/SKILL.md"
                 result["skills/whats-new"] = REPO / "harnesses/agy/skills/whats-new"
                 result["skills/convene"] = CONVENE_SKILL
+                result["skills/convene-ask"] = CONVENE_ASK_SKILL
         elif component == "profiles":
             if harness != "codex":
                 raise ValueError(f"{component} is not available for {harness}")

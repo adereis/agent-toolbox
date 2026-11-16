@@ -332,6 +332,13 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual((skill / "references/synthesis.md").resolve(), plugin / "references/synthesis.md")
         self.assertEqual((skill / "agents/openai.yaml").resolve(), plugin / "agents/openai.yaml")
         self.assertIn("allow_implicit_invocation: false", (skill / "agents/openai.yaml").read_text())
+        # The one-question skill is the opposite on purpose: a session should
+        # reach it when the user says "ask codex sol", as it reaches a subagent.
+        ask = self.root / ".agents/skills/convene-ask"
+        self.assertEqual(ask.resolve(), plugin.parent / "ask")
+        self.assertIn("SKILL.md", {entry.name for entry in os.scandir(ask)
+                                   if entry.is_file(follow_symlinks=False)})
+        self.assertIn("allow_implicit_invocation: true", (ask / "agents/openai.yaml").read_text())
         text = (skill / "SKILL.md").read_text()
         self.assertIn("`convene` on PATH", text, "the shared procedure names the command for every harness")
         self.assertIn("harnesses/claude-code/plugins/convene/bin/convene", text)

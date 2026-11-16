@@ -226,6 +226,20 @@ path resolution. Antigravity seats are audited, not
 confined: the adapter rejects tool sets it cannot enforce and checks the
 transcript instead, and it has no private-home tier.
 
+An ask (`convene ask`, `ask.py`) is a run of kind `ask`: one seat, built
+from the command line through `plan.freeze` rather than a plan file, and
+played one round per message. A follow-up is the next round's chair note,
+filed under the run lock with the budget raised by one, and the seat
+resumes its own session, so the served-model pin and every receipt rule
+apply unchanged. Keep it one seat with no phases, materials, judge or
+synthesizer; a plan that wants more is a room. Its workspace defaults to
+`repo-ro` only in a git checkout, and `prepare` refuses any `repo-ro`
+seat whose project root is the home directory or above it, because an
+ask may start anywhere. The `ask` skill is model-invocable on purpose,
+and so is the operator skill; the commands stay user-typed. The Codex
+installer links the `ask` skill as `convene-ask` with implicit invocation
+allowed, while the operator skill keeps `allow_implicit_invocation: false`.
+
 Tests drive the engine against the stub binaries in `tests/convene-stubs/`
 with an isolated home under `~/tmp`; a scenario is chosen by a
 `[[stub:NAME]]` token in the brief. The real bubblewrap jail test runs only

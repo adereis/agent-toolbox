@@ -39,6 +39,14 @@ def project_root(start=None):
     return start
 
 
+def is_checkout(path):
+    """Whether `path` is the top level of a git checkout."""
+    result = subprocess.run(["git", "-C", str(path), "rev-parse", "--show-toplevel"],
+                            capture_output=True, text=True, check=False)
+    return (result.returncode == 0 and bool(result.stdout.strip())
+            and Path(result.stdout.strip()).resolve() == Path(path).resolve())
+
+
 def runs_dir(project, env=None):
     directory = platform.state_home(env) / platform.project_key(project)
     return directory

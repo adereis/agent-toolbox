@@ -34,7 +34,7 @@ project-specific skill installation. This installer does not change
 
 | Component | Claude Code | Codex | Antigravity | Installation behavior |
 |-----------|-------------|-------|-------------|-----------------------|
-| `skills` | Yes | Yes | Yes | Installs `teach` with native explicit-invocation metadata and the configuration-aware `whats-new` release digest; for Codex and Antigravity also the `convene` operator procedure, linked from the plugin |
+| `skills` | Yes | Yes | Yes | Installs `teach` with native explicit-invocation metadata and the configuration-aware `whats-new` release digest; for Codex and Antigravity also the `convene` operator procedure and the `convene-ask` one-question skill, linked from the plugin |
 | `scripts` | Yes | Yes | Yes | Links harness utilities under `<root>/scripts/` |
 | `hooks` | Yes | Unavailable | Unavailable | Links the remaining hook scripts; registration is manual |
 | `settings` | Yes | Unavailable | Unavailable | Links statusline scripts at the Claude configuration root |
@@ -164,7 +164,10 @@ skill, so a Codex session drives the engine the way `/convene:panel` does.
 The installed `skills/convene` entry is a directory symlink. Codex 0.155.1
 discovers the regular `SKILL.md` inside it and exposes it as
 `convene:convene`, using the plugin namespace. Its references and explicit
-invocation policy live in that same shared directory.
+invocation policy live in that same shared directory. The same component
+links the plugin's `ask` skill as `skills/convene-ask`, a directory link
+too, whose policy allows implicit invocation so that "ask claude opus"
+reaches it without naming the skill.
 
 If an earlier installation left a real `~/.agents/skills/convene`
 directory containing individual file links, the installer reports a

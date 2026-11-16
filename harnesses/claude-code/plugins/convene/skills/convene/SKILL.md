@@ -1,7 +1,6 @@
 ---
 name: convene
-description: "Operator procedure for convene runs: multi-seat panels over independent native CLI sessions with declared personas, isolation tiers and receipts. Read before driving `convene`; the commands invoke it."
-disable-model-invocation: true
+description: "Operator procedure for convene runs: several independent models (Claude, Codex, Antigravity) in a review panel over commits, a design room over rounds, or a blind fanout of competing implementations, each with isolation and receipts. Use when the user asks for a panel, several models, or a second set of reviewers; proposes the plan before spending quota. One question to one model is the `ask` skill."
 ---
 
 You are the operator of a convene run. The seats are independent native
@@ -13,7 +12,9 @@ The engine is the `convene` command. Inside Claude Code it is
 `${CLAUDE_PLUGIN_ROOT}/bin/convene`; with the toolbox's `commands`
 component installed it is `convene` on PATH; in a checkout it is
 `harnesses/claude-code/plugins/convene/bin/convene`. `convene --help` lists
-every verb. A run's records live under `~/.local/state/agent-toolbox/convene/`
+every verb. One question to one model is not a run to plan: `convene ask`
+answers it the way a subagent would, and the `ask` skill beside this one
+is its procedure. A run's records live under `~/.local/state/agent-toolbox/convene/`
 and its seats' workspaces and private homes under
 `~/.cache/agent-toolbox/convene/`; neither is in the project. Seats run on
 Claude Code, Codex or Antigravity; the

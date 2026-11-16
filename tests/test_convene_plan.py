@@ -287,7 +287,7 @@ class PlanTests(unittest.TestCase):
         names = set(personas.catalog())
         self.assertEqual(names, {"quinn-t-shun", "ada-versary", "connie-tinuity", "emma-pirical",
                                  "sec-urity", "axel-cess", "archie-tecture", "tess-tcase",
-                                 "xavier-pert", "percy-formance"})
+                                 "xavier-pert", "percy-formance", "consultant"})
         self.assertEqual(set(instruments.catalog()), {"review", "design", "implement", "synthesize", "judge"})
         self.assertIn("json_schema", instruments.catalog()["review"]["profile"])
 

@@ -20,7 +20,11 @@ from convene.presets import panel
 from convene.storage import (digest, event, hashes, identifier, read, safe_name, write,
                              write_text)
 
-KINDS = ("panel", "room", "fanout")
+KINDS = ("panel", "room", "fanout", "ask")
+# An ask is one seat answering one asker, the way a subagent answers its
+# parent: no board to read, no colleagues, and each follow-up is one more
+# round on the same native session (`convene ask --to`).
+ASK_PERSONA = "consultant"
 # `sealed` is the judge's alone: it sees the attempts under letters, never
 # the board. `[judgment] by` assigns it; a plan cannot.
 VISIBILITY = ("board", "blind", "sealed")
@@ -75,7 +79,8 @@ def _brief(supplied, plan_dir):
 def _phases(supplied, rounds, seat_ids, kind):
     declared = supplied.get("phases") or []
     if not declared:
-        return [{"name": {"panel": "findings", "fanout": "attempt", "room": "discussion"}[kind],
+        return [{"name": {"panel": "findings", "fanout": "attempt", "room": "discussion",
+                          "ask": "answer"}[kind],
                  "rounds": rounds}]
     total = 0
     for phase in declared:
@@ -244,6 +249,12 @@ def _start_text(plan, seat, common, private):
             text += ("Their checkouts are not available to you, by design: the changes.patch "
                      "under each post is the record of what that seat changed, committed work "
                      "included.\n\n")
+    elif plan["kind"] == "ask":
+        # Told it was "one of 1 people in a room", a seat answers as if to a
+        # meeting. An ask has one reader, who wants this seat's own view.
+        text += ("Another coding agent, working with its user on the project below, is asking "
+                 "for your independent answer to the question that follows. It will read your "
+                 "answer and may ask follow-up questions in this same conversation.\n\n")
     elif plan["kind"] == "panel":
         text += (f"You are one of {others + 1} reviewers convened on the same change. Each "
                  "of you was given the same brief and works independently.\n\n")
@@ -262,7 +273,8 @@ def _start_text(plan, seat, common, private):
     else:
         text += (f"You are one of {others + 1} people given the same brief. You work on your "
                  "own; you will not see what the others write.\n\n")
-    text += "# Brief\n\n" + plan["brief"]["text"].strip() + "\n\n"
+    heading = "Question" if plan["kind"] == "ask" else "Brief"
+    text += f"# {heading}\n\n" + plan["brief"]["text"].strip() + "\n\n"
     reads = staging.listing(common + private)
     if reads:
         text += "# Materials\n\nThe files under materials/ in your working directory:\n\n" + reads + "\n\n"
@@ -283,10 +295,15 @@ def _start_text(plan, seat, common, private):
         # phase's instruction; the others' instrument would ask them to do
         # the brief, as a fanout's asks for an implementation report.
         text += "# What to produce\n\n" + plan["instrument"]["profile"]["prompt"].strip() + "\n\n"
-    text += ("Your final message each turn is your post. It is what the others and the "
-             f"operator read under your name, about {plan['post_length']} words, as finished "
-             "text: no preamble about what you are going to do, and no summary of these "
-             "instructions.\n")
+    if plan["kind"] == "ask":
+        text += ("Your final message each turn is your answer, read as you wrote it. Make it "
+                 "as long as the question needs and no longer, as finished text: no preamble "
+                 "about what you are going to do, and no summary of these instructions.\n")
+    else:
+        text += ("Your final message each turn is your post. It is what the others and the "
+                 f"operator read under your name, about {plan['post_length']} words, as "
+                 "finished text: no preamble about what you are going to do, and no summary "
+                 "of these instructions.\n")
     if seat["visibility"] == "board" and others:
         roster = "".join(f"- {s['persona']['profile']['label']} ({s['id']})\n"
                          for s in plan["seats"] if s["id"] != seat["id"])
@@ -302,7 +319,34 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
     the plan's own; they are recorded in the frozen plan like any default.
     """
     plan_path, supplied = load(plan_path)
-    plan_dir = plan_path.parent
+    return freeze(supplied, plan_dir=plan_path.parent, plan_source=str(plan_path),
+                  project_root=project_root, name=name, range_spec=range_spec,
+                  environ=environ, overrides=overrides)
+
+
+def _check_repo_ro(seats, project_root):
+    """Refuse to bind a directory that holds the operator's home.
+
+    A panel's project is a git checkout, but an ask may come from any
+    directory, and the project root of a directory outside git is that
+    directory itself. Bound read-only from `$HOME` or above it, the
+    operator's keys, tokens and every other project would be readable
+    inside the seat, which is what the jail's tmpfs home exists to prevent.
+    """
+    home = Path.home().resolve()
+    root = Path(project_root).resolve()
+    if root == home or root in home.parents:
+        for seat in seats:
+            if seat["workspace"] == "repo-ro":
+                raise ValueError(f"seat {seat['id']!r}: workspace = \"repo-ro\" would bind {root}, "
+                                 "which holds your home directory, into the seat; run from the "
+                                 "project's own directory, or give the seat workspace = \"none\"")
+
+
+def freeze(supplied, *, plan_dir, plan_source, project_root=None, name=None, range_spec=None,
+           environ=None, overrides=None):
+    """`prepare` for a plan already read into a table; `convene ask` builds one."""
+    plan_dir = Path(plan_dir)
     project_root = runs.project_root(project_root)
     schema = supplied.get("schema", SCHEMA)
     if schema != SCHEMA:
@@ -353,6 +397,22 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         raise ValueError("post_length must be a positive word count")
     if kind == "panel" and "workspace" not in supplied:
         defaults["workspace"] = "repo-ro"
+    if kind == "ask":
+        # One seat, one round per question; a follow-up raises the budget by
+        # one, so nothing here may schedule a second seat or a phase.
+        for key in ("phases", "synthesis", "judgment", "materials"):
+            if key in supplied:
+                raise ValueError(f"an ask takes no {key}: it is one seat answering one question")
+        if rounds != 1:
+            raise ValueError("an ask starts with one round; `convene ask --to` adds each follow-up")
+        if len(supplied.get("seats") or []) != 1:
+            raise ValueError("an ask has exactly one seat")
+        if "workspace" not in supplied:
+            # The project the question is about, when there is one to show.
+            defaults["workspace"] = "repo-ro" if runs.is_checkout(project_root) else "none"
+        if supplied.get("workspace", defaults["workspace"]) == "worktree":
+            raise ValueError("an ask reads the repository at most; use a room or a fanout for "
+                             "a seat that changes it")
     if kind == "fanout":
         # Blind by construction: the seats never see each other, each gets
         # its own checkout, and the operator reads the results sealed.
@@ -374,7 +434,7 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         raise ValueError("--range applies to kind = \"panel\" only")
 
     instrument_ref = supplied.get("instrument", {"panel": "review", "fanout": "implement",
-                                                  "room": None}[kind])
+                                                  "room": None, "ask": None}[kind])
     instrument = instruments.resolve(instrument_ref, project_root) if instrument_ref else None
 
     if not supplied.get("seats"):
@@ -413,6 +473,7 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
         jobs = sum(min(n, per_harness) for n in counts.values()) or 1
     if len({s["id"] for s in seats}) != len(seats):
         raise ValueError("duplicate seat id")
+    _check_repo_ro(seats, project_root)
     if synthesizer and synthesizer not in {s["id"] for s in seats}:
         raise ValueError(f"synthesis.by names no seat: {synthesizer!r}")
     if judge and judge not in {s["id"] for s in seats}:
@@ -486,7 +547,7 @@ def prepare(plan_path, *, project_root=None, name=None, range_spec=None, environ
 
     frozen = {
         "schema": SCHEMA, "kind": kind, "title": title.strip(), "name": root.name,
-        "project_root": str(project_root), "plan_source": str(plan_path),
+        "project_root": str(project_root), "plan_source": str(plan_source),
         "rounds": rounds, "jobs": jobs, "per_harness": per_harness,
         "phases": phases, "synthesis": synthesis, "judgment": judgment,
         "post_length": post_length, "base_commit": base,

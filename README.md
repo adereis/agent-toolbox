@@ -9,12 +9,12 @@ harnesses; each component documents where it works.
 [Convene](harnesses/claude-code/plugins/convene/README.md) is a Claude Code
 plugin that runs several **independent** coding-agent sessions on the same
 brief and brings back what each wrote, with a receipt for what actually ran.
-Seats are native CLIs (`claude -p`, `codex exec`) with a declared persona,
+Seats are native CLIs (`claude -p`, `codex exec`, `agy`) with a declared persona,
 model, tool set and isolation tier; the foreground Claude is the operator
 that writes the brief, reads the board and synthesizes.
 
 ```
-/convene:panel HEAD~3..HEAD seat=codex/gpt-5.5 seat=claude/opus --persona sec-urity
+/convene:panel HEAD~3..HEAD seat=codex/terra seat=claude/opus --persona sec-urity
 ```
 
 That convenes a security reviewer on Codex and a skeptic on Claude over the
@@ -41,6 +41,12 @@ own git worktree, and the room critiques and revises the patch; and the
 worktrees and the attempts are judged sealed under letters, by the operator
 or by a judge seat that sees nothing else, before anyone learns who wrote
 what.
+
+For a single question there is the **ask**. Say "ask this to codex sol" in
+any Claude Code or Codex session, and the session runs `convene ask
+codex/sol "..."` the way it would start a subagent. The answer comes back
+with its receipt, and `convene ask --to RUN "..."` follows up on the same
+session.
 
 ## Available components
 

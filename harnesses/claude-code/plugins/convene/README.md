@@ -19,6 +19,10 @@ worktree. The operator, or a judge seat that sees nothing but the attempts,
 reads them sealed under letters and records a judgment, and only then does
 anyone learn who wrote what.
 
+Beside the three runs is the **ask**: one seat answers one question the way
+a subagent does, and takes follow-ups on the same session (see
+[Ask one model a question](#ask-one-model-a-question)).
+
 ## Why a panel rather than a subagent
 
 A subagent shares its parent's model, memory and project instructions. A
@@ -28,6 +32,55 @@ the served model is read from the harness's own evidence, the tool calls are
 counted, compaction is detected, and the isolation tier is attested. Two
 seats on two vendors' models reviewing the same diff independently is a
 different instrument from one model asked twice.
+
+## Ask one model a question
+
+Say "ask this to codex sol" in any session, and the plugin's `ask` skill
+runs it the way the session would start a subagent:
+
+```bash
+convene ask codex/sol "Is the retry loop in src/net.py bounded on timeout?"
+convene ask --to 2026-11-15-ask-is-the-retry-loop-in-src-net-py-bounded "And at zero?"
+```
+
+The first line starts one independent native session, here `codex exec`
+on the newest Sol, and prints its answer. After the answer come one
+receipt line, every red flag, and the follow-up command. The second line
+is that follow-up. The seat resumes its own session on the same model
+version, so it remembers the question. The seat is closed like every
+seat: no web, no MCP servers, no operator settings or instruction files,
+and the strongest isolation tier the machine has. From a git checkout it
+reads the repository read-only, and `--no-repo` withholds it. Outside a
+checkout the seat gets no files, and a directory holding the home
+directory is never bound into a seat.
+
+The seat is `HARNESS` or `HARNESS/FAMILY`: `codex/sol`, `codex/terra`,
+`claude/opus`, `agy/gemini-pro`. Its persona defaults to `consultant`,
+which answers plainly and says when it thinks the question is wrong.
+`--persona`, `--tools none|read|research`, `--grant web` and `--effort`
+set the seat for the whole conversation. A long question can come from
+standard input: `convene ask codex/sol - < question.md`. The exit status
+is 0 when the seat answered, 3 when a provider quota holds the turn, and
+1 when it failed. On a hold, the `next:` line names `continue` and
+`promote`, as for any held round.
+
+An ask is a run of kind `ask` like any other, so `status`, `board`,
+`usage`, `export` and `prune` all work on it. A follow-up is filed as the
+next round's chair note and raises the budget by one. `prune` removes the
+private home that makes follow-ups possible, so a pruned ask takes no more.
+
+## Which entry points a session reaches by itself
+
+Two skills are model-invocable. A session loads one when the user's words
+match its description, with no slash command:
+- **`ask`** covers one question to one named model.
+- **`convene`** is the operator procedure for panels, rooms and fanouts. It
+  proposes the plan and waits before it spends quota on several seats,
+  unless the request already named both the work and the seats.
+
+The `/convene:panel`, `/convene:room`, `/convene:fanout` and
+`/convene:status` commands stay user-typed. Each skill's description is
+loaded into every session, which is the cost of letting a session find it.
 
 ## Install
 

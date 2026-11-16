@@ -7,7 +7,8 @@ import json
 import sys
 from pathlib import Path
 
-from convene import (doctor as doctor_, export as export_, follow as follow_, harnesses,
+from convene import (ask as ask_, doctor as doctor_, export as export_, follow as follow_,
+                     harnesses,
                      personas, plan as plan_, runs, seal as seal_)
 from convene import round as round_, board as board_
 from convene.storage import read
@@ -17,6 +18,9 @@ convene: multi-seat panels over native coding-agent CLIs.
 
   prepare PLAN [--range A..B] [--name NAME]   freeze a plan into a run
           [--grant DOOR]... [--tools SET]       open doors for every seat
+  ask HARNESS[/MODEL] QUESTION                ask one seat, as a subagent: codex/sol, agy
+      [--persona ID] [--tools SET] [--no-repo]  prints the answer and its receipt
+  ask --to RUN FOLLOW-UP                      the next message, on the same session
   run RUN [--jobs N] [--timeout S]            run rounds until done, converged or held
   round RUN N                                 run one round
   continue RUN SEAT [--round N]               retake a quota-stopped turn
@@ -92,6 +96,31 @@ the last eight trail rows.
 """
 
 
+ASK_HELP = """\
+Ask one seat a question and print its answer, the way a subagent answers.
+
+  convene ask codex/sol "Is this retry loop bounded?"
+  convene ask agy/gemini-pro - < question.md
+  convene ask --to 2026-11-15-ask-is-this-retry-loop-bounded "And on timeout?"
+
+The seat is HARNESS or HARNESS/MODEL; a model is named by its family
+(sol, terra, opus, gemini-pro) and resolves to the newest version that
+harness lists, frozen for every later turn. QUESTION `-` reads standard
+input.
+
+The seat is closed as every convene seat is: no web, no MCP servers, no
+operator settings or instruction files. From a git checkout it reads the
+repository read-only (--no-repo withholds it); elsewhere it gets none.
+The answer comes first, then one receipt line (served model, isolation
+tier, tool calls), every red flag, and the command that follows up.
+
+--to sends the next message to an earlier ask: the seat resumes its own
+native session, so it remembers the conversation. Exit status is 0 when
+the seat answered, 3 when a provider quota holds the turn (`next:` says
+how to continue it), 1 when it failed.
+"""
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="convene", description=HELP,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -113,6 +142,25 @@ def main(argv=None):
                         "(repeatable; a seat's own grants still apply)")
     p.add_argument("--tools", default=None, choices=("none", "read", "write", "research"),
                    help="tool set for every seat that does not name its own")
+
+    p = sub.add_parser("ask", help="ask one seat a question, or follow up on an earlier ask",
+                       description=ASK_HELP,
+                       formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("words", nargs="*", metavar="SEAT QUESTION | FOLLOW-UP",
+                   help="HARNESS[/MODEL] and the question; with --to, the follow-up alone")
+    p.add_argument("--to", metavar="RUN", default=None,
+                   help="follow up on this earlier ask; its seat resumes the same session")
+    p.add_argument("--persona", default=None,
+                   help="persona id (default: consultant); `convene personas` lists them")
+    p.add_argument("--tools", default=None, choices=("none", "read", "research"),
+                   help="the seat's tool set (default: read)")
+    p.add_argument("--no-repo", action="store_true",
+                   help="withhold the repository; the seat sees only the question")
+    p.add_argument("--grant", action="append", default=[], metavar="DOOR",
+                   help="open a door: web, mcp, settings, instructions, hooks (repeatable)")
+    p.add_argument("--effort", default=None, help="the harness's own effort level (default: high)")
+    p.add_argument("--name", default=None, help="run name (default: date-ask-question)")
+    p.add_argument("--timeout", type=float, default=None, help="seconds for the turn")
 
     p = sub.add_parser("run", help="run every round that is not yet published")
     p.add_argument("run")
@@ -207,7 +255,14 @@ def main(argv=None):
     p = sub.add_parser("doctor", help="check harnesses, credentials, isolation tiers and flags")
     p.add_argument("--no-probes", action="store_true", help="skip the flag-liveness probes")
 
-    args = parser.parse_args(argv)
+    # argparse cannot take positionals on both sides of an option, and an
+    # ask is written either way round (`ask codex/sol --no-repo "Q"`); its
+    # trailing words are collected here. Every other verb stays strict.
+    args, extra = parser.parse_known_args(argv)
+    if args.command == "ask" and not any(e.startswith("-") and e != "-" for e in extra):
+        args.words += extra
+    elif extra:
+        parser.error("unrecognized arguments: " + " ".join(extra))
     args.json = args.json or getattr(args, "json_after", False)
     try:
         return dispatch(args)
@@ -274,8 +329,36 @@ def _run(args, project):
     return runs.resolve(value, project)
 
 
+def _ask(args, project):
+    if args.to:
+        if len(args.words) != 1:
+            raise ValueError("--to takes the follow-up alone: convene ask --to RUN \"FOLLOW-UP\"")
+        for flag in ("persona", "tools", "effort", "name"):
+            if getattr(args, flag) is not None:
+                raise ValueError(f"--{flag} is fixed when an ask starts; a follow-up keeps it")
+        if args.no_repo or args.grant:
+            raise ValueError("an ask's doors are fixed when it starts; a follow-up keeps them")
+        message = ask_.read_question(args.words[0], sys.stdin)
+        root, n = ask_.follow_up(runs.resolve(args.to, project), message, timeout=args.timeout)
+    else:
+        if len(args.words) != 2:
+            raise ValueError("name the seat and the question: convene ask codex/sol \"QUESTION\"")
+        seat, question = args.words
+        grants = [g.strip() for item in args.grant for g in item.split(",") if g.strip()]
+        root = ask_.start(ask_.read_question(question, sys.stdin), seat, project=project,
+                          persona=args.persona, tools=args.tools, grants=grants,
+                          workspace="none" if args.no_repo else None, effort=args.effort,
+                          name=args.name, timeout=args.timeout)
+        n = 1
+    data = ask_.result(root, n)
+    print(json.dumps(data, indent=2) if args.json else ask_.render(data))
+    return ask_.exit_code(data)
+
+
 def dispatch(args):
     project = runs.project_root(args.project)
+    if args.command == "ask":
+        return _ask(args, project)
     if args.command == "prepare":
         overrides = {}
         if args.grant:

@@ -48,6 +48,8 @@ def turn_prompt(root, plan, seat, n, *, cold=False):
     name = seat["id"]
     phase = board.phase_for(plan, n)
     start = (runs.seat_work(root, plan, name) / "START.md").read_text(encoding="utf-8")
+    if plan["kind"] == "ask":
+        return _ask_prompt(root, start, n, cold=cold)
     first = next((r for r in range(1, n + 1) if name in board.acting(plan, r)), n)
     if n == 1:
         text = start + "\nNobody has posted yet. Post now."
@@ -95,6 +97,29 @@ def turn_prompt(root, plan, seat, n, *, cold=False):
     if note:
         text += f"\n\nFrom the chair, to everyone acting this round:\n\n{note}"
     return text + "\n"
+
+
+def _ask_prompt(root, start, n, *, cold):
+    """An ask's turn: the question, then each follow-up as the asker wrote it.
+
+    A follow-up is the chair note `convene ask --to` filed for its round,
+    delivered alone because the session already holds the conversation. A
+    seat whose session could not be resumed gets the question again and
+    reads the earlier exchange from the boards, where each digest carries
+    the follow-up that opened its round beside the answer.
+    """
+    if n == 1:
+        return start + "\nAnswer now.\n"
+    note = board.chair_note(root, n)
+    if not note:
+        raise RuntimeError(f"round {n} of an ask has no follow-up on file; "
+                           "`convene ask --to` files one before it plays the round")
+    if cold:
+        return (start + "\nThis conversation began earlier, but your session could not be "
+                f"resumed. The exchange so far is under board/, the latest in "
+                f"board/round-{n - 1:03d}/digest.md; read it, then answer the follow-up "
+                f"below.\n\nThe follow-up:\n\n{note}\n")
+    return f"A follow-up from the same asker:\n\n{note}\n"
 
 
 def open_round(root, plan, n):
@@ -556,6 +581,11 @@ def next_step(root, plan, *, published, budget, held, withheld, converged, gone=
         return ended
     if len(published) < budget and not converged:
         return f"convene run {name}"
+    if plan["kind"] == "ask":
+        # Finished is where an ask waits: the conversation goes on only when
+        # the asker sends another message, as with a subagent.
+        return (f"convene ask --to {name} \"FOLLOW-UP\" continues the conversation; "
+                f"convene board {name} shows it whole")
     if converged and len(published) < budget:
         # `run` would play one more round and stop again if the signal holds,
         # so say both halves: the room thinks it is done, and going past

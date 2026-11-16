@@ -323,6 +323,14 @@ convene skill to review HEAD~3..HEAD". The procedure names the command,
 the plan template and the receipts to report. Seats keep their own isolation regardless of
 which harness operates them.
 
+`skills` also links the plugin's `ask` skill as `convene-ask`. Unlike the
+operator procedure, its policy allows implicit invocation, so a Codex
+session picks it up when you say "ask claude opus whether this migration
+is reversible". It runs `convene ask claude/opus "..."`, which works the
+way a subagent call does: one independent seat, its answer with a
+receipt, and `convene ask --to RUN "..."` for a follow-up on the same
+session.
+
 The directory link matters: this Codex version skips file symlinks during
 skill discovery. See the [installation guide](../../docs/installation.md#plugins)
 if an earlier installation conflicts with the directory link.
